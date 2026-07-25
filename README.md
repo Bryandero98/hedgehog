@@ -2,7 +2,7 @@
 
 [![Weekly downloads](https://img.shields.io/npm/dw/%40skyf0xx%2Fhedgehog)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 [![GitHub stars](https://img.shields.io/github/stars/skyf0xx/hedgehog)](https://github.com/skyf0xx/hedgehog)
-```
+
 
 AI writes code faster than humans ever could, but **speed without discipline creates chaos**.
 
