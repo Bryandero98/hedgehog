@@ -1,6 +1,7 @@
 # The Antidote to AI Spaghetti Code ⭐
 
-[![GitHub stars](https://img.shields.io/github/stars/skyf0xx/hedgehog?style=social)](https://github.com/skyf0xx/hedgehog/stargazers)
+[![Weekly downloads](https://img.shields.io/npm/dw/%40skyf0xx%2Fhedgehog?style=for-the-badge)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
+
 
 AI writes code faster than humans ever could, but **speed without discipline creates chaos**.
 
@@ -10,8 +11,8 @@ AI writes code faster than humans ever could, but **speed without discipline cre
 
 Hedgehog pairs **BMAD's planning** with **disciplined execution**, in one workflow.
 
-- Plan: BMAD workflow
 - Build: Hedgehog execution discipline
+- Plan: BMAD workflow
 - Ship: Quality gates and incremental loops
 
 ![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.png)
