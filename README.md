@@ -120,14 +120,11 @@ the same templated look every AI-generated page defaults to.
 From an empty project folder:
 
 ``` bash
-npx @skyf0xx/hedgehog init
-```
+# 1. Full-stack app (Nx, NestJS, Drizzle, ts-rest, Next.js)
+npx @skyf0xx/hedgehog init --ts-full-stack-app
 
-This installs the `full-stack-app` core by default. For the landing-page
-core instead:
-
-``` bash
-npx @skyf0xx/hedgehog init --core=landing-page
+# 2. Landing page (Astro, Tailwind, GSAP)
+npx @skyf0xx/hedgehog init --landing-page
 ```
 
 Then open Claude Code and describe what you want to build. The

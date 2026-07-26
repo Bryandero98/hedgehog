@@ -57,7 +57,7 @@ re-copy: patch the specific file at its source.
 
 ### 2. Land `src/golden-cores/landing-page/`
 
-In the common case this is already done — `hedgehog init --core=landing-page`'s
+In the common case this is already done — `hedgehog init --landing-page`'s
 installer copies `src/golden-cores/landing-page/` to the repo root at
 install time, the same way it copies `src/agents` to `.claude/agents`.
 Check whether the core files are already present (same check as step 1).

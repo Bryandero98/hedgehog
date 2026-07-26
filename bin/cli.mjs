@@ -3,8 +3,8 @@
 // into the current repo, so the discipline travels with the project.
 //
 // Usage:
-//   npx @skyf0xx/hedgehog init                        scaffold, full-stack-app core (default)
-//   npx @skyf0xx/hedgehog init --core=landing-page     scaffold with a named core instead
+//   npx @skyf0xx/hedgehog init                        scaffold, ts-full-stack-app core (default)
+//   npx @skyf0xx/hedgehog init --landing-page          scaffold the landing-page core instead
 //   npx @skyf0xx/hedgehog init --force                 overwrite files that already exist
 //   npx @skyf0xx/hedgehog update                       refresh .claude/agents + .claude/skills
 //   npx @skyf0xx/hedgehog --help
@@ -19,6 +19,16 @@ const PKG_ROOT = resolve(__dirname, '..');
 const DEST_ROOT = process.cwd();
 const CORES_ROOT = join(PKG_ROOT, 'src/golden-cores');
 const DEFAULT_CORE = 'full-stack-app';
+
+// One install flag per core, named for what a user is asking to build
+// rather than the internal src/golden-cores/<name> directory — the two
+// diverge deliberately so the CLI's public surface can stay stable
+// while cores are renamed or added underneath it. Adding a core means
+// adding one entry here (and a matching src/golden-cores/<dir>).
+const CORE_FLAGS = {
+  '--ts-full-stack-app': 'full-stack-app',
+  '--landing-page': 'landing-page',
+};
 
 // ── tiny ANSI helpers (no deps) ─────────────────────────────────────────
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -148,16 +158,18 @@ CLAUDE.md / TODO.md templates into the repo root, so the discipline is
 committed alongside your code.
 
 ${bold('Usage')}
-  npx @skyf0xx/hedgehog init                    scaffold, ${DEFAULT_CORE} core (default)
-  npx @skyf0xx/hedgehog init --core=<name>      scaffold with a named core instead
-  npx @skyf0xx/hedgehog init --force            overwrite existing files
-  npx @skyf0xx/hedgehog update                  refresh .claude/agents + .claude/skills
+  npx @skyf0xx/hedgehog init                      scaffold, ${DEFAULT_CORE} core (default)
+  npx @skyf0xx/hedgehog init --ts-full-stack-app  scaffold the full-stack-app core explicitly
+  npx @skyf0xx/hedgehog init --landing-page       scaffold the landing-page core instead
+  npx @skyf0xx/hedgehog init --force              overwrite existing files
+  npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
 
-After it runs, commit the payload, open Claude Code, and say
-"bootstrap this project" to trigger the matching bootstrap-core skill.
+After it runs, commit the payload, open Claude Code, and describe what
+you want to build — the planner agent runs planning intake, then hands
+off to bootstrap.
 
 ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
@@ -226,14 +238,20 @@ async function init({ force, core }) {
   console.log('Next steps:');
   console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
   console.log(`  2. ${bold('pnpm install')}`);
-  console.log(`  3. Open Claude Code and say: ${bold('"bootstrap this project"')}\n`);
-  console.log(dim(`Core: ${bold(core)} — already scaffolded and verified.`));
+  console.log(`  3. Open Claude Code and describe what you want to build.`);
+  console.log(
+    dim(
+      `     The ${bold('planner')} agent runs planning intake, then hands off to bootstrap.`,
+    ),
+  );
+  console.log();
+  console.log(dim(`Core: ${bold(core)} (installer default — planner may override it).`));
   console.log(
     dim(
       core === DEFAULT_CORE
         ? '(Nx, packages/config, packages/db, apps/api, apps/web) — bootstrap\n' +
-            'now only runs whichever add-ons (Auth, Queue, Mobile) Intake calls for.'
-        : 'bootstrap now only runs whichever add-on steps this core defines, if any.',
+            'runs whichever add-ons (Auth, Queue, Mobile) intake calls for.'
+        : 'bootstrap runs whichever add-on steps this core defines, if any.',
     ),
   );
 }
@@ -279,8 +297,17 @@ async function main() {
   }
   const cmd = args[0];
   const force = args.includes('--force') || args.includes('-f');
-  const coreArg = args.find((a) => a.startsWith('--core='));
-  const core = coreArg ? coreArg.slice('--core='.length) : DEFAULT_CORE;
+  const coreFlag = args.find((a) => a in CORE_FLAGS);
+  if (coreFlag === undefined && args.some((a) => a.startsWith('--core='))) {
+    const attempted = args.find((a) => a.startsWith('--core='));
+    console.error(
+      `${red('Unknown flag:')} ${attempted}\n\n` +
+        `Use an explicit core flag instead: ${Object.keys(CORE_FLAGS).join(', ')}\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const core = coreFlag ? CORE_FLAGS[coreFlag] : DEFAULT_CORE;
 
   if (cmd === 'init') {
     await init({ force, core });
