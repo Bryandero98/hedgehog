@@ -40,7 +40,7 @@ when a new package needs wiring into a consumer's dependencies.
   from a `NEXT_PUBLIC_`-prefixed env var (added to
   `packages/config/env.schema.ts` if it isn't there yet) — never a
   hardcoded `http://localhost:<port>` literal, even as a "temporary"
-  fallback. `apps/api`'s dev port is `3333` (see `hedgehog-bootstrap-core`
+  fallback. `apps/api`'s dev port is `3333` (see `hedgehog-bootstrap-full-stack-app-core`
   — chosen specifically to not collide with `apps/web`'s `next dev`
   default of `3000`); a literal fallback drifts out of sync with that the
   moment either port changes and produces a silent 404 that looks like a

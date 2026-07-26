@@ -117,7 +117,7 @@ tagged a release containing it, prefer that tag instead.
 ## Constraints
 
 - Never auto-run this on a schedule or "while you're in the area" — only
-  on explicit request, same posture as `src/golden-core` regeneration.
+  on explicit request, same posture as `src/golden-cores/full-stack-app` regeneration.
 - Never hand-patch a single vendored file to fix an upstream bug without
   also updating `ATTRIBUTION.md` — a silent local fork is worse than a
   stale pin, since nothing records that `skills/BMAD/` has diverged from

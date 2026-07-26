@@ -16,7 +16,7 @@ discipline's stance and rationale.
   review).
 - `src/skills/` — the packaged procedures a consuming project copies into
   its own `.claude/skills/`:
-  - `hedgehog-bootstrap-core` — lands the always-on core workspace (Nx,
+  - `hedgehog-bootstrap-full-stack-app-core` — lands the always-on core workspace (Nx,
     enforcement config, `packages/db`, `apps/api`, `apps/web`) from a
     pre-built, pre-verified template, one pass, before any add-on step.
   - `hedgehog-bootstrap` — scaffolds whichever add-ons (Auth, Queue,

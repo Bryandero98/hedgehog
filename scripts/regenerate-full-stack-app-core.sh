@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerates src/golden-core/ from scratch — the deterministic core
+# Regenerates src/golden-cores/full-stack-app/ from scratch — the deterministic full-stack-app core
 # output that `hedgehog-bootstrap-core` copies into every project instead
 # of generating it live. Run this by hand whenever a core dependency
 # (Nx, NestJS, Next, Drizzle, ...) needs bumping. Not run automatically,
@@ -14,20 +14,20 @@
 # What this does, in order: scaffold the Nx workspace + packages/config
 # (with the full enforcement config baked in), packages/db, apps/api,
 # apps/web. Every hand-edit below exists because a real run hit it; see
-# `hedgehog-bootstrap-core`'s "Known issues baked into golden-core"
-# section for the why behind each one. Diff the result against the
-# current src/golden-core/ before committing — don't assume a clean run
-# means nothing changed upstream in a way that matters.
+# `hedgehog-bootstrap-core`'s "Known issues baked into the full-stack-app
+# core" section for the why behind each one. Diff the result against the
+# current src/golden-cores/full-stack-app/ before committing — don't
+# assume a clean run means nothing changed upstream in a way that matters.
 #
-# Usage: scripts/regenerate-golden-core.sh [scratch-dir]
+# Usage: scripts/regenerate-full-stack-app-core.sh [scratch-dir]
 #   scratch-dir defaults to a fresh temp directory.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRATCH="${1:-$(mktemp -d /tmp/hedgehog-golden-core.XXXXXX)}"
+SCRATCH="${1:-$(mktemp -d /tmp/hedgehog-full-stack-app-core.XXXXXX)}"
 
-echo "Regenerating golden-core in: $SCRATCH"
+echo "Regenerating full-stack-app core in: $SCRATCH"
 mkdir -p "$SCRATCH"
 cd "$SCRATCH"
 
@@ -212,16 +212,16 @@ npx nx build web
 rm -rf apps/web/.next .nx
 
 echo ""
-echo "=== Verification passed. Sync into src/golden-core/: ==="
+echo "=== Verification passed. Sync into src/golden-cores/full-stack-app/: ==="
 echo "  rsync -a --exclude=node_modules --exclude=.git --exclude=.nx \\"
 echo "    --exclude=dist --exclude=out-tsc --exclude='*.tsbuildinfo' \\"
 echo "    --exclude=.env --exclude='apps/web/.next' \\"
-echo "    '$SCRATCH/' '$REPO_ROOT/src/golden-core/'"
+echo "    '$SCRATCH/' '$REPO_ROOT/src/golden-cores/full-stack-app/'"
 echo ""
 echo "IMPORTANT: rename the synced .gitignore —"
-echo "  mv '$REPO_ROOT/src/golden-core/.gitignore' '$REPO_ROOT/src/golden-core/gitignore.template'"
+echo "  mv '$REPO_ROOT/src/golden-cores/full-stack-app/.gitignore' '$REPO_ROOT/src/golden-cores/full-stack-app/gitignore.template'"
 echo "npm strips files literally named .gitignore from published tarballs."
 echo "bin/cli.mjs's DOTFILE_RENAMES restores the name on install."
 echo ""
-echo "Then diff against the previous src/golden-core/ and commit deliberately —"
+echo "Then diff against the previous src/golden-cores/full-stack-app/ and commit deliberately —"
 echo "don't blind-overwrite without reviewing what changed upstream."

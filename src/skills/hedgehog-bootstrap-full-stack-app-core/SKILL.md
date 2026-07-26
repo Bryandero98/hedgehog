@@ -1,13 +1,13 @@
 ---
-name: hedgehog-bootstrap-core
-description: Use once, at the start of a new Hedgehog project, before hedgehog-bootstrap's add-on steps, to land the golden-core workspace (Nx, packages/config, packages/db, apps/api, apps/web, and every enforcement file) and verify it's green. Runs as the first move of the `bootstrap` agent, which `planner` invokes automatically after Confirm & Lock. No per-project decisions, no add-on awareness.
+name: hedgehog-bootstrap-full-stack-app-core
+description: Use once, at the start of a new Hedgehog project on the full-stack-app core, before hedgehog-bootstrap's add-on steps, to land the full-stack-app core workspace (Nx, packages/config, packages/db, apps/api, apps/web, and every enforcement file) and verify it's green. Runs as the first move of the `bootstrap` agent, which `planner` invokes automatically after Confirm & Lock. No per-project decisions, no add-on awareness.
 ---
 
-# Hedgehog Bootstrap — Core
+# Hedgehog Bootstrap — full-stack-app Core
 
 Lands the always-on core of a Hedgehog project — the same four pieces on
 every project, regardless of size or which add-ons are on — by copying a
-pre-built, pre-verified workspace (`src/golden-core/` in the Hedgehog
+pre-built, pre-verified workspace (`src/golden-cores/full-stack-app/` in the Hedgehog
 package) rather than generating it live: Nx workspace + enforcement
 config, `packages/db`, `apps/api`, `apps/web`. These pieces are
 deterministic — the same commands produce the same output on every
@@ -23,7 +23,7 @@ Hedgehog project.
 
 ## What lands
 
-Everything under `src/golden-core/` in the installed Hedgehog package,
+Everything under `src/golden-cores/full-stack-app/` in the installed Hedgehog package,
 copied to the repo root:
 
 - Root: `nx.json`, `pnpm-workspace.yaml`, `package.json` (with the
@@ -84,14 +84,14 @@ alike. No Docker: stop and point to installing Docker Desktop
 (macOS/Windows) or Docker Engine (Linux) rather than falling back to a
 natively-installed Postgres. See **Local infra: Docker, always** below.
 
-### 3. Land `src/golden-core/`
+### 3. Land `src/golden-cores/full-stack-app/`
 
 In the common case this is already done — `hedgehog init`'s installer
-copies `src/golden-core/` to the repo root at install time, the same way
+copies `src/golden-cores/full-stack-app/` to the repo root at install time, the same way
 it copies `src/agents` to `.claude/agents`. Check whether the core files
 are already present (same check as step 1). If they're missing —
 `hedgehog init` ran against an older package version, or the files were
-deleted — copy `src/golden-core/`'s contents to the repo root now as a
+deleted — copy `src/golden-cores/full-stack-app/`'s contents to the repo root now as a
 fallback. Either way, by the end of this step every file listed in "What
 lands" above should be on disk.
 
@@ -113,7 +113,7 @@ of one line here.
 `pnpm install` resolves against the committed `pnpm-lock.yaml` — this
 should be fast and produce no lockfile changes. A lockfile diff here
 means the shipped `pnpm-lock.yaml` doesn't match `package.json` — that's
-a packaging bug in `src/golden-core`, not something to patch locally
+a packaging bug in `src/golden-cores/full-stack-app`, not something to patch locally
 (see **If verification fails**, below).
 
 ### 5. Verify
@@ -150,11 +150,12 @@ The four core Bootstrap lines ship pre-checked in the `TODO.md` template.
 If step 3's fallback copy ran, check them now. Leave every add-on line
 (Auth/Queue/Mobile) untouched; `hedgehog-bootstrap` owns those.
 
-## Known issues baked into golden-core
+## Known issues baked into the full-stack-app core
 
 These are already fixed in the committed tree — listed here so anyone
-regenerating `src/golden-core` (see that skill's regeneration script)
-knows why the tree looks the way it does, and doesn't reintroduce the
+regenerating `src/golden-cores/full-stack-app` (see
+`scripts/regenerate-full-stack-app-core.sh`) knows why the tree looks the
+way it does, and doesn't reintroduce the
 bug by "cleaning up" what looks like an unnecessary pin or directive.
 
 - **`apps/web-e2e/tsconfig.json` needs an explicit `"types": ["node"]`.**
@@ -224,14 +225,14 @@ bug by "cleaning up" what looks like an unnecessary pin or directive.
 
 ## If verification fails
 
-A clean copy of `src/golden-core` that fails typecheck/lint/test or
+A clean copy of `src/golden-cores/full-stack-app` that fails typecheck/lint/test or
 needs a lockfile change means the shipped template itself is broken —
 not a per-project problem to hand-patch around. Stop and report exactly
 what failed (which target, which error). Fixing this means updating
-`src/golden-core` at its source (via
-`scripts/regenerate-golden-core.sh` in the Hedgehog repo itself) and
-shipping a new package version — never patch a consuming project's copy
-to route around a broken template and call core done.
+`src/golden-cores/full-stack-app` at its source (via
+`scripts/regenerate-full-stack-app-core.sh` in the Hedgehog repo itself)
+and shipping a new package version — never patch a consuming project's
+copy to route around a broken template and call core done.
 
 ## Local infra: Docker, always
 
@@ -253,7 +254,7 @@ not here.
   instead — this skill's whole point is being identical across every
   project.
 - Don't hand-edit any file this step lands to work around a verification
-  failure. Fix `src/golden-core` at the source instead (see **If
+  failure. Fix `src/golden-cores/full-stack-app` at the source instead (see **If
   verification fails**).
 - Don't add domain schema, contracts, or any `libs/<module>/*` content —
   that's Phase A, after every Bootstrap box (core and whichever add-ons

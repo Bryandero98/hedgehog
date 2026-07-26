@@ -21,7 +21,7 @@
     "src/agents",
     "src/skills",
     "src/templates",
-    "src/golden-core",
+    "src/golden-cores",
     "skills/BMAD"
   ],
   "engines": {

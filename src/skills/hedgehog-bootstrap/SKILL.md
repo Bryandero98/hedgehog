@@ -16,7 +16,7 @@ This skill touches no domain modules — no schema, no contract, nothing
 under `libs/<module>/`. That's Phase A, started fresh after Bootstrap
 closes.
 
-**Core lands via `hedgehog-bootstrap-core`, run first, unconditionally.**
+**Core lands via `hedgehog-bootstrap-full-stack-app-core`, run first, unconditionally.**
 That skill copies a pre-built, pre-verified workspace (Nx, enforcement
 config, `packages/db`, `apps/api`, `apps/web`) rather than generating it
 live — core is identical on every project, so it's built once upstream
@@ -36,12 +36,12 @@ Hedgehog has one non-negotiable **core** — applied to every project that
 uses Hedgehog at all, regardless of size — plus a small set of named
 **add-ons**, each scaffolded only when planning intake's scope boundary
 (`planner`) actually calls for it. The core is not "the small version of
-the stack"; it's the fixed floor, landed by `hedgehog-bootstrap-core`.
+the stack"; it's the fixed floor, landed by `hedgehog-bootstrap-full-stack-app-core`.
 Add-ons are not "extra polish"; each is standing infra with a real
 ongoing cost (a service to run, a secret to manage, a seam to keep
 idempotent) that a project without the matching need shouldn't carry.
 
-### Core (every project, no exceptions — see `hedgehog-bootstrap-core`)
+### Core (every project, no exceptions — see `hedgehog-bootstrap-full-stack-app-core`)
 
 | Layer | Choice |
 |---|---|
@@ -65,7 +65,7 @@ idempotent) that a project without the matching need shouldn't carry.
 Constraint-contingent substitutions: Prisma for Drizzle when the team
 isn't SQL-comfortable; cloud + Pulumi/SST for Railway when full
 declarative IaC is a hard requirement; tRPC for ts-rest when the client is
-committed TypeScript-only. A substitution here means `src/golden-core`
+committed TypeScript-only. A substitution here means `src/golden-cores/full-stack-app`
 itself needs regenerating against the substitute before this project's
 Bootstrap runs — not a per-project hand-edit after landing core.
 
@@ -85,7 +85,7 @@ stubbed or partially wired.
 
 A project with none of these on is still a full Hedgehog project — Nx,
 NestJS, Postgres, Docker, ts-rest, the phase discipline, and every gate
-still apply (all landed by `hedgehog-bootstrap-core`). What's cut is
+still apply (all landed by `hedgehog-bootstrap-full-stack-app-core`). What's cut is
 infra with no consumer, not the discipline itself.
 
 If a project's whole description has no persistent domain data and no
@@ -100,18 +100,18 @@ something with no domain module in it.
 
 ```
 apps/
-  web        (Next.js — UI only)                    core, landed by hedgehog-bootstrap-core
+  web        (Next.js — UI only)                    core, landed by hedgehog-bootstrap-full-stack-app-core
   mobile     (Expo — only if the Mobile add-on is on)
-  api        (NestJS — owns all domain logic + DB access)  core, landed by hedgehog-bootstrap-core
+  api        (NestJS — owns all domain logic + DB access)  core, landed by hedgehog-bootstrap-full-stack-app-core
   worker     (BullMQ consumers — only if the Queue add-on is on)
 
 packages/
-  db         (Drizzle schema + client)                core, landed by hedgehog-bootstrap-core
+  db         (Drizzle schema + client)                core, landed by hedgehog-bootstrap-full-stack-app-core
   contracts  (ts-rest + Zod contracts)
   hooks      (TanStack Query — shared web + mobile)
   jobs       (typed job registry / queue definitions — only if Queue is on)
   auth       (Better Auth config — only if Auth is on)
-  config     (locked ESLint/Prettier/tsconfig/env schema)  core, landed by hedgehog-bootstrap-core
+  config     (locked ESLint/Prettier/tsconfig/env schema)  core, landed by hedgehog-bootstrap-full-stack-app-core
   shared     (cross-cutting types + utils)
 
 docs/
@@ -144,7 +144,7 @@ recording which add-ons (Auth, Queue, Mobile) are on for this project. No
 scope boundary yet, or a `TODO.md` with no `## Add-ons` block: stop and
 point to `planner` rather than guessing which add-ons apply.
 
-Run `hedgehog-bootstrap-core` first, unconditionally, if it hasn't
+Run `hedgehog-bootstrap-full-stack-app-core` first, unconditionally, if it hasn't
 already landed core (check `TODO.md`'s Bootstrap section, or `nx.json`
 at the repo root). That skill has its own re-run guard and Docker check
 — don't duplicate those here.
@@ -167,11 +167,11 @@ pnpm add better-auth @thallesp/nestjs-better-auth
 
 Configure the Drizzle adapter against `packages/db`. Add
 `BETTER_AUTH_SECRET: z.string().min(32)` to `packages/config/env.schema.ts`
-now (it doesn't exist in the core schema `hedgehog-bootstrap-core`
+now (it doesn't exist in the core schema `hedgehog-bootstrap-full-stack-app-core`
 landed), and add a matching `BETTER_AUTH_SECRET=` line with a generated
 value to the root `.env.example` — a schema entry with no `.env.example`
 line reproduces the exact `loadEnv()` crash-on-boot that
-`hedgehog-bootstrap-core`'s `DATABASE_URL` entry exists to prevent, just
+`hedgehog-bootstrap-full-stack-app-core`'s `DATABASE_URL` entry exists to prevent, just
 for this var instead. Tag: `scope:auth`, `type:adapter`.
 
 Also wire the global auth guard on `apps/api`: `pnpm add
@@ -198,7 +198,7 @@ pnpm add bullmq ioredis
 ```
 
 Add a `redis` service to the root `docker-compose.yml`
-`hedgehog-bootstrap-core` landed (Postgres-only until now) and
+`hedgehog-bootstrap-full-stack-app-core` landed (Postgres-only until now) and
 `REDIS_URL: z.string().url()` to `packages/config/env.schema.ts` (it
 doesn't exist in the core schema), plus a matching `REDIS_URL=` line in
 the root `.env.example` pointing at that same `docker-compose.yml`
@@ -243,7 +243,7 @@ pnpm add react-native-reusables nativewind
 ```
 
 Configure NativeWind's theme (`tailwind.config.js` colors, light/dark) to
-match `apps/web`'s base theme (landed by `hedgehog-bootstrap-core`) — one
+match `apps/web`'s base theme (landed by `hedgehog-bootstrap-full-stack-app-core`) — one
 visual identity across platforms, set once here rather than drifting
 per-screen. Tag: `scope:mobile`.
 
@@ -265,14 +265,14 @@ other).
 ## Locked format/lint config
 
 One shared config, extended everywhere — landed by
-`hedgehog-bootstrap-core`, referenced (not re-created) by every add-on
+`hedgehog-bootstrap-full-stack-app-core`, referenced (not re-created) by every add-on
 step above:
 
 - `packages/config/eslint-base.js` — flat config, extended by every
   app/lib.
 - `packages/config/prettier.js` — the shared base, *without*
   `prettier-plugin-tailwindcss` (that's `apps/web`'s own config, already
-  wired by `hedgehog-bootstrap-core`).
+  wired by `hedgehog-bootstrap-full-stack-app-core`).
 
 A per-app override request signals to fix the base config at the source.
 
@@ -280,7 +280,7 @@ A per-app override request signals to fix the base config at the source.
 
 Update `TODO.md`: check off every add-on line now built or explicitly
 skipped (core's four lines are already checked by
-`hedgehog-bootstrap-core`). Leave Phase A/B sections as-is (per-module,
+`hedgehog-bootstrap-full-stack-app-core`). Leave Phase A/B sections as-is (per-module,
 filled in by `planner` during planning intake or when new scope enters play).
 Hand off to `hedgehog-loop` — from here, every domain module goes
 through Phase A steps 1–5(a) one at a time, gated by lefthook, each its
@@ -288,7 +288,7 @@ own commit.
 
 ## Constraints
 
-- Run `hedgehog-bootstrap-core` first, unconditionally, before any step
+- Run `hedgehog-bootstrap-full-stack-app-core` first, unconditionally, before any step
   in this file — never scaffold an add-on against a core that hasn't
   landed and verified clean.
 - Add-on steps (Auth, Queue, Mobile) run only if `TODO.md`'s `## Add-ons`
@@ -307,5 +307,5 @@ own commit.
   discipline as every other step in the discipline, even though this is
   infra rather than a domain module.
 - Never substitute a natively-installed Postgres or Redis, even to match
-  a contributor's existing local setup — see `hedgehog-bootstrap-core`'s
+  a contributor's existing local setup — see `hedgehog-bootstrap-full-stack-app-core`'s
   **Local infra: Docker, always**.
