@@ -1,0 +1,164 @@
+---
+name: hedgehog-landing-loop
+description: Use for every unit of work on the landing-page core, from planning intake through the final build phase — the Chain Method's brief → feeling → tokens/motif → sequence → artifact pipeline, gated and committed one phase at a time, checked off TODO.md. Triggers on "next step", "next phase", "what's next", or the start of any work session on a bootstrapped landing-page project. Also covers this core's own planning intake and Correction Protocol.
+---
+
+# Hedgehog Landing Loop
+
+The operating loop for a bootstrapped `landing-page` project: pick the
+next phase, run it through its owning agent, gate it, commit it, check it
+off. `TODO.md` at repo root is the live list — read it before starting.
+It's thin: a context blurb plus a checklist mirroring the phase structure
+below. Checked/unchecked is its only state.
+
+This is the **Chain Method**: a pipeline where every visual choice traces
+back to a reason. No agent may introduce a choice that doesn't originate
+in the previous agent's output — that discipline is what this skill
+enforces mechanically, the same role Nx module boundaries play for
+`full-stack-app`.
+
+## Planning intake (Phase 0, before any build phase)
+
+Run once, before `bootstrap` scaffolds the workspace. No BMAD shelf here
+— a landing page's brief doesn't carry a PRD's worth of material, and
+eliciting one would be ceremony this core exists specifically to avoid.
+
+1. **Structured interview** for the subject statement: the concrete
+   subject (what is this actually selling/announcing/showing), the
+   audience, and the page's single job. If the description doesn't pin
+   these down, ask directly — don't proceed on vagueness, and don't
+   invent an audience or job that wasn't stated or confirmed.
+2. **Write `.hedgehog/chain/00-brief.md`** — the subject statement, one
+   paragraph, plus the audience and single job named explicitly. This is
+   the root every downstream phase's traceability audit walks back to.
+3. **Confirm & Lock** — show the subject statement, audience, and job
+   back in plain terms before writing `TODO.md`. State plainly what
+   happens on confirmation: *"This locks in the brief, commits it
+   (`chore(planning): intake`), and hands off to `bootstrap` to scaffold
+   the Astro workspace. The Strategist phase starts once that closes.
+   Anything wrong or missing — say so now."* Wait for explicit
+   go-ahead — a revision here is just another pass at the interview, not
+   a Correction Protocol entry, since nothing downstream exists yet.
+4. **Write `TODO.md`** mirroring the phase table below, then commit
+   planning intake's output as one commit, `chore(planning): intake` —
+   `TODO.md`, `.hedgehog/chain/00-brief.md`, and root `CLAUDE.md`'s
+   filled placeholders.
+5. **Hand off to `bootstrap`** once the commit lands.
+
+`planner` owns this section; see that agent for when it runs.
+
+## The Chain Method phases
+
+Every phase's input is the prior phase's output, in this exact order — no
+agent works from anything but what was actually handed to it. Steps 4a
+(inside `landing-systems`) and 4c (inside `landing-strategist`) are the
+only parallel-input point in the chain, both reading the same upstream
+artifact; everything else is strictly sequential.
+
+| # | Phase | Agent | Produces | Commit |
+|---|---|---|---|---|
+| 1 | Strategist | `landing-strategist` | Subject/audience/job statement (from planning intake — restated here as this phase's formal output) | `feat(landing): strategy` |
+| 1b | Diagnostician | `landing-strategist` | Awareness level, Sophistication level, Sin/desire, Big Idea, Category/Positioning statement | bundled into `feat(landing): strategy` |
+| 1c | Narrative Agent | `landing-strategist` | StoryBrand arc (Character → Problem → Guide → Plan → Action → Success/Failure), subject as Guide | bundled into `feat(landing): strategy` |
+| 1d | Objection Agent | `landing-strategist` | Ranked objection map, each tagged with a Cialdini rebuttal principle | bundled into `feat(landing): strategy` |
+| 2 | Brand Anthropologist | `landing-strategist` | 3–5 adjective pairs (each with a named opposite) | bundled into `feat(landing): strategy` |
+| 3 | Psychologist | `landing-strategist` | Adjectives sorted visceral / behavioral / reflective | bundled into `feat(landing): strategy` |
+| 4 | Perfumer | `landing-strategist` | Top/heart/base note timing per adjective, the page's peak moment, the ending treatment | bundled into `feat(landing): strategy` |
+| 5 | Ingredient Director + Copywriter | `landing-systems` | Dial table (color/type/form/space/motion) + voice spec + gated headline (2 backups) + objection rebuttal prose, run against the same sorted-adjectives/diagnosis input | `feat(landing): systems` |
+| 6 | Systems Designer | `landing-systems` | The token system (hex values, type roles, spacing unit, easing family, copy voice, with note timing attached) | bundled into `feat(landing): systems` |
+| 7 | Motif Artist | `landing-systems` | Signature motif (source, persistence, continuity, scale range, literalness) | bundled into `feat(landing): systems` |
+| 8 | Sequencer | `landing-sequencer` | Per-section transition type, weight, spacing, beat structure | `feat(landing): sequence` |
+| 9 | Critic + Usability Auditor | `landing-critic` | Redlines, or a pass — reconciled traceability/distinctiveness + usability audit | `feat(landing): audit` (no commit if redlined — see Correction Protocol) |
+| 10 | Builder | `landing-builder` | The built page, in Astro | `feat(landing): build` |
+
+Phases 1 through 4 (including 1b/1c/1d) are one agent's context
+(`landing-strategist`) because they're one continuous judgment call —
+subject into diagnosis into feeling into timing — not separable artifacts
+with different tool footprints. Same reasoning collapses 5–7 into
+`landing-systems` (everything that becomes a Tailwind token or a line of
+copy) and 8/9's reconciliation into a single `landing-critic` pass. See
+each agent's own file for the internal sub-steps it runs through.
+
+## The Loop (every unit of work)
+
+1. **Pick the next phase** per the table above, from `TODO.md`. One phase
+   at a time, in order.
+2. **Check the gate.** The prior phase is checkpointed and committed
+   first.
+3. **Delegate exactly one phase** to its owning agent, passing it the
+   full chain so far (every upstream artifact, not just the immediately
+   prior one) — an agent that only sees its direct input can't verify its
+   own traceability back to the subject statement.
+4. The agent **runs its self-test** (see that agent's own file for what
+   it checks) before presenting its artifact.
+5. The agent **commits** using the exact Conventional Commit format
+   above.
+6. **Check off the line in `TODO.md`** once the agent reports the commit
+   landed.
+7. **Repeat**, one delegated phase at a time.
+
+Each commit batches exactly one phase's artifact; a wrong phase is fixed
+forward later via the Correction Protocol.
+
+## Correction Protocol
+
+When a downstream phase reveals an upstream phase was wrong — most often
+`landing-critic` redlining something that doesn't trace back to the
+subject statement, or matches a known AI-default cluster:
+
+1. Stop.
+2. Patch the upstream phase directly, in place, via that phase's owning
+   agent.
+3. Fast-forward every dependent phase that breaks. A token system change
+   (phase 6) ripples through the motif (7), the sequence (8), and the
+   build (10) — each gets its own small commit, in order, not one bundled
+   fix.
+4. Re-run `landing-critic` against the patched chain before resuming.
+5. The commit messages are the explanation.
+6. Resume the loop.
+
+Use `conventional-commits` when a correction touches several phases in
+one working-tree pass and needs splitting back into per-phase commits.
+
+## Phase Transition Checks
+
+Before `landing-builder` starts, confirm:
+
+- `landing-critic` returned a pass, not a redline — a redlined spec never
+  reaches the Builder; it goes back to the phase the redline names.
+- Every phase 1–9 has its commit landed.
+
+Before `landing-strategist` starts, confirm planning intake's Confirm &
+Lock has held and its commit has landed. If not, stop and ask.
+
+## Rules
+
+- **No agent introduces a choice that doesn't originate in the previous
+  agent's output.** This is the chain's core discipline — enforced by
+  `landing-critic`'s traceability audit, not by tooling, so treat a
+  critic redline with the same weight a failed typecheck gets elsewhere
+  in Hedgehog.
+- **Ingredients move in agreement.** Color, type, space, motion, copy
+  rhythm, and pacing are reconciled into one system at phase 6 — a
+  mismatch (warm color, cold type) is a defect `landing-systems` owns
+  fixing, not a later polish pass.
+- **Sequential except phases 5's two parallel inputs.** The Ingredient
+  Director and Copywriter sub-steps inside `landing-systems` read the
+  same sorted-adjectives input and can run together; every other phase
+  waits on the one before it.
+- **A wrong phase gets fixed at its source** — the Correction Protocol,
+  not a downstream workaround (e.g. don't patch the Builder's output to
+  fix a token that's wrong at the Systems Designer level).
+- **The Critic's veto is real.** `landing-critic` can send any phase back
+  to its owning agent, citing which audit failed; it cannot rewrite the
+  artifact itself.
+- **Figma/Stitch MCP output is input only.** Anything handed off from
+  those tools is re-derived through the token system (phase 6) before it
+  touches Tailwind config — never copied through as final values.
+
+## Stop Condition
+
+A build session ends when every phase in `TODO.md` is checked off and
+`landing-builder`'s artifact is committed, or when the subject statement
+or an adjective is ambiguous enough that continuing means guessing — ask
+one question and wait.
