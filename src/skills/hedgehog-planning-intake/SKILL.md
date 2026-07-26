@@ -1,17 +1,17 @@
 ---
 name: hedgehog-planning-intake
-description: Use once per project, at the start, and again on a scoped pass when new domain scope enters play — runs the vendored BMAD-METHOD planning shelf, mines its output into scope boundary/domain modules/the Add-ons decision, and gates on Confirm & Lock before anything is written. Invoked by the `planner` agent; don't run standalone.
+description: Use once per project on the full-stack-app core, at the start, and again on a scoped pass when new domain scope enters play — runs the vendored BMAD-METHOD planning shelf, mines its output into scope boundary/domain modules/the Add-ons decision, and gates on Confirm & Lock before anything is written. Invoked by the `planner` agent after it picks full-stack-app at Phase 0; don't run standalone, and don't run for landing-page (see `hedgehog-landing-loop` instead).
 ---
 
-# Hedgehog Planning Intake
+# Hedgehog Planning Intake (full-stack-app core)
 
 Turns a person's description of a problem into `TODO.md` (with its
 `## Add-ons` block) and `docs/design/<module>-notes.md` per module, by
 running the vendored BMAD-METHOD planning shelf and mining its output.
-This is the mechanics `planner` calls once its "does Hedgehog apply at
-all" check passes — the interpretive judgment (scope boundary, module
-split, Add-ons decision, Confirm & Lock) still belongs to `planner`; this
-skill is the fixed procedure that judgment runs inside.
+This is the mechanics `planner` calls once its Phase 0 core-selection
+check picks `full-stack-app` — the interpretive judgment (scope boundary,
+module split, Add-ons decision, Confirm & Lock) still belongs to
+`planner`; this skill is the fixed procedure that judgment runs inside.
 
 ## Phase 0 — BMAD elicitation
 
