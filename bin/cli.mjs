@@ -3,12 +3,13 @@
 // into the current repo, so the discipline travels with the project.
 //
 // Usage:
-//   npx @skyf0xx/hedgehog init          scaffold into the current directory
-//   npx @skyf0xx/hedgehog init --force  overwrite files that already exist
-//   npx @skyf0xx/hedgehog update        refresh .claude/agents + .claude/skills
+//   npx @skyf0xx/hedgehog init                        scaffold, full-stack-app core (default)
+//   npx @skyf0xx/hedgehog init --core=landing-page     scaffold with a named core instead
+//   npx @skyf0xx/hedgehog init --force                 overwrite files that already exist
+//   npx @skyf0xx/hedgehog update                       refresh .claude/agents + .claude/skills
 //   npx @skyf0xx/hedgehog --help
 
-import { cp, mkdir, access, readdir, stat, rm } from 'node:fs/promises';
+import { cp, mkdir, access, readdir, stat, rm, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -16,6 +17,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = resolve(__dirname, '..');
 const DEST_ROOT = process.cwd();
+const CORES_ROOT = join(PKG_ROOT, 'src/golden-cores');
+const DEFAULT_CORE = 'full-stack-app';
 
 // ── tiny ANSI helpers (no deps) ─────────────────────────────────────────
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
@@ -31,35 +34,61 @@ const dim = (s) => paint('2', s);
 // this name in the package, renamed back on copy.
 const DOTFILE_RENAMES = { 'gitignore.template': '.gitignore' };
 
+// Every subdirectory of src/golden-cores/ is a valid --core value —
+// discovered from disk so a new core added under golden-cores/ doesn't
+// need this list touched separately.
+async function availableCores() {
+  return (await readdir(CORES_ROOT, { withFileTypes: true }))
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+}
+
 // ── the payload: what gets copied, and to where under the target repo ───
 // `dir` entries copy a whole tree; `file` entries copy a single file and
-// may rename (templates lose their src/templates/ prefix at the root).
-const PLAN = [
-  { type: 'dir', from: 'src/agents', to: '.claude/agents' },
-  { type: 'dir', from: 'src/skills', to: '.claude/skills' },
-  // The vendored BMAD-METHOD planning shelf that hedgehog-planning-intake
-  // runs — referenced by repo-root-relative path (skills/BMAD/...), so it
-  // lands there rather than under .claude/.
-  { type: 'dir', from: 'skills/BMAD', to: 'skills/BMAD' },
-  { type: 'file', from: 'src/templates/CLAUDE.md', to: 'CLAUDE.md' },
-  { type: 'file', from: 'src/templates/TODO.md', to: 'TODO.md' },
-  // The pre-built, pre-verified core Nx workspace — packages/config,
-  // packages/db, apps/api, apps/web, and every enforcement file
-  // (lefthook, commitlint, phase gate, module boundaries). Lands the
-  // root package.json too, so there's no separate placeholder for it.
-  // `hedgehog-bootstrap-core` verifies this on first run rather than
-  // generating it live — see that skill for what's in here and why.
-  { type: 'dir', from: 'src/golden-core', to: '.' },
-];
+// may rename (templates lose their src/templates/ prefix at the root);
+// `merge` entries concatenate a shared shell with a core-specific include
+// at {{CORE_SECTION}} (see CLAUDE.md template plumbing below).
+// Agents and skills for every core install regardless of which one is
+// chosen — planner needs the full toolset to run core selection at all,
+// and a project can only switch cores before it's bootstrapped anyway.
+function plan(core) {
+  return [
+    { type: 'dir', from: 'src/agents', to: '.claude/agents' },
+    { type: 'dir', from: 'src/skills', to: '.claude/skills' },
+    // The vendored BMAD-METHOD planning shelf that hedgehog-planning-intake
+    // runs — referenced by repo-root-relative path (skills/BMAD/...), so it
+    // lands there rather than under .claude/.
+    { type: 'dir', from: 'skills/BMAD', to: 'skills/BMAD' },
+    {
+      type: 'merge',
+      shell: 'src/templates/CLAUDE.md',
+      include: `src/templates/CLAUDE.core.${core}.md`,
+      to: 'CLAUDE.md',
+    },
+    {
+      type: 'merge',
+      shell: 'src/templates/TODO.md',
+      include: `src/templates/TODO.core.${core}.md`,
+      to: 'TODO.md',
+    },
+    // The pre-built, pre-verified workspace for the chosen core —
+    // everything a fresh project of that shape needs at repo root
+    // (lands the root package.json too, so there's no separate
+    // placeholder for it). The relevant bootstrap-core skill verifies
+    // this on first run rather than generating it live.
+    { type: 'dir', from: `src/golden-cores/${core}`, to: '.' },
+  ];
+}
 
-// The subset of PLAN that's the discipline's payload rather than
+// The subset of plan() that's the discipline's payload rather than
 // project-specific or write-once content: `update` re-copies exactly
 // this, always overwriting, since a consuming project's own
 // .claude/agents and .claude/skills are supposed to match upstream
-// verbatim. CLAUDE.md/TODO.md carry project-filled content, golden-core
-// is verified once by hedgehog-bootstrap-core, and skills/BMAD is
-// re-vendored only deliberately (bmad-revendor) — none of those belong
-// in an update.
+// verbatim. CLAUDE.md/TODO.md carry project-filled content, the core
+// workspace is verified once by its bootstrap-core skill, and
+// skills/BMAD is re-vendored only deliberately (bmad-revendor) — none
+// of those belong in an update.
 const UPDATE_PLAN = [
   { type: 'dir', from: 'src/agents', to: '.claude/agents' },
   { type: 'dir', from: 'src/skills', to: '.claude/skills' },
@@ -71,8 +100,25 @@ const exists = (p) =>
     () => false,
   );
 
+// Writes one planned file to disk — a straight copy, or for a `merge`
+// entry, the shell template with {{CORE_SECTION}} replaced by the
+// chosen core's include.
+async function writePlannedFile(f) {
+  await mkdir(dirname(f.dest), { recursive: true });
+  if (f.merge) {
+    const shell = await readFile(join(PKG_ROOT, f.merge.shell), 'utf8');
+    const section = await readFile(join(PKG_ROOT, f.merge.include), 'utf8');
+    await writeFile(f.dest, shell.replaceAll('{{CORE_SECTION}}', section.trimEnd()));
+    return;
+  }
+  await cp(f.src, f.dest);
+}
+
 // Every destination file this plan would write, resolved absolute.
 async function plannedFiles(entry) {
+  if (entry.type === 'merge') {
+    return [{ dest: join(DEST_ROOT, entry.to), merge: entry }];
+  }
   const src = join(PKG_ROOT, entry.from);
   if (entry.type === 'file') {
     return [{ src, dest: join(DEST_ROOT, entry.to) }];
@@ -92,7 +138,8 @@ async function plannedFiles(entry) {
   return out;
 }
 
-function help() {
+async function help() {
+  const cores = await availableCores();
   console.log(`
 ${bold('Hedgehog installer')}
 
@@ -101,28 +148,40 @@ CLAUDE.md / TODO.md templates into the repo root, so the discipline is
 committed alongside your code.
 
 ${bold('Usage')}
-  npx @skyf0xx/hedgehog init            scaffold into the current directory
-  npx @skyf0xx/hedgehog init --force    overwrite existing files
-  npx @skyf0xx/hedgehog update          refresh .claude/agents + .claude/skills
+  npx @skyf0xx/hedgehog init                    scaffold, ${DEFAULT_CORE} core (default)
+  npx @skyf0xx/hedgehog init --core=<name>      scaffold with a named core instead
+  npx @skyf0xx/hedgehog init --force            overwrite existing files
+  npx @skyf0xx/hedgehog update                  refresh .claude/agents + .claude/skills
   npx @skyf0xx/hedgehog --help
 
-After it runs, commit the .claude/ payload, open Claude Code, and say
-"bootstrap this project" to trigger the hedgehog-bootstrap skill.
+Available cores: ${cores.join(', ')}
+
+After it runs, commit the payload, open Claude Code, and say
+"bootstrap this project" to trigger the matching bootstrap-core skill.
 
 ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
 agent/skill changes from a newer release. It always overwrites those two
-directories and never touches CLAUDE.md, TODO.md, golden-core, or
+directories and never touches CLAUDE.md, TODO.md, the core workspace, or
 skills/BMAD — those are project-specific or updated deliberately, not by
 this command.
 `);
 }
 
-async function init({ force }) {
+async function init({ force, core }) {
+  const cores = await availableCores();
+  if (!cores.includes(core)) {
+    console.error(
+      `${red('Unknown core:')} ${core}\n\nAvailable cores: ${cores.join(', ')}\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   // Resolve the full list of writes up front so we can detect conflicts
   // before touching anything.
   const groups = [];
-  for (const entry of PLAN) {
+  for (const entry of plan(core)) {
     const files = await plannedFiles(entry);
     groups.push({ entry, files });
   }
@@ -151,8 +210,7 @@ async function init({ force }) {
   for (const { files } of groups) {
     for (const f of files) {
       const already = await exists(f.dest);
-      await mkdir(dirname(f.dest), { recursive: true });
-      await cp(f.src, f.dest);
+      await writePlannedFile(f);
       if (already) overwritten++;
       else written++;
       const label = already ? yellow('overwrite') : green('create');
@@ -169,11 +227,13 @@ async function init({ force }) {
   console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
   console.log(`  2. ${bold('pnpm install')}`);
   console.log(`  3. Open Claude Code and say: ${bold('"bootstrap this project"')}\n`);
+  console.log(dim(`Core: ${bold(core)} — already scaffolded and verified.`));
   console.log(
     dim(
-      'The core workspace (Nx, packages/config, packages/db, apps/api,\n' +
-        'apps/web) is already scaffolded and verified — bootstrap now only\n' +
-        'runs whichever add-ons (Auth, Queue, Mobile) Intake calls for.',
+      core === DEFAULT_CORE
+        ? '(Nx, packages/config, packages/db, apps/api, apps/web) — bootstrap\n' +
+            'now only runs whichever add-ons (Auth, Queue, Mobile) Intake calls for.'
+        : 'bootstrap now only runs whichever add-on steps this core defines, if any.',
     ),
   );
 }
@@ -205,7 +265,7 @@ async function update() {
   console.log(`  2. ${bold('git add -A && git commit -m "chore: update hedgehog"')}\n`);
   console.log(
     dim(
-      'CLAUDE.md, TODO.md, the golden-core workspace, and skills/BMAD are\n' +
+      'CLAUDE.md, TODO.md, the core workspace, and skills/BMAD are\n' +
         'untouched — those carry project-specific or write-once content.',
     ),
   );
@@ -214,14 +274,16 @@ async function update() {
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
-    help();
+    await help();
     return;
   }
   const cmd = args[0];
   const force = args.includes('--force') || args.includes('-f');
+  const coreArg = args.find((a) => a.startsWith('--core='));
+  const core = coreArg ? coreArg.slice('--core='.length) : DEFAULT_CORE;
 
   if (cmd === 'init') {
-    await init({ force });
+    await init({ force, core });
     return;
   }
 
@@ -231,7 +293,7 @@ async function main() {
   }
 
   console.error(`${red('Unknown command:')} ${cmd}\n`);
-  help();
+  await help();
   process.exitCode = 1;
 }
 
