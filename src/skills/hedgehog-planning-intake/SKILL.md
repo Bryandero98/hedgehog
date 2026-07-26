@@ -1,19 +1,24 @@
 ---
 name: hedgehog-planning-intake
-description: Use once per project on the full-stack-app core, at the start, and again on a scoped pass when new domain scope enters play — runs the vendored BMAD-METHOD planning shelf, mines its output into scope boundary/domain modules/the Add-ons decision, and gates on Confirm & Lock before anything is written. Invoked by the `planner` agent after it picks full-stack-app at Phase 0; don't run standalone, and don't run for landing-page (see `hedgehog-landing-loop` instead).
+description: Use once per project, at the start, on either core — Phase 0 (running the vendored BMAD-METHOD planning shelf) is shared by full-stack-app and landing-page alike; Phase 1 (mining BMAD's output into scope boundary/domain modules/the Add-ons decision) is full-stack-app's own procedure, run again on a scoped pass when new domain scope enters play. Invoked by the `planner` agent after Phase 0 core selection; don't run standalone. landing-page runs this skill's Phase 0, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1.
 ---
 
-# Hedgehog Planning Intake (full-stack-app core)
+# Hedgehog Planning Intake
 
-Turns a person's description of a problem into `TODO.md` (with its
-`## Add-ons` block) and `docs/design/<module>-notes.md` per module, by
-running the vendored BMAD-METHOD planning shelf and mining its output.
-This is the mechanics `planner` calls once its Phase 0 core-selection
-check picks `full-stack-app` — the interpretive judgment (scope boundary,
-module split, Add-ons decision, Confirm & Lock) still belongs to
-`planner`; this skill is the fixed procedure that judgment runs inside.
+Turns a person's description of a problem into planning material, by
+running the vendored BMAD-METHOD planning shelf (Phase 0, shared by both
+cores) and mining its output. On full-stack-app that mining is this
+skill's own Phase 1, into scope boundary/domain modules/Add-ons; on
+landing-page it's `hedgehog-landing-loop`'s planning-intake section, into
+a subject/audience/job statement. This is the mechanics `planner` calls
+once its Phase 0 core-selection check has picked a core — the
+interpretive judgment (scope boundary, module split, Add-ons decision on
+full-stack-app; subject statement on landing-page; Confirm & Lock either
+way) belongs to `planner`; this skill (Phase 0, and Phase 1 on
+full-stack-app) and `hedgehog-landing-loop` (landing-page's own mining)
+are the fixed procedures that judgment runs inside.
 
-## Phase 0 — BMAD elicitation
+## Phase 0 — BMAD elicitation (both cores)
 
 State the BMAD attribution, then run the vendored shelf in full
 sequence, every time — no per-project skip logic, no reduced default
@@ -55,13 +60,21 @@ Every file/folder carries a one-line attribution header. `00-manifest.md`
 states the source repo, pinned version (`skills/BMAD/ATTRIBUTION.md` has
 the pinned commit), date, and which skills ran.
 
-`.hedgehog/BMAD/` is archival and immutable once written. Nothing in
-`hedgehog-loop`'s day-to-day operation, `hedgehog-bootstrap`, or
-`reviewer` reads this folder live — `planner` reads it exactly once,
-right after the shelf completes, to mine it. After that it's historical
-record only, the same relationship the commit log has to a merged PR.
+`.hedgehog/BMAD/` is archival and immutable once written, on both cores.
+Nothing in `hedgehog-loop`'s day-to-day operation, `hedgehog-bootstrap`,
+or `reviewer` reads this folder live — `planner` reads it exactly once,
+right after the shelf completes, to mine it (this skill's Phase 1 below
+on full-stack-app; `hedgehog-landing-loop`'s planning-intake section on
+landing-page). After that it's historical record only, the same
+relationship the commit log has to a merged PR.
 
-## Phase 1 — Mining
+## Phase 1 — Mining (full-stack-app only)
+
+landing-page's counterpart to this Phase 1 is
+`hedgehog-landing-loop`'s own planning-intake section, run once Phase 0
+above completes: it mines the same `.hedgehog/BMAD/` archive into a
+subject/audience/job statement, in place of the scope boundary/domain
+modules/Add-ons decision this Phase 1 produces.
 
 Read `.hedgehog/BMAD/` once and do the interpretive work BMAD's docs
 don't do for you — none of BMAD's outputs contain a ready-made

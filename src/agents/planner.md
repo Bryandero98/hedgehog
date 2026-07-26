@@ -90,12 +90,19 @@ Once Phase 0 picks a core, run that core's own intake procedure:
   Hedgehog starts where BMAD's output ends. That skill also owns the
   fixed `## Add-ons` block format `TODO.md` carries.
 - **`landing-page`** → open `hedgehog-landing-loop`'s planning-intake
-  section and follow it: a short structured interview for the subject
-  statement (concrete subject, audience, the page's single job), no BMAD
-  shelf involved — a one-page artifact doesn't carry a PRD's worth of
-  material, and running the full BMAD shelf against it would be exactly
-  the ceremony-on-ceremony this core exists to avoid. That skill owns
-  `.hedgehog/chain/00-brief.md` and this core's own Confirm & Lock stage.
+  section and follow it: it opens with `hedgehog-planning-intake`'s
+  Phase 0 (the same vendored BMAD shelf `full-stack-app` runs, in full,
+  archived to `.hedgehog/BMAD/` — the same skill, not a separate copy of
+  its steps), then does its own mining into a draft subject statement
+  (concrete subject, audience, the page's single job), the landing-page
+  counterpart to `hedgehog-planning-intake`'s Phase 1 (domain modules and
+  an Add-ons decision on full-stack-app). The mined draft is shown back
+  at this core's own Confirm & Lock stage, pre-filled from BMAD's output,
+  for the user to accept or correct. State the same BMAD attribution as
+  full-stack-app before that Phase 0 begins. `hedgehog-landing-loop`
+  owns `.hedgehog/chain/00-brief.md` and this core's own Confirm & Lock
+  stage; `.hedgehog/BMAD/` is written by the shared Phase 0 in
+  `hedgehog-planning-intake`.
 
 Either way, this is the mechanical procedure; the judgment — what's
 actually in scope, where a table becomes a module (full-stack-app) or
@@ -118,9 +125,12 @@ throughout.
   schema. Own `.hedgehog/BMAD/` (archival, written once, never edited
   after), `TODO.md`'s `## Add-ons` block, and
   `docs/design/<module>-notes.md` as artifacts.
-- **landing-page**: run the short structured interview for the subject
-  statement (subject, audience, single page job) — no BMAD shelf. Own
-  `.hedgehog/chain/00-brief.md` as the artifact.
+- **landing-page**: run the same vendored BMAD shelf in full, then mine
+  its output into a draft subject statement (subject, audience, single
+  page job) instead of scope boundary/domain modules/Add-ons — shown
+  back at this core's own Confirm & Lock for the user to accept or
+  correct. Own `.hedgehog/BMAD/` (archival, written once, never edited
+  after) and `.hedgehog/chain/00-brief.md` as artifacts.
 - Either way: update `TODO.md` to reflect the checklist for what's in
   scope, mirroring the chosen core's own phase/step structure.
 
@@ -139,8 +149,10 @@ throughout.
      then mine `.hedgehog/BMAD/` into scope boundary, domain modules,
      cross-module FKs, and the Add-ons decision — asking the user
      directly only for whatever BMAD's docs leave unresolved.
-   - landing-page: run the structured interview for the subject
-     statement, asking directly for whatever isn't already stated.
+   - landing-page: run the same vendored BMAD shelf in full, then mine
+     `.hedgehog/BMAD/` into a draft subject statement (subject, audience,
+     single page job) — asking the user directly only for whatever
+     BMAD's docs leave unresolved.
 5. **Run that core's Confirm & Lock** before writing anything.
 6. **Write/update `TODO.md`**: a checklist mirroring the chosen core's
    own phase/step structure — Bootstrap/Phase A/Phase B and the
@@ -181,17 +193,21 @@ throughout.
 - `docs/design/<module>-notes.md` is not optional on full-stack-app —
   every module in scope gets one, regardless of how much material the UX
   spec produced.
-- Archival planning output is write-once. Once a file is written, it's
-  historical record — don't edit it to reflect a later decision; a later
-  run writes its own dated pass if intake re-runs (full-stack-app only —
-  landing-page's scope is fixed at Phase 1, not re-entered).
+- Archival planning output is write-once on both cores. Once a file is
+  written, it's historical record — don't edit it to reflect a later
+  decision. On full-stack-app a later run writes its own dated pass if
+  intake re-runs; landing-page's scope is fixed at Phase 1, not
+  re-entered, so its `.hedgehog/BMAD/` and `.hedgehog/chain/00-brief.md`
+  are written exactly once, ever.
 - Never invent scope. Ambiguous scope means stop and ask — this applies
   equally to a full-stack-app module boundary and a landing-page subject
-  statement.
+  statement, whether or not BMAD's docs offered a mineable answer.
 - Never default a full-stack-app add-on on or off without either a
   concrete trigger in BMAD's docs or a direct answer to a gap-fill
   question — an unresolved add-on left as a guess is the same mistake as
-  an unasked scope question.
+  an unasked scope question. The landing-page equivalent: never invent
+  the subject, audience, or job from BMAD's material where it's
+  genuinely silent — a gap-fill question, not a guess.
 - Don't replan a step sequence within a core — fixed by that core's own
   loop skill, not a per-project decision.
 - Don't replan a core's stack itself — fixed by that core's bootstrap
@@ -202,9 +218,9 @@ throughout.
   lives in the commit log via the Correction Protocol, and in this
   core's own archival planning output for the planning material itself.
 - Never route back into BMAD's own chain-forward suggestions or
-  `bmad-party-mode` (full-stack-app only) — those are stripped from the
-  vendored skills. Control returns to you after each skill, not to
-  BMAD's own routing.
+  `bmad-party-mode` — those are stripped from the vendored skills on
+  both cores. Control returns to you after each skill, not to BMAD's own
+  routing.
 
 ## Weaknesses
 
@@ -214,10 +230,13 @@ throughout.
   fuzzy. When in doubt between "one module" and "two modules," prefer one
   table = one module literally, and let the schema step prove it right or
   wrong.
-- On full-stack-app, BMAD's docs give you material, not decisions — a
-  brief that mentions "notify the user" without saying how is not itself
-  an Auth or Queue trigger; read for the concrete operational shape, not
-  just the vocabulary, before deciding a trigger fired.
+- BMAD's docs give you material, not decisions, on either core — a
+  full-stack-app brief that mentions "notify the user" without saying
+  how is not itself an Auth or Queue trigger; a landing-page brief that
+  mentions a feature in passing is not itself the subject, audience, or
+  job unless the material actually commits to it. Read for the concrete
+  shape, not just the vocabulary, before mining a trigger or a subject
+  statement out of prose that was gesturing at something else.
 - Core selection (Phase 0) is a judgment call with no BMAD-equivalent
   elicitation behind it — get it wrong and everything downstream (stack,
   agents, step sequence) is wrong too. When a description is genuinely

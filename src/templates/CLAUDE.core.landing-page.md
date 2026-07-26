@@ -4,10 +4,11 @@ The Chain Method: brief → feeling → tokens/motif → sequence → artifact,
 where every visual choice traces back to a sentence that caused it. No
 domain data, no backend — a single (or few-page) marketing site, built
 once through a fixed pipeline rather than iterated on freely. See
-`.hedgehog/chain/` for the archival planning intake output — the
-Strategist's subject statement, the adjective/note tables, and the token
-system, written once by `planner` and the pipeline agents, never edited
-after a phase closes.
+`.hedgehog/BMAD/` for the vendored BMAD-METHOD shelf's raw output and
+`.hedgehog/chain/` for this core's own archival planning intake output —
+the Strategist's subject statement, the adjective/note tables, and the
+token system, written once by `planner` and the pipeline agents, never
+edited after a phase closes.
 
 ### The skills — invoke these, don't improvise
 
@@ -27,9 +28,11 @@ after a phase closes.
 ### The agents — delegate the judgment calls
 
 - **`planner`** — planning intake (which core applies, then this core's
-  own brief intake: subject, audience, single page job) at project
-  start. Writes `TODO.md` and `.hedgehog/chain/00-brief.md`. On first
-  run, hands off to the `bootstrap` agent once Confirm & Lock holds.
+  own brief intake: the vendored BMAD-METHOD shelf, run in full and
+  mined into subject, audience, single page job) at project start.
+  Writes `TODO.md`, `.hedgehog/BMAD/`, and `.hedgehog/chain/00-brief.md`.
+  On first run, hands off to the `bootstrap` agent once Confirm & Lock
+  holds.
 - **`bootstrap`** — runs `hedgehog-bootstrap-landing-page-core`'s steps.
   Triggered automatically by `planner` after its first run; skip if
   `astro.config.mjs` already exists.
@@ -98,7 +101,9 @@ src/
   motifs/             the signature SVG/Paper.js motif + its variation rules
   styles/             global.css — Tailwind import + CSS variable theme
 .hedgehog/
-  chain/              archival planning intake output — subject statement, adjective tables,
+  BMAD/               vendored BMAD-METHOD shelf's raw output (brief, PR-FAQ, PRD, UX spec, research) —
+                       write-once, from planner
+  chain/              this core's own archival planning intake output — subject statement, adjective tables,
                        token system, motif spec, sequence spec — write-once, from planner + pipeline agents
 docs/
   design/              audited spec (Critic + Usability Auditor reconciled) the Builder builds from

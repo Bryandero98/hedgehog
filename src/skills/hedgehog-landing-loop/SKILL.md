@@ -19,31 +19,55 @@ enforces mechanically, the same role Nx module boundaries play for
 
 ## Planning intake (Phase 0, before any build phase)
 
-Run once, before `bootstrap` scaffolds the workspace. No BMAD shelf here
-— a landing page's brief doesn't carry a PRD's worth of material, and
-eliciting one would be ceremony this core exists specifically to avoid.
+Run once, before `bootstrap` scaffolds the workspace. Opens with
+`hedgehog-planning-intake`'s Phase 0 — the same vendored BMAD-METHOD
+shelf `full-stack-app` runs, in the same full sequence, archived to the
+same `.hedgehog/BMAD/` layout. After that Phase 0 completes, this
+section does its own mining — a one-paragraph subject statement, the
+landing-page counterpart to `hedgehog-planning-intake`'s own Phase 1
+(domain modules and an Add-ons decision on full-stack-app). That mined
+draft becomes the first draft of `.hedgehog/chain/00-brief.md`, shown
+back at Confirm & Lock for the user to accept or correct.
 
-1. **Structured interview** for the subject statement: the concrete
-   subject (what is this actually selling/announcing/showing), the
-   audience, and the page's single job. If the description doesn't pin
-   these down, ask directly — don't proceed on vagueness, and don't
-   invent an audience or job that wasn't stated or confirmed.
-2. **Write `.hedgehog/chain/00-brief.md`** — the subject statement, one
-   paragraph, plus the audience and single job named explicitly. This is
-   the root every downstream phase's traceability audit walks back to.
-3. **Confirm & Lock** — show the subject statement, audience, and job
-   back in plain terms before writing `TODO.md`. State plainly what
-   happens on confirmation: *"This locks in the brief, commits it
-   (`chore(planning): intake`), and hands off to `bootstrap` to scaffold
-   the Astro workspace. The Strategist phase starts once that closes.
-   Anything wrong or missing — say so now."* Wait for explicit
-   go-ahead — a revision here is just another pass at the interview, not
-   a Correction Protocol entry, since nothing downstream exists yet.
-4. **Write `TODO.md`** mirroring the phase table below, then commit
+1. **Run `hedgehog-planning-intake`'s Phase 0 in full**: state the BMAD
+   attribution it states, then run `bmad-brainstorming`,
+   `bmad-product-brief`, `bmad-prfaq`, `bmad-prd`, `bmad-ux`,
+   `bmad-deep-recon`, archived to `.hedgehog/BMAD/` with the fixed layout
+   and `00-manifest.md` attribution header that skill's Phase 0 defines.
+   `.hedgehog/BMAD/` is archival and immutable once written, same as
+   `full-stack-app` — nothing in this core's day-to-day loop reads it
+   live after this step mines it once.
+2. **Mine a draft subject statement** from `.hedgehog/BMAD/`: the
+   concrete subject (what is this actually selling/announcing/showing),
+   the audience, and the page's single job, sourced from the brief and
+   PR-FAQ (a landing page's brief and PR-FAQ are the closest BMAD
+   artifacts to a subject statement — the PRD's Glossary and deep-recon
+   output are read for supporting color, not required to resolve a
+   one-page subject/audience/job). Where BMAD's material leaves any of
+   the three genuinely unresolved, ask directly — don't proceed on
+   vagueness, and don't invent an audience or job that wasn't stated,
+   mined, or confirmed.
+3. **Write `.hedgehog/chain/00-brief.md`** — the mined subject statement,
+   one paragraph, plus the audience and single job named explicitly.
+   This is the root every downstream phase's traceability audit walks
+   back to; it draws from BMAD's archive but is its own file, in this
+   core's own `.hedgehog/chain/` layout, not a pointer into
+   `.hedgehog/BMAD/`.
+4. **Confirm & Lock** — show the mined subject statement, audience, and
+   job back in plain terms, alongside which BMAD skills ran and where
+   their output lives (`.hedgehog/BMAD/`), before writing `TODO.md`.
+   State plainly what happens on confirmation: *"This locks in the
+   brief, commits it (`chore(planning): intake`), and hands off to
+   `bootstrap` to scaffold the Astro workspace. The Strategist phase
+   starts once that closes. Anything wrong or missing — say so now."*
+   Wait for explicit go-ahead — a revision here is just another mining
+   pass against the same BMAD archive, not a Correction Protocol entry,
+   since nothing downstream exists yet.
+5. **Write `TODO.md`** mirroring the phase table below, then commit
    planning intake's output as one commit, `chore(planning): intake` —
-   `TODO.md`, `.hedgehog/chain/00-brief.md`, and root `CLAUDE.md`'s
-   filled placeholders.
-5. **Hand off to `bootstrap`** once the commit lands.
+   `TODO.md`, `.hedgehog/BMAD/`, `.hedgehog/chain/00-brief.md`, and root
+   `CLAUDE.md`'s filled placeholders.
+6. **Hand off to `bootstrap`** once the commit lands.
 
 `planner` owns this section; see that agent for when it runs.
 

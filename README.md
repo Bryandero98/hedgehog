@@ -92,8 +92,8 @@ there's no domain module to build, so the enforced order is a pipeline
 instead of a layer sequence:
 
 ``` text
-Planning intake - subject/audience/single-job interview, no BMAD shelf
-(planner agent)
+Planning intake - BMAD-METHOD's brief/PR-FAQ/PRD/UX spec, mined into a
+subject/audience/single-job statement (planner agent)
   ↓
 Bootstrap (once per project - Astro + Tailwind workspace)
   ↓
@@ -133,10 +133,11 @@ npx @skyf0xx/hedgehog init --core=landing-page
 Then open Claude Code and describe what you want to build. The
 `planner` agent decides which core actually applies (overriding the
 installer's default if what you describe doesn't match it), then runs
-that core's own planning intake — BMAD-METHOD's brainstorming, brief,
-PRD, and UX spec for `full-stack-app`; a short subject/audience/job
-interview for `landing-page`. Once you confirm, it scaffolds the project
-itself.
+that core's own planning intake — both cores run BMAD-METHOD's
+brainstorming, brief, PR-FAQ, PRD, UX spec, and deep-recon in full;
+`full-stack-app` mines that output into scope boundary and domain
+vocabulary, `landing-page` mines it into a subject/audience/job
+statement. Once you confirm, it scaffolds the project itself.
 
 The chosen core's workspace - for `full-stack-app`: Nx, `packages/config`,
 `packages/db`, `apps/api`, `apps/web`, and every enforcement file; for
@@ -226,7 +227,7 @@ Method — nothing here is a default reached for out of habit:
 
 Superpowers and BMAD both improve on raw prompting: one gives the AI good habits, the other a planning process. Alone, either can still be broken by convention.
 
-Hedgehog runs BMAD for planning on the `full-stack-app` core (a lighter, core-specific intake on `landing-page`), then enforces the build that follows with tooling, not convention — Nx boundaries, commit hooks, and phase gates on `full-stack-app`; a redline-gated pipeline on `landing-page`.
+Hedgehog runs BMAD for planning on both cores — the same full shelf either way, mined differently per core's own shape — then enforces the build that follows with tooling, not convention — Nx boundaries, commit hooks, and phase gates on `full-stack-app`; a redline-gated pipeline on `landing-page`.
 
 | | Superpowers | BMAD | Hedgehog + BMAD |
 | --- | --- | --- | --- |

@@ -23,8 +23,11 @@ discipline's stance and rationale.
     Mobile) planning intake turned on, one commit per step, after core
     has landed.
   - `hedgehog-planning-intake` — runs the vendored BMAD-METHOD planning
-    shelf (`skills/BMAD/`) and mines its output into scope boundary,
-    domain modules, and the Add-ons decision. Invoked by `planner`.
+    shelf (`skills/BMAD/`), shared by both cores, and mines its output
+    into scope boundary, domain modules, and the Add-ons decision on
+    `full-stack-app`. Invoked by `planner`; `landing-page` runs this
+    skill's shelf too, then mines the same archive through
+    `hedgehog-landing-loop`'s own planning-intake section instead.
   - `hedgehog-loop` — the operating loop for every unit of work once
     bootstrap has run: the domain module step sequence, phase rules, and
     Correction Protocol.
