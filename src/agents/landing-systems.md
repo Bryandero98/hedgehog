@@ -155,7 +155,11 @@ Borrowed technique:
 
 Author the motif as hand-built SVG, or as a Paper.js sketch if it needs
 to evolve programmatically across sections — output either the SVG
-markup or the Paper.js setup into `src/motifs/`.
+markup or the Paper.js setup into `src/motifs/`. Use the
+`svg-motif-authoring` skill for the actual drawing: build the shape from
+primitives and boolean ops or a parametric generator, never a hand-typed
+freehand bezier path — that's the difference between a sourced motif and
+generic clip-art geometry.
 
 ## Workflow
 
