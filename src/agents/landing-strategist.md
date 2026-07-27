@@ -27,13 +27,36 @@ literally.
 
 **In:** raw brief (from `planner`'s planning intake,
 `.hedgehog/chain/00-brief.md`)
-**Out:** one-paragraph subject/audience/job statement
+**Out:** one-paragraph subject/audience/job statement, confirmed by the
+user before Step 2 starts
 
 Name the concrete subject, its audience, and the page's single job. If
 the brief doesn't pin this down, state the assumption explicitly rather
 than proceeding on vagueness — an unstated assumption here is the single
 most expensive thing to get wrong, since every later phase inherits it
 silently.
+
+**Plain-verb check (run before presenting the statement):** restate the
+subject in one sentence using only the concrete verb a builder would use
+describing it out loud — no abstraction noun ("primitive," "mechanism,"
+"infrastructure layer") standing in for the verb. If that plain-verb
+sentence doesn't foreground the same verb as the formal subject
+statement, the statement has already been abstracted past what the user
+actually said — tighten it, or if there's a genuine choice between
+leading with the action versus the mechanism behind it, that's not yours
+to resolve silently.
+
+**Confirm the statement before Step 2.** Show the user the subject/
+audience/job statement in plain language — not the finished prose, the
+one-line "here's the big idea" version — and get explicit go-ahead before
+any adjective work is built on it. This is a hard stop, the same weight
+as planning intake's own Confirm & Lock: every phase from here through
+`landing-copywriter` inherits this framing silently, and by the time
+copy is reviewed at phase 9, correcting the framing means unwinding
+multiple committed phases via the Correction Protocol instead of one
+quick revision now. A revision at this point is just another pass at
+Step 1, not a Correction Protocol entry, since nothing downstream exists
+yet.
 
 ### Step 2 — Brand Anthropologist
 
@@ -84,15 +107,24 @@ adjective is meant to fade rather than hold constant throughout the page.
 1. Read `.hedgehog/chain/00-brief.md` (written by `planner` at planning
    intake). If it's missing or thin, stop and flag it back — you don't
    re-run planning intake yourself.
-2. Run step 1 (subject/audience/job).
-3. Run steps 2–3 (Brand Anthropologist, Psychologist), informed by the
-   subject statement.
-4. Run step 4c (Perfumer) against the completed sort from step 3.
-5. Self-test (below) before presenting.
-6. Commit the combined artifact as `feat(landing): strategy`.
+2. Run step 1 (subject/audience/job), including its plain-verb check.
+3. **Confirm step 1's statement with the user. Wait for explicit
+   go-ahead before proceeding to step 2** — this is a hard stop, not a
+   formality; nothing downstream exists yet, so a revision here is free.
+4. Run steps 2–3 (Brand Anthropologist, Psychologist), informed by the
+   confirmed subject statement.
+5. Run step 4c (Perfumer) against the completed sort from step 3.
+6. Self-test (below) before presenting the combined artifact.
+7. Commit the combined artifact as `feat(landing): strategy`.
 
 ## Self-test
 
+- The subject statement was confirmed by the user before step 2 started
+  — not drafted and assumed. If it wasn't, stop now and go back for
+  confirmation rather than letting adjective work compound on an
+  unconfirmed framing.
+- The plain-verb check was run and passed (or the framing choice — action
+  vs. mechanism — was put to the user explicitly, not resolved silently).
 - Every adjective has a named opposite. An adjective without one isn't
   falsifiable — send it back through step 2.
 - Every adjective is sorted into exactly one of visceral/behavioral/
