@@ -147,6 +147,15 @@ one working-tree pass and needs splitting back into per-phase commits.
 
 ## Phase Transition Checks
 
+Before `landing-strategist`'s step 2 (Brand Anthropologist) starts,
+confirm step 1's subject/audience/job statement has been shown to and
+confirmed by the user — not just drafted. This is the cheapest point in
+the whole chain to correct the core framing (nothing downstream exists
+yet); every phase after it inherits that framing silently, and by the
+time `landing-copywriter` is reviewed at phase 9, a wrong framing means
+unwinding four committed phases via the Correction Protocol instead of
+one free revision here.
+
 Before `landing-critic` starts, confirm `landing-copywriter`'s copy has
 been presented to and confirmed by the user, not just written —
 `landing-critic`'s traceability audit reads confirmed copy, not a draft
