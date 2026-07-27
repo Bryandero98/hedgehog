@@ -1,6 +1,6 @@
 ---
 name: hedgehog-bootstrap-landing-page-core
-description: Use once, at the start of a new Hedgehog project on the landing-page core, to land the pre-verified Astro + Tailwind workspace and verify it's green. Runs as the only move of the `bootstrap` agent on this core — there are no add-on steps, unlike full-stack-app. Invoked automatically by `planner` after Confirm & Lock.
+description: Use once, at the start of a new Hedgehog project on the landing-page core, to land the pre-verified Astro + Tailwind v4 workspace and verify it's green. Runs as the only move of the `bootstrap` agent on this core — there are no add-on steps, unlike full-stack-app. Invoked automatically by `planner` after Confirm & Lock.
 ---
 
 # Hedgehog Bootstrap — landing-page Core
@@ -9,8 +9,9 @@ Lands the whole of a `landing-page` project's workspace — there's no
 add-on layer to run after it, unlike `full-stack-app`'s
 `hedgehog-bootstrap` — by copying a pre-built, pre-verified workspace
 (`src/golden-cores/landing-page/` in the Hedgehog package) rather than
-generating it live: Astro workspace, Tailwind token-layer config, the
-library set this core is built on (GSAP, Lenis, SplitType, Paper.js).
+generating it live: Astro workspace, Tailwind v4 CSS-first token-layer
+config, the library set this core is built on (GSAP, Lenis, SplitType,
+p5.js, ogl).
 This piece is deterministic — the same commands produce the same output
 on every project — so the output is committed once, upstream, and copied
 here instead of re-derived by an agent on every run.
@@ -27,17 +28,15 @@ Hedgehog package, copied to the repo root:
 - Root: `astro.config.mjs`, `package.json` (with the `dev` script —
   `astro dev` — and every library in the stack pinned), `tsconfig.json`,
   `eslint.config.mjs`, `.prettierrc.js`, `.gitignore`, `pnpm-lock.yaml`.
-- `tailwind.config.ts` — the token layer only: no component classes, no
-  plugin beyond the base. Ships with placeholder tokens (a neutral
-  starting palette, a system type stack, a 4px spacing unit) that
-  `landing-systems` overwrites at its own phase — this file existing and
-  being wired into the build is what core guarantees, not any specific
-  token values.
 - `src/pages/index.astro` — a minimal placeholder page (proves the build
   pipeline works end to end), replaced by `landing-builder`'s own output
   at the build phase.
-- `src/styles/global.css` — the Tailwind import and CSS custom-property
-  scaffold `landing-systems`'s token system writes into.
+- `src/styles/global.css` — the Tailwind v4 CSS-first import and the
+  `@theme` token block: no component classes, no plugin beyond the base.
+  Ships with placeholder tokens (a neutral starting palette, a system
+  type stack, a 4px spacing unit) that `landing-systems` overwrites
+  entirely at its own phase — this block existing and being wired into
+  the build is what core guarantees, not any specific token values.
 - `src/sections/`, `src/motifs/` — empty, with a `.gitkeep`; real content
   starts at the systems and build phases.
 
@@ -125,13 +124,6 @@ like an unnecessary pin.
   root. All four are stripped before syncing — they'd otherwise collide
   with (or silently shadow) the project's real root `CLAUDE.md` and
   Hedgehog's own workspace conventions.
-- **MorphSVGPlugin ships inside the `gsap` package itself** — no
-  separate install, no Club GreenSock membership, no private registry.
-  GreenSock made every plugin free when GSAP joined Webflow in 2024.
-  Import it as `import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin'`
-  directly from the `gsap` dependency already in `package.json`. Don't
-  reintroduce a separate paid-plugin workaround if this comes up again —
-  verify current licensing against gsap.com before assuming otherwise.
 
 ## If verification fails
 

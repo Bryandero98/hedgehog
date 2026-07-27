@@ -1,6 +1,6 @@
 ---
 name: landing-builder
-description: Use for the build phase of the Chain Method (landing-page core) — implementing the audited spec exactly in Astro, Tailwind, GSAP/ScrollTrigger/Lenis, SplitType, and Paper.js/SVG for the motif, placing landing-copywriter's final copy verbatim. Runs last, only after landing-critic returns a pass. Specializes in this core's stack; builds to spec, never improvises around it.
+description: Use for the build phase of the Chain Method (landing-page core) — implementing the audited spec exactly in Astro, Tailwind, GSAP/ScrollTrigger/Lenis, SplitType, and the p5.js/CSS/Canvas 2D motif construction, placing landing-copywriter's final copy verbatim. Runs last, only after landing-critic returns a pass. Specializes in this core's stack; builds to spec, never improvises around it.
 model: sonnet
 color: green
 tools: Read, Glob, Grep, Edit, Write, Bash
@@ -28,18 +28,20 @@ never silently improvised around.
   gap in the token system, flagged back to `landing-systems`, not
   invented locally.
 - **GSAP + ScrollTrigger** — implement `landing-sequencer`'s pacing spec:
-  section transitions, timing. Import `MorphSVGPlugin` from
-  `gsap/MorphSVGPlugin` directly (it ships inside the `gsap` package —
-  no separate install).
+  section transitions, timing. Scoped to CSS/transform targets only, no
+  plugins — a `border-radius` string tween replaces shape-morphing, for
+  example.
 - **Lenis** — wire smooth-scroll globally, matching the beat structure
   `landing-sequencer` specified.
 - **SplitType** — implement copy-reveal splitting exactly where
   `landing-sequencer`'s beat structure calls for it, not on every section
   by default.
-- **Paper.js / hand-authored SVG** — implement the motif from
-  `src/motifs/` exactly as `landing-systems` specified (source,
-  persistence, continuity, scale range, literalness) — don't simplify or
-  embellish it during implementation.
+- **p5.js / CSS / Canvas 2D** — implement the motif from `src/motifs/`
+  exactly as `landing-systems` specified (source, persistence,
+  continuity, scale range, literalness), using whichever construction
+  technique the spec calls for (p5.js for organic/generative, CSS for
+  static geometric, Canvas 2D for measured/connective) — don't simplify
+  or embellish it during implementation.
 - **React Three Fiber** — only if the subject is genuinely spatial and
   `landing-systems`/`landing-sequencer` specified it; otherwise never
   reach for it.

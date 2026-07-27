@@ -34,12 +34,14 @@ Method: nothing here is a default reached for out of habit.
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Framework | Astro | Zero-JS-by-default shell; islands only where interaction is actually needed. |
-| Styling | Tailwind (v4, CSS-first) | Config as token layer only, no component library pre-deciding how things look. |
-| Animation | GSAP + ScrollTrigger | Owns per-section pacing and top/heart/base fade timing with real control. |
+| Styling | Tailwind v4 (CSS-first) | Config as token layer only, no component library pre-deciding how things look. |
+| Animation / pacing | GSAP + ScrollTrigger (CSS/transform targets only, no plugins) | Owns per-section pacing and top/heart/base fade timing with real control — no SVG dependency once scoped to CSS properties. |
 | Scroll feel | Lenis | The "weight and suspension" dial, instead of default browser scroll physics. |
 | Copy reveal | SplitType | Line/word/char splitting, makes copy rhythm visible in motion, not just static text. |
-| Motif | SVG-first + Paper.js | Hand-authored graphics; Paper.js for a motif that evolves (augmentation/inversion) across sections. |
-| Motif transforms | GSAP MorphSVGPlugin | Ships free inside the `gsap` package, for a motif that physically transforms across sections. |
-| Texture | Custom SVG noise/grain filter | Materiality layer nothing else in the stack owns. |
-| Design handoff | Figma MCP / Stitch MCP | Input only, at the Strategist/Builder boundaries; never allowed to set spacing/style defaults directly. |
+| Organic/generative motif | p5.js | Motif described as a rule (noise, jitter, growth) instead of hand-typed path data — reliable and animates naturally. |
+| Static geometric motif | CSS `clip-path` / gradients / `border-radius` | Simple shapes (spines, chevrons, blobs) with zero coordinate-guessing risk; GSAP-animatable directly. |
+| Measured/connective motif | Canvas 2D with computed coordinates | Threads/lines that align to real DOM positions, drawn from measured values, not imagined ones. |
+| Continuous background field | `ogl` (lightweight WebGL) or raw shader | One field spanning the full page height so sections read as windows onto one surface, not stacked blocks. |
+| Section boundary treatment | CSS `clip-path` irregular edges + `mix-blend-mode` overlap + negative-margin overlap | Breaks the hard horizontal seam between sections without any new dependency. |
+| Texture/grain | CSS `mask-image` + noise pattern | Materiality layer, no SVG filter needed. |
 | 3D | React Three Fiber | Only when the subject is genuinely spatial; skipped by default. |

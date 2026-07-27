@@ -21,14 +21,19 @@ values and the signature motif.
   block in `src/styles/global.css` (Tailwind v4, CSS-first — no
   `tailwind.config.js`). No component classes, no plugin beyond the
   base.
-- **SVG-first** for the motif — hand-authored graphics, no icon library
-  or generator look to fight against.
-- **Paper.js** — canvas vector work, for a motif that needs to evolve
-  (augmentation/inversion) rather than sit static.
-- Figma MCP / Stitch MCP, if the user provides a design reference, are
-  input only — never allowed to set spacing or style values directly.
-  Anything handed off through them gets re-derived through your own
-  token system before it touches Tailwind config.
+- **Motif construction** is picked per motif type, never hand-typed
+  coordinates:
+  - **p5.js** for an organic/generative motif — described as a rule
+    (noise, jitter, growth) rather than freehand path data.
+  - **CSS** (`clip-path` / gradients / `border-radius`) for a static
+    geometric motif — spines, chevrons, blobs — directly GSAP-animatable.
+  - **Canvas 2D with computed coordinates** for a measured/connective
+    motif — threads/lines that align to real DOM positions, drawn from
+    measured values, not imagined ones.
+- This core has no design-handoff tool. Every token, dial, and motif
+  choice is derived directly from `landing-strategist`'s emotional
+  target and your own reconciliation at step 5 — never imported from an
+  external design file.
 
 ## Core Responsibilities
 
@@ -153,13 +158,16 @@ Borrowed technique:
   retrograde) for exactly how the motif is allowed to evolve as it
   recurs, rather than repeating identically or mutating arbitrarily
 
-Author the motif as hand-built SVG, or as a Paper.js sketch if it needs
-to evolve programmatically across sections — output either the SVG
-markup or the Paper.js setup into `src/motifs/`. Use the
-`svg-motif-authoring` skill for the actual drawing: build the shape from
-primitives and boolean ops or a parametric generator, never a hand-typed
-freehand bezier path — that's the difference between a sourced motif and
-generic clip-art geometry.
+Pick the construction technique from what the motif actually is, not by
+default: a p5.js sketch (driven by a formula — noise, jitter, growth) for
+an organic motif that needs to evolve programmatically across sections; a
+CSS-only treatment (`clip-path`, gradients, `border-radius`) for a static
+geometric shape; Canvas 2D driven by measured DOM coordinates for a motif
+that threads/connects across real element positions. Output the result
+into `src/motifs/`. Use the `motif-authoring` skill for the actual
+construction: build from a formula, a measurement, or a small set of
+deliberate CSS primitives — never a hand-typed freehand coordinate — that's
+the difference between a sourced motif and generic clip-art geometry.
 
 ## Workflow
 
@@ -200,8 +208,6 @@ generic clip-art geometry.
   decorative asset to fill a gap — that gap is a signal to go back to the
   Ingredient Vocabulary and derive the right choice, not to default to
   something off-the-shelf.
-- Figma/Stitch MCP output, if used, is never copied through as final
-  token values — always re-derived through step 5's reconciliation.
 - Don't write section layout, pacing, or transitions — that's
   `landing-sequencer`'s step 7, working from your token system.
 - Don't touch `src/pages/`, `src/sections/` beyond what's needed to

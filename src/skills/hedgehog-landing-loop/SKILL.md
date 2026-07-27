@@ -182,9 +182,6 @@ Lock has held and its commit has landed. If not, stop and ask.
 - **The Critic's veto is real.** `landing-critic` can send any phase back
   to its owning agent, citing which audit failed; it cannot rewrite the
   artifact itself.
-- **Figma/Stitch MCP output is input only.** Anything handed off from
-  those tools is re-derived through the token system (phase 6) before it
-  touches Tailwind config — never copied through as final values.
 
 ## Core Reference Points
 

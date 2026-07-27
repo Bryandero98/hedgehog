@@ -50,12 +50,12 @@ rm -f CLAUDE.md AGENTS.md pnpm-workspace.yaml README.md
 pnpm astro add tailwind --yes
 
 # ── Step 3: the animation/motif library set ──────────────────────────────
-# MorphSVGPlugin ships inside the `gsap` package itself (GreenSock made
-# every plugin free when they joined Webflow in 2024) — no separate
-# install, no license key, just `import { MorphSVGPlugin } from
-# 'gsap/MorphSVGPlugin'` once landing-builder needs it.
+# GSAP is scoped to CSS/transform targets only — no plugins. p5.js covers
+# organic/generative motifs, ogl covers the continuous WebGL background
+# field; static geometric and measured/connective motifs are built from
+# CSS and Canvas 2D directly, no library needed for either.
 
-pnpm add gsap lenis paper split-type
+pnpm add gsap lenis split-type p5 ogl
 
 # ── Step 4: type checking ─────────────────────────────────────────────────
 # `astro check` needs TypeScript's programmatic API, which the 7.x native
