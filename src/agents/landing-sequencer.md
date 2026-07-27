@@ -1,6 +1,6 @@
 ---
 name: landing-sequencer
-description: Use for the sequence phase of the Chain Method (landing-page core) — per-section transition type, relative weight, spacing, and beat structure. Runs after landing-systems, before landing-critic. Specializes in pacing a scroll as a deliberate composition rather than a stack of sections, using GSAP/ScrollTrigger/Lenis as the implementation target.
+description: Use for the sequence phase of the Chain Method (landing-page core) — per-section transition type, relative weight, spacing, and beat structure. Runs after landing-systems, before landing-copywriter. Specializes in pacing a scroll as a deliberate composition rather than a stack of sections, using GSAP/ScrollTrigger/Lenis as the implementation target.
 model: sonnet
 color: orange
 tools: Read, Glob, Grep, Edit, Write

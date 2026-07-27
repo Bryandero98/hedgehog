@@ -82,26 +82,27 @@ artifact; everything else is strictly sequential.
 | # | Phase | Agent | Produces | Commit |
 |---|---|---|---|---|
 | 1 | Strategist | `landing-strategist` | Subject/audience/job statement (from planning intake — restated here as this phase's formal output) | `feat(landing): strategy` |
-| 1b | Diagnostician | `landing-strategist` | Awareness level, Sophistication level, Sin/desire, Big Idea, Category/Positioning statement | bundled into `feat(landing): strategy` |
-| 1c | Narrative Agent | `landing-strategist` | StoryBrand arc (Character → Problem → Guide → Plan → Action → Success/Failure), subject as Guide | bundled into `feat(landing): strategy` |
-| 1d | Objection Agent | `landing-strategist` | Ranked objection map, each tagged with a Cialdini rebuttal principle | bundled into `feat(landing): strategy` |
 | 2 | Brand Anthropologist | `landing-strategist` | 3–5 adjective pairs (each with a named opposite) | bundled into `feat(landing): strategy` |
 | 3 | Psychologist | `landing-strategist` | Adjectives sorted visceral / behavioral / reflective | bundled into `feat(landing): strategy` |
 | 4 | Perfumer | `landing-strategist` | Top/heart/base note timing per adjective, the page's peak moment, the ending treatment | bundled into `feat(landing): strategy` |
-| 5 | Ingredient Director + Copywriter | `landing-systems` | Dial table (color/type/form/space/motion) + voice spec + gated headline (2 backups) + objection rebuttal prose, run against the same sorted-adjectives/diagnosis input | `feat(landing): systems` |
+| 5 | Ingredient Director + Copywriter | `landing-systems` | Dial table (color/type/form/space/motion) + voice spec, run against the same sorted-adjectives input | `feat(landing): systems` |
 | 6 | Systems Designer | `landing-systems` | The token system (hex values, type roles, spacing unit, easing family, copy voice, with note timing attached) | bundled into `feat(landing): systems` |
 | 7 | Motif Artist | `landing-systems` | Signature motif (source, persistence, continuity, scale range, literalness) | bundled into `feat(landing): systems` |
 | 8 | Sequencer | `landing-sequencer` | Per-section transition type, weight, spacing, beat structure | `feat(landing): sequence` |
-| 9 | Critic + Usability Auditor | `landing-critic` | Redlines, or a pass — reconciled traceability/distinctiveness + usability audit | `feat(landing): audit` (no commit if redlined — see Correction Protocol) |
-| 10 | Builder | `landing-builder` | The built page, in Astro | `feat(landing): build` |
+| 9 | Copywriter | `landing-copywriter` | Final page copy — headline (2 backups), every section's body text, CTA text, written to the voice spec and beat structure, reviewed and confirmed by the user | `feat(landing): copy` |
+| 10 | Critic + Usability Auditor | `landing-critic` | Redlines, or a pass — reconciled traceability/distinctiveness + usability audit | `feat(landing): audit` (no commit if redlined — see Correction Protocol) |
+| 11 | Builder | `landing-builder` | The built page, in Astro | `feat(landing): build` |
 
-Phases 1 through 4 (including 1b/1c/1d) are one agent's context
-(`landing-strategist`) because they're one continuous judgment call —
-subject into diagnosis into feeling into timing — not separable artifacts
-with different tool footprints. Same reasoning collapses 5–7 into
-`landing-systems` (everything that becomes a Tailwind token or a line of
-copy) and 8/9's reconciliation into a single `landing-critic` pass. See
-each agent's own file for the internal sub-steps it runs through.
+Phases 1 through 4 are one agent's context (`landing-strategist`)
+because they're one continuous judgment call — subject into feeling into
+timing — not separable artifacts with different tool footprints. Same
+reasoning collapses 5–7 into `landing-systems` (everything that becomes
+a Tailwind token or a copy rule) and 10's reconciliation into a single
+`landing-critic` pass. Copy is its own phase, not folded into
+`landing-systems` or `landing-builder`, specifically so the user reads
+and confirms the actual words before either the audit or the build runs
+— see `landing-copywriter`'s own file for its writing standard and
+self-test.
 
 ## The Loop (every unit of work)
 
@@ -134,9 +135,9 @@ subject statement, or matches a known AI-default cluster:
 2. Patch the upstream phase directly, in place, via that phase's owning
    agent.
 3. Fast-forward every dependent phase that breaks. A token system change
-   (phase 6) ripples through the motif (7), the sequence (8), and the
-   build (10) — each gets its own small commit, in order, not one bundled
-   fix.
+   (phase 6) ripples through the motif (7), the sequence (8), the copy
+   (9, if the voice spec shifted), and the build (11) — each gets its own
+   small commit, in order, not one bundled fix.
 4. Re-run `landing-critic` against the patched chain before resuming.
 5. The commit messages are the explanation.
 6. Resume the loop.
@@ -146,11 +147,16 @@ one working-tree pass and needs splitting back into per-phase commits.
 
 ## Phase Transition Checks
 
+Before `landing-critic` starts, confirm `landing-copywriter`'s copy has
+been presented to and confirmed by the user, not just written —
+`landing-critic`'s traceability audit reads confirmed copy, not a draft
+still awaiting review.
+
 Before `landing-builder` starts, confirm:
 
 - `landing-critic` returned a pass, not a redline — a redlined spec never
   reaches the Builder; it goes back to the phase the redline names.
-- Every phase 1–9 has its commit landed.
+- Every phase 1–10 has its commit landed.
 
 Before `landing-strategist` starts, confirm planning intake's Confirm &
 Lock has held and its commit has landed. If not, stop and ask.
@@ -179,6 +185,25 @@ Lock has held and its commit has landed. If not, stop and ask.
 - **Figma/Stitch MCP output is input only.** Anything handed off from
   those tools is re-derived through the token system (phase 6) before it
   touches Tailwind config — never copied through as final values.
+
+## Core Reference Points
+
+The chain's judgment calls, across every phase, are grounded in these —
+not restated per-agent since they're shared foundation, not one phase's
+procedure:
+
+- Donald Norman, *Emotional Design* — visceral / behavioral / reflective
+  (`landing-strategist`'s step 3)
+- Scott McCloud, *Understanding Comics* — panel transition taxonomy,
+  closure (`landing-sequencer`'s step 7)
+- Will Eisner, *Comics and Sequential Art* — page as one composition
+  before it's a sequence (`landing-sequencer`'s step 7)
+- Rudolf Arnheim, *Art and Visual Perception* — visual weight, tension,
+  balance (`landing-systems`'s step 4a/5 dial reconciliation)
+- Josef Albers, *Interaction of Color* — color as relational, not
+  absolute (`landing-systems`'s step 4a color dial)
+- Dieter Rams / Massimo Vignelli — restraint as an emotional register
+  (`landing-critic`'s Chanel cut, step 8)
 
 ## Stop Condition
 

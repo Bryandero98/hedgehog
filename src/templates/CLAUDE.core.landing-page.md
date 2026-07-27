@@ -36,29 +36,29 @@ edited after a phase closes.
 - **`bootstrap`** — runs `hedgehog-bootstrap-landing-page-core`'s steps.
   Triggered automatically by `planner` after its first run; skip if
   `astro.config.mjs` already exists.
-- **`landing-strategist`** — Chain Method steps 1–3 and 4c, plus the
-  Diagnostician/Narrative Agent/Objection Agent sub-steps folded into
-  step 1: subject statement → Awareness/Sophistication/Big-Idea
-  diagnosis → narrative arc → objection map → adjective pairs
-  (visceral/behavioral/reflective) → top/heart/base note timing and the
-  page's single peak moment. One context, one artifact: the emotional
-  and persuasive target spec.
-- **`landing-systems`** — steps 4a/4b/5/6, run together: the ingredient
-  dial table, the copy voice spec (plus the Awareness-gated headline and
-  objection rebuttal prose), the token system that reconciles them, and
-  the signature motif. Owns everything that becomes a Tailwind token or a
-  piece of copy.
-- **`landing-sequencer`** — step 7: per-section transition type, weight,
-  spacing, and beat structure — the GSAP/ScrollTrigger/Lenis pacing spec
-  the Builder implements against.
-- **`landing-critic`** — steps 8–9 reconciled: traceability/distinctiveness
-  audit (does every choice trace to the subject statement, does anything
-  match a known AI-default cluster) and the usability pass (Fitts's Law
-  on the CTA, affordance/signifier check). Has veto power; cannot rewrite,
-  only redline back to the owning agent.
-- **`landing-builder`** — step 10: builds the audited spec exactly in
-  Astro. Anything that can't be built as specified is flagged back up the
-  chain, never silently improvised around.
+- **`landing-strategist`** — subject statement → adjective pairs →
+  visceral/behavioral/reflective sort → top/heart/base note timing and
+  the page's single peak moment. One context, one artifact: the
+  emotional target spec.
+- **`landing-systems`** — the ingredient dial table, the copy voice spec,
+  the token system that reconciles them, and the signature motif. Owns
+  everything that becomes a Tailwind token or a copy rule.
+- **`landing-sequencer`** — per-section transition type, weight, spacing,
+  and beat structure — the GSAP/ScrollTrigger/Lenis pacing spec the
+  Builder implements against.
+- **`landing-copywriter`** — the final page copy: headline (2 backups),
+  every section's body text, CTA text — written to the voice spec and
+  the sequence's beat structure. Presented as its own artifact for the
+  user to read and confirm before the audit or the build runs.
+- **`landing-critic`** — the reconciled traceability/distinctiveness
+  audit (does every choice, including the copy, trace to the subject
+  statement, does anything match a known AI-default cluster) and the
+  usability pass (Fitts's Law on the CTA, affordance/signifier check).
+  Has veto power; cannot rewrite, only redline back to the owning agent.
+- **`landing-builder`** — builds the audited spec exactly in Astro,
+  placing `landing-copywriter`'s copy verbatim. Anything that can't be
+  built as specified is flagged back up the chain, never silently
+  improvised around.
 
 ## The constants (do not deviate)
 

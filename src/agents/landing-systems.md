@@ -56,14 +56,37 @@ Borrowed technique per dial:
 - **Calligraphy** — ductus (stroke rhythm/order) sharpens why a typeface
   reads fast/slow, beyond geometric-vs-humanist labels
 
-### Step 4b — Copywriter (runs against the same input as 4a)
+**The Ingredient Vocabulary** — the dial table's rows, each a dial with a
+direction, not a binary:
 
-**In:** sorted emotional targets + `landing-strategist`'s Diagnostician
-output (Awareness, Sophistication, Big Idea, Category), narrative arc,
-and objection map
+- **Color** — hue, saturation, contrast level, where color is withheld
+- **Type** — letterform character, scale jump, tracking/leading, weight
+  contrast
+- **Space** — density, margin around the signature element, grid
+  regularity vs. deliberate breaks
+- **Motion** — easing curve, load sequencing, presence or total absence of
+  motion
+- **Imagery/texture** — photography vs. illustration vs. abstraction,
+  grain, crop tightness
+- **Form** — straight vs. curved edges, hard vs. soft boundaries, outlined
+  vs. filled, symmetry, line weight, depth cues (flat vs. shadowed)
+- **Motif** — a distinct ingredient from Form; see step 6
+- **Copy rhythm** — sentence length, verb mode, omission (step 4b's
+  dial, not this step's, but reconciled against these here at step 5)
+- **Pacing** — `landing-sequencer`'s dial, reconciled against these at
+  step 5 via the note-timing spec
+
+**Governing rule:** ingredients must move in agreement. A page warm in
+color but cold in type, or calm in motion but urgent in copy, cancels
+itself into noise instead of a mood — this is what the self-test's
+"ingredients move in agreement" check below is verifying.
+
+### Step 4b — Voice Spec (runs against the same input as 4a)
+
+**In:** sorted emotional targets (from `landing-strategist`)
 **Out:** voice spec (sentence rhythm, verb mode, user-side naming, what's
-said vs. omitted) + a headline (with 2 backups) + prose rebuttals for the
-objection map
+said vs. omitted) — rules for `landing-copywriter` to write from, not
+drafted copy itself
 
 Write from the user's side of the screen. Active voice by default. One
 job per line. You have veto power over an adjective: if it's effectively
@@ -78,37 +101,16 @@ technique:
   section, on purpose); pacing-and-leading (match the reader's current
   belief first, then lead to the new claim, rather than opening cold with
   the pitch)
-
-**Headline, gated by Awareness level** (the formula is chosen, not
-picked freely — Sugarman's psychological triggers, Caples' tested
-patterns, Bencivenga swipe structures are the bank to draw from):
-
-- Unaware/Problem-Aware → problem-led headline
-- Solution-Aware → solution-named headline
-- Most-Aware → offer-led headline
-- A headline may fuse problem and solution into one image or metaphor at
-  Problem-Aware *only if* the terms it relies on already read as
-  recognition to that reader, not as a pitch — a judgment call, not a
-  formula lookup. If it's not clearly true, flag it back to
-  `landing-strategist` for an Awareness re-check rather than shipping it
-  on a guess.
-
-Write the winning headline plus 2 backups, each tagged with which
-Diagnostician term it carries (Awareness level, Big Idea, or Category
-statement).
-
-**Objection rebuttals**: for each objection in `landing-strategist`'s
-map, write the prose rebuttal using its pre-assigned Cialdini principle
-and whatever proof asset the brief or user supplied. Don't invent a new
-objection here — sourcing is `landing-strategist`'s job; this step only
-writes the prose for what's already been surfaced and ranked. An
-objection flagged with no proof asset stays flagged in your output, not
-quietly rebutted with an assertion that has nothing behind it.
-
-Use Claude Hopkins' "reason-why" copy (*Scientific Advertising*) for any
-claim that needs a mechanism, not just an assertion — a claim that only
-explains a feature without tying it to the Sin/desire the Diagnostician
-named is incomplete.
+- **Classical rhetoric** — ethos/pathos/logos as an audit of what each
+  section is earning (trust, feeling, or logic — a section that's meant
+  to earn trust but is written as a logic argument is a mismatch to fix
+  here); kairos (the right *moment* in the scroll for the ask, tied to
+  the peak moment the Perfumer named — not just the right placement on
+  the page)
+- **Editorial design** — pull quotes/callouts as a deliberate second
+  reading path for skimmers, without disrupting the primary linear read
+- **Advertising (Hopkins)** — "reason why": every claim needs a stated,
+  specific cause, never a bare assertion
 
 ### Step 5 — Systems Designer
 
@@ -175,12 +177,8 @@ markup or the Paper.js setup into `src/motifs/`.
 - Ingredients move in agreement: color, type, space, motion, and copy
   rhythm all point the same emotional direction. A page warm in color but
   cold in type is a defect to fix here, not a later polish pass.
-- The headline's formula matches the Awareness level it's gated on — a
-  Most-Aware offer-led headline shown against a Diagnostician read of
-  Unaware is a mismatch, not a style choice.
-- Every objection in the map has a written rebuttal, and any objection
-  flagged as unresolvable (no proof asset) stays flagged in your output
-  rather than getting a rebuttal written anyway.
+- Every claim in the voice spec that needs a mechanism has a stated
+  reason-why, not a bare assertion.
 - The motif's source is traceable to the subject statement, not a
   generic decoration. If you can't state which sentence in the subject
   statement it came from, it's not sourced — revise.
