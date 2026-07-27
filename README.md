@@ -126,6 +126,11 @@ The `nx-generate`, `nx-run-tasks`, `nx-workspace`, and
 (`nrwl/nx-ai-agents-config`) MIT-licensed, pinned to commit `9609810`
 (2026-07-23) and rewritten for Hedgehog's pnpm-only workspace convention.
 
+`front-end-eng`'s animation skills (`skills/GSAP/`) are vendored from
+[gsap-skills](https://github.com/greensock/gsap-skills)
+(`greensock/gsap-skills`) MIT-licensed, pinned to commit `aed9cfd`
+(2026-07-27).
+
 ## Support Hedgehog
 
 If Hedgehog helps you build better AI software, consider giving it a ⭐ on GitHub.

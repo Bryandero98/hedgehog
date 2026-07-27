@@ -32,6 +32,14 @@ boundary is unclear, `nx-generate` if a step calls for scaffolding a new
 library/app rather than hand-writing it, and `link-workspace-packages`
 when a new package needs wiring into a consumer's dependencies.
 
+If the screen step calls for animation or motion — entrances, sequencing,
+scroll-driven effects, drag, SVG/morph effects — use GSAP, loading the
+relevant skill from `skills/GSAP/` (`gsap-core`, `gsap-timeline`,
+`gsap-scrolltrigger`, `gsap-plugins`, `gsap-utils`, `gsap-react`,
+`gsap-performance`, `gsap-frameworks`; see `skills/GSAP/llms.txt` for
+which to load). GSAP is the one animation library in the locked stack —
+don't reach for a second one.
+
 ## Core Responsibilities
 
 - **Step 6 (hook)**: build the TanStack Query hook in `packages/hooks`,

@@ -70,6 +70,9 @@ function plan(core) {
     // runs — referenced by repo-root-relative path (skills/BMAD/...), so it
     // lands there rather than under .claude/.
     { type: 'dir', from: 'skills/BMAD', to: 'skills/BMAD' },
+    // The vendored GSAP animation skill shelf that front-end-eng loads for
+    // motion work — same repo-root-relative referencing as skills/BMAD.
+    { type: 'dir', from: 'skills/GSAP', to: 'skills/GSAP' },
     {
       type: 'merge',
       shell: 'src/templates/CLAUDE.md',
@@ -97,8 +100,9 @@ function plan(core) {
 // .claude/agents and .claude/skills are supposed to match upstream
 // verbatim. CLAUDE.md/TODO.md carry project-filled content, the core
 // workspace is verified once by its bootstrap-core skill, and
-// skills/BMAD is re-vendored only deliberately (bmad-revendor) — none
-// of those belong in an update.
+// skills/BMAD and skills/GSAP are re-vendored only deliberately (a
+// manual re-vendor, per each shelf's ATTRIBUTION.md) — none of those
+// belong in an update.
 const UPDATE_PLAN = [
   { type: 'dir', from: 'src/agents', to: '.claude/agents' },
   { type: 'dir', from: 'src/skills', to: '.claude/skills' },
@@ -175,8 +179,8 @@ ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
 agent/skill changes from a newer release. It always overwrites those two
 directories and never touches CLAUDE.md, TODO.md, the core workspace, or
-skills/BMAD — those are project-specific or updated deliberately, not by
-this command.
+skills/BMAD and skills/GSAP — those are project-specific or updated
+deliberately, not by this command.
 `);
 }
 
@@ -283,8 +287,9 @@ async function update() {
   console.log(`  2. ${bold('git add -A && git commit -m "chore: update hedgehog"')}\n`);
   console.log(
     dim(
-      'CLAUDE.md, TODO.md, the core workspace, and skills/BMAD are\n' +
-        'untouched — those carry project-specific or write-once content.',
+      'CLAUDE.md, TODO.md, the core workspace, and skills/BMAD and\n' +
+        'skills/GSAP are untouched — those carry project-specific or\n' +
+        'write-once content.',
     ),
   );
 }
