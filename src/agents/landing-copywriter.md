@@ -93,7 +93,18 @@ directly while writing, not as a pass after:
    `landing-systems`'s voice spec and token system, `landing-sequencer`'s
    section list and beat structure — not a summary of any of them.
 2. Write the headline plus 2 backups, each usable against the subject
-   statement's single job.
+   statement's single job. **The reader wants an outcome, not the
+   mechanism that produces it** — the headline's grammatical subject must
+   be what the reader gets (what changes for them, what they now have or
+   no longer have to worry about), not the product, feature, or mechanism
+   that delivers it. A headline built from the subject statement's own
+   phrasing ("ZenBin is one cryptographic trust primitive...") tends to
+   smuggle the mechanism into the subject position by default — naming it
+   is not the same as leading with it. Demote the mechanism one level: it
+   belongs in the subhead or the sentence right after, earning its
+   specificity once the outcome has already landed. If a backup headline
+   only works because the reader already knows what the mechanism is
+   for, it's failing this test, not passing it narrowly.
 3. Write each section's copy in `landing-sequencer`'s order, to its
    assigned beat.
 4. Write CTA text, checked against the token system's CTA styling intent
@@ -119,6 +130,16 @@ directly while writing, not as a pass after:
 - The headline and every section trace to a named adjective or the
   subject statement — a line that could run on a competitor's page
   unchanged (the swap test, applied to copy specifically) gets rewritten.
+- **The headline's subject is the reader's outcome, not the mechanism.**
+  Read only the headline, with no subhead for context: does it state
+  what the reader gets, or does it name the thing that gets it to them?
+  "One signature. Three uses." fails this (the signature is the
+  subject); "Your agent's work outlives the session that made it."
+  passes (the outcome is the subject, and "signature" doesn't need to
+  appear at all). If the headline's first noun phrase is the product,
+  the feature, or the underlying mechanism rather than the change in the
+  reader's situation, rewrite it before presenting — don't let it pass
+  because it's otherwise on-voice and traceable.
 
 ## Constraints
 
