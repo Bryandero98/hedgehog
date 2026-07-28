@@ -35,11 +35,11 @@ Method: nothing here is a default reached for out of habit.
 | --- | --- | --- |
 | Framework | Astro | Zero-JS-by-default shell; islands only where interaction is actually needed. |
 | Styling | Tailwind v4 (CSS-first) | Config as token layer only, no component library pre-deciding how things look. |
-| Animation / pacing | GSAP + ScrollTrigger (CSS/transform targets only, no plugins) | Owns per-section pacing and top/heart/base fade timing with real control — no SVG dependency once scoped to CSS properties. |
+| Animation / pacing | Motion (CSS/transform targets only, no plugins) | Owns per-section pacing and top/heart/base fade timing via `animate()`/`scroll()`/`stagger()`. |
 | Scroll feel | Lenis | The "weight and suspension" dial, instead of default browser scroll physics. |
 | Copy reveal | SplitType | Line/word/char splitting, makes copy rhythm visible in motion, not just static text. |
-| Organic/generative motif | p5.js | Motif described as a rule (noise, jitter, growth) instead of hand-typed path data — reliable and animates naturally. |
-| Static geometric motif | CSS `clip-path` / gradients / `border-radius` | Simple shapes (spines, chevrons, blobs) with zero coordinate-guessing risk; GSAP-animatable directly. |
+| Organic/generative motif | Paper.js | Motif described as a rule (noise, jitter, growth) driving a retained-mode scene graph instead of hand-typed path data or an imperative redraw. |
+| Static geometric motif | CSS `clip-path` / gradients / `border-radius` | Simple shapes (spines, chevrons, blobs) with zero coordinate-guessing risk; Motion-animatable directly. |
 | Measured/connective motif | Canvas 2D with computed coordinates | Threads/lines that align to real DOM positions, drawn from measured values, not imagined ones. |
 | Continuous background field | `ogl` (lightweight WebGL) or raw shader | One field spanning the full page height so sections read as windows onto one surface, not stacked blocks. |
 | Section boundary treatment | CSS `clip-path` irregular edges + `mix-blend-mode` overlap + negative-margin overlap | Breaks the hard horizontal seam between sections without any new dependency. |

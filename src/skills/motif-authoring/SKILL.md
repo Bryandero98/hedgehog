@@ -1,6 +1,6 @@
 ---
 name: motif-authoring
-description: Use whenever `landing-systems` authors the signature motif (Chain Method step 6, `hedgehog-landing-loop`) or `landing-builder` implements one from `src/motifs/`. Trigger on "draw the motif", "author the motif", "write src/motifs/". Picks the right construction technique — p5.js, CSS, or Canvas 2D — per motif type, and gives the technique for producing each without hand-typed coordinate guessing.
+description: Use whenever `landing-systems` authors the signature motif (Chain Method step 6, `hedgehog-landing-loop`) or `landing-builder` implements one from `src/motifs/`. Trigger on "draw the motif", "author the motif", "write src/motifs/". Picks the right construction technique — Paper.js, CSS, or Canvas 2D — per motif type, and gives the technique for producing each without hand-typed coordinate guessing.
 ---
 
 # Motif Authoring
@@ -20,15 +20,18 @@ continuity, scale range, and literalness. That spec determines which of
 three techniques applies — pick one, don't mix by default:
 
 1. **Organic / generative** (a material's grain, a growth pattern, a
-   natural form that evolves) → **p5.js**. Write the motif as a rule —
-   noise, jitter, growth, a formula-driven point set — not a curve typed
-   out point by point. The generator is legible and adjustable; a
-   hand-typed curve is neither.
+   natural form that evolves) → **Paper.js**. Write the motif as a rule —
+   noise, jitter, growth, a formula-driven point set — driving a scene
+   graph of `Path`/`Group` objects, not a curve typed out point by point.
+   The generator is legible and adjustable; a hand-typed curve is
+   neither. See `paper-js-motifs` for the concrete API patterns
+   (`PaperScope` setup, seeded randomness, the `params` object,
+   setter-based redraw) once this technique is chosen.
 2. **Static geometric** (a spine, a chevron, a blob, a simple silhouette
    that doesn't need to evolve) → **CSS** (`clip-path`, gradients,
    `border-radius`). Build the shape from `clip-path` polygon/shape
    functions, layered gradients, or `border-radius` percentage strings —
-   values you can reason about exactly, animatable directly by GSAP
+   values you can reason about exactly, animatable directly by Motion
    (e.g. tweening a `border-radius` string in place of shape morphing).
 3. **Measured / connective** (a thread, a line, a connector that must
    align to real element positions across the page) → **Canvas 2D with
@@ -42,45 +45,16 @@ three techniques applies — pick one, don't mix by default:
 **Never hand-write multi-point geometry as raw guessed numbers**, in any
 of the three:
 
-- **p5.js** — construct from a formula (sine-based waveform, noise
+- **Paper.js** — construct from a formula (sine-based waveform, noise
   function, L-system, Voronoi cell, particle rule) with named parameters,
   not a manually plotted point list. Express motif variation
   (augmentation/inversion/retrograde, per `landing-systems` step 6's
-  music-theory vocabulary) as parameter changes on the same generator,
-  not a hand-edited copy.
-  - Use **instance mode** (`new p5(sketch, container)`), not global mode
-    — a global-mode sketch leaks `setup`/`draw`/every p5 function onto
-    `window`, which collides with Astro's own module scope and with
-    GSAP/ScrollTrigger's own render loop running on the same page.
-  - Seed every source of randomness explicitly —
-    `p.randomSeed(seed); p.noiseSeed(seed);` — with a fixed, committed
-    seed value. This is what makes "derive from a formula" mean anything
-    in practice: the same seed must always reproduce the exact same
-    motif, so a reviewer (or `landing-critic`) can re-run it and get the
-    committed result, not a fresh roll.
-  - Collect the formula's inputs (particle count, noise scale, growth
-    rate, angle — whatever the generator exposes) into one named
-    `params` object at the top of the sketch, not scattered magic
-    numbers through `draw()`. This is the same object the "state the
-    parameters and what each one is for" verification step below reads
-    from — an ungrouped generator is harder to audit, not just harder to
-    read.
-  - Mount inside a `client:*` island only where the sequencer's beat
-    structure actually calls for the motif to animate; a motif that's
-    static per section doesn't need a live p5 instance at all — render
-    once and let CSS/GSAP handle any transform-level movement instead.
-  - **If the sketch exposes any setter that triggers a redraw** (e.g.
-    `p.setGrooveDensity`, any `noLoop()` sketch re-invoked on demand
-    instead of rendered exactly once), the draw function must be
-    idempotent across repeated calls: wrap its body in `p.push()` /
-    `p.pop()`, or call `p.resetMatrix()` and reset any accumulated style
-    state at the top, before applying `p.translate()`/`p.rotate()`/
-    `p.scale()` or other stateful calls. `p.clear()` empties the pixel
-    buffer but does **not** reset the transform or style stack — a
-    `translate()` inside a function called N times shifts the origin N
-    times, not once, so geometry that looks correct on first paint can
-    walk off-canvas entirely by the second or third call. This is a
-    silent failure: no error, no console warning, just nothing drawn.
+  music-theory vocabulary) as parameter changes that update the same
+  scene graph's object properties, not a hand-edited copy. See
+  `paper-js-motifs` for the concrete implementation patterns (scoped
+  `PaperScope`, seeded PRNG, the `params` object, setter-based redraw)
+  — this skill governs the choice and the audit, that one governs the
+  code.
 - **CSS** — build from `clip-path`'s named shape functions
   (`polygon()`, `circle()`, `ellipse()`, `inset()` with rounded corners)
   or `border-radius`'s percentage syntax, composed via layering and
@@ -99,19 +73,15 @@ A motif is not correct because it compiles. Before writing it into
 - **Render it and look.** Use the Bash tool to run the dev server or a
   standalone preview and view the actual output — don't judge geometry
   or a Canvas draw call from the source alone.
-- **If the sketch exposes setters, call every one of them at least once,
-  in sequence, before judging it correct** — not just the initial
-  render. A bug in redraw idempotency (see the p5.js transform/style
-  reset rule above) is invisible on first paint and only shows up after
-  the second or later invocation, which is exactly how the setter will
-  actually be used once mounted (density/scale changes fire after
-  `setup()`, not instead of it).
+- **If the scene graph exposes setters, call every one of them at least
+  once before judging it correct** — confirm each produces the visual
+  update it's meant to, not just that the initial render looks right.
 - **State the construction's parameters and what each one is for** — a
-  p5.js formula's inputs, a `clip-path` shape's control values, a Canvas
-  draw's measured inputs — before accepting it. If you can't say why a
-  value is what it is, it was guessed, not authored — redo it via the
-  technique's proper primitives.
-- **For p5.js, confirm the seed is fixed and committed**, not left to
+  Paper.js formula's inputs, a `clip-path` shape's control values, a
+  Canvas draw's measured inputs — before accepting it. If you can't say
+  why a value is what it is, it was guessed, not authored — redo it via
+  the technique's proper primitives.
+- **For Paper.js, confirm the seed is fixed and committed**, not left to
   default/time-based randomness — re-running the sketch must reproduce
   the exact motif that was reviewed, not a new variation each load.
 - **Check symmetry/proportion deliberately** where the source motif
@@ -137,10 +107,10 @@ A motif is not correct because it compiles. Before writing it into
   numbers are unreadable — there's no way to tell what a curve looks
   like from its `d` string while writing it, so hand-typed paths drift
   into lumpy, asymmetric, or self-intersecting geometry regardless of
-  how carefully they're written. If a motif genuinely doesn't fit p5.js,
-  CSS, or Canvas 2D, that's a signal to reconsider the motif's source or
-  literalness with `landing-systems` — not a reason to fall back to
-  hand-authored SVG.
+  how carefully they're written. If a motif genuinely doesn't fit
+  Paper.js, CSS, or Canvas 2D, that's a signal to reconsider the motif's
+  source or literalness with `landing-systems` — not a reason to fall
+  back to hand-authored SVG.
 - `landing-builder` implements the motif exactly as authored here — a
   motif that's hard to render cleanly should be fixed at this step, not
   smoothed over during build.

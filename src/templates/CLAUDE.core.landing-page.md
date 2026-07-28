@@ -44,8 +44,8 @@ edited after a phase closes.
   the token system that reconciles them, and the signature motif. Owns
   everything that becomes a Tailwind token or a copy rule.
 - **`landing-sequencer`** — per-section transition type, weight, spacing,
-  and beat structure — the GSAP/ScrollTrigger/Lenis pacing spec the
-  Builder implements against.
+  and beat structure — the Motion/Lenis pacing spec the Builder
+  implements against.
 - **`landing-copywriter`** — the final page copy: headline (2 backups),
   every section's body text, CTA text — written to the voice spec and
   the sequence's beat structure. Presented as its own artifact for the
@@ -66,15 +66,16 @@ edited after a phase closes.
 
 **Astro** (zero-JS-by-default shell, islands only where interaction is
 genuinely needed) · **Tailwind v4, CSS-first** (config as token layer
-only — no component library on top) · **GSAP + ScrollTrigger**, scoped to
+only — no component library on top) · **Motion**, scoped to
 CSS/transform targets only, no plugins (primary animation engine; owns
-Sequencer pacing and top/heart/base fade timing) · **Lenis** (smooth-
-scroll feel, the "weight and suspension" dial) · **SplitType**
-(line/word/char copy-reveal splitting) · **p5.js** (organic/generative
-motifs — described as a rule: noise, jitter, growth — not hand-typed path
-data) · **CSS `clip-path` / gradients / `border-radius`** (static
-geometric motifs — spines, chevrons, blobs — GSAP-animatable directly,
-zero coordinate-guessing risk) · **Canvas 2D with computed coordinates**
+Sequencer pacing and top/heart/base fade timing) · **Lenis**
+(smooth-scroll feel, the "weight and suspension" dial) · **SplitType**
+(line/word/char copy-reveal splitting) · **Paper.js** (organic/generative
+motifs — described as a rule: noise, jitter, growth — not hand-typed
+path data; see the `paper-js-motifs` skill for implementation patterns)
+· **CSS `clip-path` / gradients / `border-radius`** (static geometric
+motifs — spines, chevrons, blobs — Motion-animatable directly, zero
+coordinate-guessing risk) · **Canvas 2D with computed coordinates**
 (measured/connective motifs — threads/lines that align to real DOM
 positions, drawn from measured values) · **`ogl`** (lightweight WebGL) or
 a raw shader (a continuous background field spanning the full page
@@ -97,11 +98,11 @@ Vocabulary and derive the right choice, not to default to something
 off-the-shelf.
 
 Motifs are always constructed from a formula or a measurement, never
-hand-typed coordinates: an organic motif is a p5.js rule (noise, jitter,
-growth), a static geometric motif is CSS (`clip-path`, gradients,
-`border-radius`), and a measured/connective motif is Canvas 2D drawn from
-real DOM positions. See the `motif-authoring` skill for the technique
-per motif type.
+hand-typed coordinates: an organic motif is a Paper.js scene graph driven
+by a rule (noise, jitter, growth), a static geometric motif is CSS
+(`clip-path`, gradients, `border-radius`), and a measured/connective
+motif is Canvas 2D drawn from real DOM positions. See the
+`motif-authoring` skill for the technique per motif type.
 
 ### Layout
 
@@ -110,7 +111,7 @@ astro.config.mjs     Astro workspace root
 src/
   pages/              one file per page (usually just index.astro)
   sections/           one component per page section, in Sequencer order
-  motifs/             the signature motif (p5.js / CSS / Canvas 2D) + its variation rules
+  motifs/             the signature motif (Paper.js / CSS / Canvas 2D) + its variation rules
   styles/             global.css — Tailwind v4 CSS-first import + the `@theme` token layer (hex values, type roles, spacing unit, easing family from Step 5)
 .hedgehog/
   BMAD/               vendored BMAD-METHOD shelf's raw output (brief, PR-FAQ, PRD, UX spec, research) —

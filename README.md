@@ -72,7 +72,7 @@ From an empty project folder ask Claude to install:
 # 1. Full-stack app (Nx, NestJS, Drizzle, ts-rest, Next.js)
 npx @skyf0xx/hedgehog init --ts-full-stack-app
 
-# 2. Landing page (Astro, Tailwind, GSAP)
+# 2. Landing page (Astro, Tailwind, Motion)
 npx @skyf0xx/hedgehog init --landing-page
 ```
 

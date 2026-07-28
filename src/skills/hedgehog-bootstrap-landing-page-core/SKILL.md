@@ -10,8 +10,8 @@ add-on layer to run after it, unlike `full-stack-app`'s
 `hedgehog-bootstrap` — by copying a pre-built, pre-verified workspace
 (`src/golden-cores/landing-page/` in the Hedgehog package) rather than
 generating it live: Astro workspace, Tailwind v4 CSS-first token-layer
-config, the library set this core is built on (GSAP, Lenis, SplitType,
-p5.js, ogl).
+config, the library set this core is built on (Motion, Lenis, SplitType,
+Paper.js, ogl).
 This piece is deterministic — the same commands produce the same output
 on every project — so the output is committed once, upstream, and copied
 here instead of re-derived by an agent on every run.

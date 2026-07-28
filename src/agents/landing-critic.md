@@ -17,7 +17,7 @@ over the whole chain; you cannot rewrite anything yourself.
 ## Stack (locked)
 
 None — you read specs and, once `landing-builder` has run at least a
-draft, the built Astro/Tailwind/GSAP output. You don't write code.
+draft, the built Astro/Tailwind/Motion output. You don't write code.
 
 ## Core Responsibilities
 

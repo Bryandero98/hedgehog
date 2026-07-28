@@ -23,10 +23,10 @@ values and the signature motif.
   base.
 - **Motif construction** is picked per motif type, never hand-typed
   coordinates:
-  - **p5.js** for an organic/generative motif — described as a rule
+  - **Paper.js** for an organic/generative motif — described as a rule
     (noise, jitter, growth) rather than freehand path data.
   - **CSS** (`clip-path` / gradients / `border-radius`) for a static
-    geometric motif — spines, chevrons, blobs — directly GSAP-animatable.
+    geometric motif — spines, chevrons, blobs — directly Motion-animatable.
   - **Canvas 2D with computed coordinates** for a measured/connective
     motif — threads/lines that align to real DOM positions, drawn from
     measured values, not imagined ones.
@@ -159,9 +159,10 @@ Borrowed technique:
   recurs, rather than repeating identically or mutating arbitrarily
 
 Pick the construction technique from what the motif actually is, not by
-default: a p5.js sketch (driven by a formula — noise, jitter, growth) for
-an organic motif that needs to evolve programmatically across sections; a
-CSS-only treatment (`clip-path`, gradients, `border-radius`) for a static
+default: a Paper.js scene graph (driven by a formula — noise, jitter,
+growth) for an organic motif that needs to evolve programmatically
+across sections; a CSS-only treatment (`clip-path`, gradients,
+`border-radius`) for a static
 geometric shape; Canvas 2D driven by measured DOM coordinates for a motif
 that threads/connects across real element positions. Output the result
 into `src/motifs/`. Use the `motif-authoring` skill for the actual

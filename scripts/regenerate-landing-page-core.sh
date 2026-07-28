@@ -3,8 +3,8 @@
 # deterministic landing-page core output that
 # `hedgehog-bootstrap-landing-page-core` copies into every project on
 # this core instead of generating it live. Run this by hand whenever a
-# core dependency (Astro, Tailwind, GSAP, Lenis, ...) needs bumping. Not
-# run automatically, not part of the installer's runtime path.
+# core dependency (Astro, Tailwind, Motion, Lenis, ...) needs bumping.
+# Not run automatically, not part of the installer's runtime path.
 #
 # What this does, in order: scaffold a minimal Astro project, add
 # Tailwind (v4, CSS-first — no tailwind.config.js), add the animation/
@@ -12,6 +12,12 @@
 # place. Unlike full-stack-app's regenerate script, this one runs start
 # to finish with no manual-pause steps — Astro's own scaffolding and
 # `astro add` cover everything that needed hand-wiring on the Nx side.
+#
+# Animation engine is Motion (`animate()`/`scroll()`/`stagger()`), scoped
+# to CSS/transform targets only. Organic/generative motifs use Paper.js —
+# a retained-mode scene graph of `Path`/`Group` objects whose properties
+# you set; `view.draw()` renders current state, so a redraw never replays
+# an imperative script and can't leak transform/style state across calls.
 # Diff the result against the current src/golden-cores/landing-page/
 # before committing — don't assume a clean run means nothing changed
 # upstream in a way that matters.
@@ -50,12 +56,12 @@ rm -f CLAUDE.md AGENTS.md pnpm-workspace.yaml README.md
 pnpm astro add tailwind --yes
 
 # ── Step 3: the animation/motif library set ──────────────────────────────
-# GSAP is scoped to CSS/transform targets only — no plugins. p5.js covers
-# organic/generative motifs, ogl covers the continuous WebGL background
-# field; static geometric and measured/connective motifs are built from
-# CSS and Canvas 2D directly, no library needed for either.
+# Motion is scoped to CSS/transform targets only — no plugins. Paper.js
+# covers organic/generative motifs, ogl covers the continuous WebGL
+# background field; static geometric and measured/connective motifs are
+# built from CSS and Canvas 2D directly, no library needed for either.
 
-pnpm add gsap lenis split-type p5 ogl
+pnpm add motion lenis split-type paper ogl
 
 # ── Step 4: type checking ─────────────────────────────────────────────────
 # `astro check` needs TypeScript's programmatic API, which the 7.x native
