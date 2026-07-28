@@ -69,6 +69,18 @@ of the three:
     structure actually calls for the motif to animate; a motif that's
     static per section doesn't need a live p5 instance at all — render
     once and let CSS/GSAP handle any transform-level movement instead.
+  - **If the sketch exposes any setter that triggers a redraw** (e.g.
+    `p.setGrooveDensity`, any `noLoop()` sketch re-invoked on demand
+    instead of rendered exactly once), the draw function must be
+    idempotent across repeated calls: wrap its body in `p.push()` /
+    `p.pop()`, or call `p.resetMatrix()` and reset any accumulated style
+    state at the top, before applying `p.translate()`/`p.rotate()`/
+    `p.scale()` or other stateful calls. `p.clear()` empties the pixel
+    buffer but does **not** reset the transform or style stack — a
+    `translate()` inside a function called N times shifts the origin N
+    times, not once, so geometry that looks correct on first paint can
+    walk off-canvas entirely by the second or third call. This is a
+    silent failure: no error, no console warning, just nothing drawn.
 - **CSS** — build from `clip-path`'s named shape functions
   (`polygon()`, `circle()`, `ellipse()`, `inset()` with rounded corners)
   or `border-radius`'s percentage syntax, composed via layering and
@@ -87,6 +99,13 @@ A motif is not correct because it compiles. Before writing it into
 - **Render it and look.** Use the Bash tool to run the dev server or a
   standalone preview and view the actual output — don't judge geometry
   or a Canvas draw call from the source alone.
+- **If the sketch exposes setters, call every one of them at least once,
+  in sequence, before judging it correct** — not just the initial
+  render. A bug in redraw idempotency (see the p5.js transform/style
+  reset rule above) is invisible on first paint and only shows up after
+  the second or later invocation, which is exactly how the setter will
+  actually be used once mounted (density/scale changes fire after
+  `setup()`, not instead of it).
 - **State the construction's parameters and what each one is for** — a
   p5.js formula's inputs, a `clip-path` shape's control values, a Canvas
   draw's measured inputs — before accepting it. If you can't say why a
