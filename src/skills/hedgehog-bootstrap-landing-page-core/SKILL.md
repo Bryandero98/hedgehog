@@ -11,7 +11,7 @@ add-on layer to run after it, unlike `full-stack-app`'s
 (`src/golden-cores/landing-page/` in the Hedgehog package) rather than
 generating it live: Astro workspace, Tailwind v4 CSS-first token-layer
 config, the library set this core is built on (Motion, Lenis, SplitType,
-Paper.js, ogl).
+ogl, Lucide).
 This piece is deterministic — the same commands produce the same output
 on every project — so the output is committed once, upstream, and copied
 here instead of re-derived by an agent on every run.
@@ -37,7 +37,7 @@ Hedgehog package, copied to the repo root:
   type stack, a 4px spacing unit) that `landing-systems` overwrites
   entirely at its own phase — this block existing and being wired into
   the build is what core guarantees, not any specific token values.
-- `src/sections/`, `src/motifs/` — empty, with a `.gitkeep`; real content
+- `src/sections/`, `src/shapes/` — empty, with a `.gitkeep`; real content
   starts at the systems and build phases.
 
 `node_modules` is not part of the copy — `pnpm install` regenerates it
@@ -147,6 +147,7 @@ copy to route around a broken template and call core done.
 - Don't hand-edit any file this step lands to work around a verification
   failure. Fix `src/golden-cores/landing-page` at the source instead (see
   **If verification fails**).
-- Don't write any Chain Method phase content (adjectives, tokens, motif,
-  sequence, or the built page) — that's `landing-strategist` through
-  `landing-builder`'s work, after this Bootstrap box is checked.
+- Don't write any Chain Method phase content (adjectives, tokens,
+  signature element, sequence, or the built page) — that's
+  `landing-strategist` through `landing-builder`'s work, after this
+  Bootstrap box is checked.

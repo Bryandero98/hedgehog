@@ -18,7 +18,7 @@ audience, and the page's single job — full detail in
 noted. Do not start a phase until the one above it is checked. -->
 
 - [ ] strategy — subject/audience/job + adjective pairs + visceral/behavioral/reflective sort + note timing — `landing-strategist`
-- [ ] systems — dial table + voice spec (parallel) → token system → signature motif — `landing-systems`
+- [ ] systems — dial table + voice spec (parallel) → token system → signature element — `landing-systems`
 - [ ] sequence — per-section transitions, weight, spacing, beat structure — `landing-sequencer`
 - [ ] copy — final headline, section body, and CTA text, reviewed and confirmed by the user — `landing-copywriter`
 - [ ] audit — traceability/distinctiveness + usability, reconciled to a pass — `landing-critic`

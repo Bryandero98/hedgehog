@@ -1,14 +1,20 @@
 ## This project's core: landing-page
 
-The Chain Method: brief → feeling → tokens/motif → sequence → artifact,
-where every visual choice traces back to a sentence that caused it. No
-domain data, no backend — a single (or few-page) marketing site, built
-once through a fixed pipeline rather than iterated on freely. See
-`.hedgehog/BMAD/` for the vendored BMAD-METHOD shelf's raw output and
-`.hedgehog/chain/` for this core's own archival planning intake output —
-the Strategist's subject statement, the adjective/note tables, and the
-token system, written once by `planner` and the pipeline agents, never
-edited after a phase closes.
+The Chain Method: brief → feeling → tokens/element → sequence →
+artifact, where every visual choice traces back to a sentence that
+caused it. No domain data, no backend — a single (or few-page) marketing
+site, built once through a fixed pipeline rather than iterated on
+freely. See `.hedgehog/BMAD/` for the vendored BMAD-METHOD shelf's raw
+output and `.hedgehog/chain/` for this core's own archival planning
+intake output — the Strategist's subject statement, the adjective/note
+tables, and the token system, written once by `planner` and the pipeline
+agents, never edited after a phase closes.
+
+The Chain Method decides *what* the signature element is and *why* it's
+there — sourced from the subject statement, audited for traceability.
+`landing-shapes` decides *how* to build it and every other section
+shape, divider, or icon — the concrete CSS/canvas techniques and the
+pinned icon source. Neither restates the other's decision.
 
 ### The skills — invoke these, don't improvise
 
@@ -16,11 +22,16 @@ edited after a phase closes.
   pick the next step from `TODO.md`, run exactly one Chain Method phase
   through its owning agent, gate it, commit it, check it off. Also holds
   the Correction Protocol for fixing a wrong upstream phase (e.g. a
-  motif that doesn't trace back to the subject statement). Invoke it at
-  the start of any build session and for "what's next".
+  signature element that doesn't trace back to the subject statement).
+  Invoke it at the start of any build session and for "what's next".
 - **`hedgehog-bootstrap-landing-page-core`** — run **once**, at project
   start, to land the pre-verified Astro + Tailwind workspace. Skip if
   `astro.config.mjs` already exists.
+- **`landing-shapes`** — the shape/divider/icon construction library:
+  geometry personality, curve and angular CSS/canvas techniques, and
+  Lucide as the pinned icon source. `landing-systems` points into it
+  when naming the signature element's family; `landing-sequencer` and
+  `landing-builder` invoke it for the concrete recipe.
 - **`conventional-commits`** — when a change spans several phases in one
   working-tree pass and needs splitting back into per-phase commits
   (mainly Correction Protocol cleanups).
@@ -41,7 +52,7 @@ edited after a phase closes.
   the page's single peak moment. One context, one artifact: the
   emotional target spec.
 - **`landing-systems`** — the ingredient dial table, the copy voice spec,
-  the token system that reconciles them, and the signature motif. Owns
+  the token system that reconciles them, and the signature element. Owns
   everything that becomes a Tailwind token or a copy rule.
 - **`landing-sequencer`** — per-section transition type, weight, spacing,
   and beat structure — the Motion/Lenis pacing spec the Builder
@@ -70,54 +81,49 @@ only — no component library on top) · **Motion**, scoped to
 CSS/transform targets only, no plugins (primary animation engine; owns
 Sequencer pacing and top/heart/base fade timing) · **Lenis**
 (smooth-scroll feel, the "weight and suspension" dial) · **SplitType**
-(line/word/char copy-reveal splitting) · **Paper.js** (organic/generative
-motifs — described as a rule: noise, jitter, growth — not hand-typed
-path data; see the `paper-js-motifs` skill for implementation patterns)
-· **CSS `clip-path` / gradients / `border-radius`** (static geometric
-motifs — spines, chevrons, blobs — Motion-animatable directly, zero
-coordinate-guessing risk) · **Canvas 2D with computed coordinates**
-(measured/connective motifs — threads/lines that align to real DOM
-positions, drawn from measured values) · **`ogl`** (lightweight WebGL) or
-a raw shader (a continuous background field spanning the full page
-height, so sections read as windows onto one surface) · **CSS
-`clip-path` irregular edges + `mix-blend-mode` overlap + negative-margin
-overlap** (section boundary treatment — breaks the hard horizontal seam
-between sections without a new dependency) · **CSS `mask-image` + noise
-pattern** (texture/grain layer) · **React Three Fiber** (rare — only when
-the subject is genuinely spatial; default is to skip it).
+(line/word/char copy-reveal splitting) · **Signature element & shape
+construction** — the `landing-shapes` skill: geometry personality, the
+curve/angular CSS and Canvas 2D technique library, Lucide as the pinned
+icon source · **`ogl`** (lightweight WebGL) or a raw shader (a
+continuous background field spanning the full page height, so sections
+read as windows onto one surface) · **CSS `clip-path` irregular edges +
+`mix-blend-mode` overlap + negative-margin overlap** (section boundary
+treatment — breaks the hard horizontal seam between sections without a
+new dependency) · **CSS `mask-image` + noise pattern** (texture/grain
+layer) · **React Three Fiber** (rare — only when the subject is
+genuinely spatial; default is to skip it).
 
 This core has no design-handoff tool. All visual decisions are derived
 directly through the Systems Designer's token system (step 5) and the
-motif techniques above — never imported from an external design file.
+`landing-shapes` techniques — never imported from an external design
+file.
 
 Don't substitute libraries. If a package name changed upstream, verify
 against current docs before running — don't swap in a different one, and
-don't reach for a component library or icon set to fill a gap one of the
-above doesn't cover; that gap is a signal to go back to the Ingredient
-Vocabulary and derive the right choice, not to default to something
-off-the-shelf.
+don't reach for a component library or a second icon set to fill a gap
+one of the above doesn't cover; that gap is a signal to go back to the
+Ingredient Vocabulary and derive the right choice, not to default to
+something off-the-shelf.
 
-Motifs are always constructed from a formula or a measurement, never
-hand-typed coordinates: an organic motif is a Paper.js scene graph driven
-by a rule (noise, jitter, growth), a static geometric motif is CSS
-(`clip-path`, gradients, `border-radius`), and a measured/connective
-motif is Canvas 2D drawn from real DOM positions. See the
-`motif-authoring` skill for the technique per motif type.
+The signature element and every other section shape is always
+constructed from a generator, a formula, a measurement, or a sourced
+Lucide icon — never hand-typed coordinates. See the `landing-shapes`
+skill for the technique.
 
 ### Layout
 
-```
+```text
 astro.config.mjs     Astro workspace root
 src/
   pages/              one file per page (usually just index.astro)
   sections/           one component per page section, in Sequencer order
-  motifs/             the signature motif (Paper.js / CSS / Canvas 2D) + its variation rules
+  shapes/             the signature element + any other section shapes/dividers, built via landing-shapes
   styles/             global.css — Tailwind v4 CSS-first import + the `@theme` token layer (hex values, type roles, spacing unit, easing family from Step 5)
 .hedgehog/
   BMAD/               vendored BMAD-METHOD shelf's raw output (brief, PR-FAQ, PRD, UX spec, research) —
                        write-once, from planner
   chain/              this core's own archival planning intake output — subject statement, adjective tables,
-                       token system, motif spec, sequence spec — write-once, from planner + pipeline agents
+                       token system, signature element spec, sequence spec — write-once, from planner + pipeline agents
 docs/
   design/              audited spec (Critic + Usability Auditor reconciled) the Builder builds from
 ```
@@ -127,9 +133,9 @@ docs/
 - **One page, one job.** The Strategist's subject statement names it;
   every downstream choice traces back to that sentence or gets cut.
 - **No agent introduces a choice that doesn't originate in the previous
-  agent's output.** A motif the Motif Artist didn't source from the
-  subject, a color the Ingredient Director didn't derive from an
-  adjective — both get redlined by the Critic, not waved through.
+  agent's output.** A signature element the Systems phase didn't source
+  from the subject, a color the Ingredient Director didn't derive from
+  an adjective — both get redlined by the Critic, not waved through.
 - **Ingredients move in agreement.** Color, type, space, motion, copy
   rhythm, and pacing are one system reconciled at step 5 — a page warm
   in color but cold in type is a defect, not a style choice.

@@ -1,6 +1,6 @@
 ---
 name: hedgehog-landing-loop
-description: Use for every unit of work on the landing-page core, from planning intake through the final build phase — the Chain Method's brief → feeling → tokens/motif → sequence → artifact pipeline, gated and committed one phase at a time, checked off TODO.md. Triggers on "next step", "next phase", "what's next", or the start of any work session on a bootstrapped landing-page project. Also covers this core's own planning intake and Correction Protocol.
+description: Use for every unit of work on the landing-page core, from planning intake through the final build phase — the Chain Method's brief → feeling → tokens/element → sequence → artifact pipeline, gated and committed one phase at a time, checked off TODO.md. Triggers on "next step", "next phase", "what's next", or the start of any work session on a bootstrapped landing-page project. Also covers this core's own planning intake and Correction Protocol.
 ---
 
 # Hedgehog Landing Loop
@@ -87,7 +87,7 @@ artifact; everything else is strictly sequential.
 | 4 | Perfumer | `landing-strategist` | Top/heart/base note timing per adjective, the page's peak moment, the ending treatment | bundled into `feat(landing): strategy` |
 | 5 | Ingredient Director + Copywriter | `landing-systems` | Dial table (color/type/form/space/motion) + voice spec, run against the same sorted-adjectives input | `feat(landing): systems` |
 | 6 | Systems Designer | `landing-systems` | The token system (hex values, type roles, spacing unit, easing family, copy voice, with note timing attached) | bundled into `feat(landing): systems` |
-| 7 | Motif Artist | `landing-systems` | Signature motif (source, persistence, continuity, scale range, literalness) | bundled into `feat(landing): systems` |
+| 7 | Signature Element | `landing-systems` | Signature element (source, persistence, continuity, scale range, literalness) | bundled into `feat(landing): systems` |
 | 8 | Sequencer | `landing-sequencer` | Per-section transition type, weight, spacing, beat structure | `feat(landing): sequence` |
 | 9 | Copywriter | `landing-copywriter` | Final page copy — headline (2 backups), every section's body text, CTA text, written to the voice spec and beat structure, reviewed and confirmed by the user | `feat(landing): copy` |
 | 10 | Critic + Usability Auditor | `landing-critic` | Redlines, or a pass — reconciled traceability/distinctiveness + usability audit | `feat(landing): audit` (no commit if redlined — see Correction Protocol) |
@@ -135,9 +135,9 @@ subject statement, or matches a known AI-default cluster:
 2. Patch the upstream phase directly, in place, via that phase's owning
    agent.
 3. Fast-forward every dependent phase that breaks. A token system change
-   (phase 6) ripples through the motif (7), the sequence (8), the copy
-   (9, if the voice spec shifted), and the build (11) — each gets its own
-   small commit, in order, not one bundled fix.
+   (phase 6) ripples through the signature element (7), the sequence
+   (8), the copy (9, if the voice spec shifted), and the build (11) —
+   each gets its own small commit, in order, not one bundled fix.
 4. Re-run `landing-critic` against the patched chain before resuming.
 5. The commit messages are the explanation.
 6. Resume the loop.

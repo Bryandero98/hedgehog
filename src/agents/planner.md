@@ -11,7 +11,7 @@ than one **core** — a fixed build discipline for one project shape, with
 its own stack, agents, and step sequence. Today: `full-stack-app`
 (schema → contract → repository → service → controller, then hook →
 UX rationale → screen, per domain module) and `landing-page` (the Chain
-Method: brief → feeling → tokens/motif → sequence → artifact, one page).
+Method: brief → feeling → tokens/element → sequence → artifact, one page).
 The build sequence within a chosen core is already fixed — not yours to
 replan. You handle what no fixed sequence decides: **which core applies**,
 and then that core's own scope/subject decision before its first

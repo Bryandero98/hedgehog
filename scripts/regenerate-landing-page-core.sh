@@ -8,16 +8,17 @@
 #
 # What this does, in order: scaffold a minimal Astro project, add
 # Tailwind (v4, CSS-first — no tailwind.config.js), add the animation/
-# motif library set, wire ESLint + Prettier, verify clean, sync into
+# icon library set, wire ESLint + Prettier, verify clean, sync into
 # place. Unlike full-stack-app's regenerate script, this one runs start
 # to finish with no manual-pause steps — Astro's own scaffolding and
 # `astro add` cover everything that needed hand-wiring on the Nx side.
 #
 # Animation engine is Motion (`animate()`/`scroll()`/`stagger()`), scoped
-# to CSS/transform targets only. Organic/generative motifs use Paper.js —
-# a retained-mode scene graph of `Path`/`Group` objects whose properties
-# you set; `view.draw()` renders current state, so a redraw never replays
-# an imperative script and can't leak transform/style state across calls.
+# to CSS/transform targets only. Signature elements and section shapes
+# are built from CSS (`clip-path`, gradients, `border-radius`) or Canvas
+# 2D with computed coordinates, per the `landing-shapes` skill — no
+# geometry library needed for either. `ogl` covers a continuous WebGL
+# background field; Lucide (`@lucide/astro`) is the pinned icon source.
 # Diff the result against the current src/golden-cores/landing-page/
 # before committing — don't assume a clean run means nothing changed
 # upstream in a way that matters.
@@ -55,13 +56,14 @@ rm -f CLAUDE.md AGENTS.md pnpm-workspace.yaml README.md
 
 pnpm astro add tailwind --yes
 
-# ── Step 3: the animation/motif library set ──────────────────────────────
-# Motion is scoped to CSS/transform targets only — no plugins. Paper.js
-# covers organic/generative motifs, ogl covers the continuous WebGL
-# background field; static geometric and measured/connective motifs are
-# built from CSS and Canvas 2D directly, no library needed for either.
+# ── Step 3: the animation/icon library set ────────────────────────────────
+# Motion is scoped to CSS/transform targets only — no plugins. ogl
+# covers the continuous WebGL background field; the signature element
+# and other section shapes are built from CSS and Canvas 2D directly, no
+# geometry library needed for either. @lucide/astro is the pinned icon
+# source.
 
-pnpm add motion lenis split-type paper ogl
+pnpm add motion lenis split-type ogl @lucide/astro
 
 # ── Step 4: type checking ─────────────────────────────────────────────────
 # `astro check` needs TypeScript's programmatic API, which the 7.x native
@@ -124,7 +126,7 @@ dist
 node_modules
 EOF
 
-# ── Step 6: the token layer + placeholder page + section/motif dirs ──────
+# ── Step 6: the token layer + placeholder page + section/shape dirs ──────
 
 cat > src/styles/global.css <<'EOF'
 @import 'tailwindcss';
@@ -174,8 +176,8 @@ import '../styles/global.css';
 </html>
 EOF
 
-mkdir -p src/sections src/motifs
-touch src/sections/.gitkeep src/motifs/.gitkeep
+mkdir -p src/sections src/shapes
+touch src/sections/.gitkeep src/shapes/.gitkeep
 
 # ── Step 7: package.json — name, scripts ──────────────────────────────────
 

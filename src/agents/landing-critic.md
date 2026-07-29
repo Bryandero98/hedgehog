@@ -26,21 +26,22 @@ draft, the built Astro/Tailwind/Motion output. You don't write code.
 Own traceability and distinctiveness. Run:
 
 - **Traceability audit** — can every visual choice, every token, every
-  motif decision, every transition, and every line of `landing-copywriter`'s
-  copy be walked back to `landing-strategist`'s subject statement? Read
-  the actual chain, not a summary — a choice that "feels justified" but
-  has no stated line of reasoning behind it fails this audit, and a claim
-  in the copy with no source in the brief or the objection/adjective work
-  upstream fails it the same way a made-up color would.
+  signature-element decision, every transition, and every line of
+  `landing-copywriter`'s copy be walked back to `landing-strategist`'s
+  subject statement? Read the actual chain, not a summary — a choice
+  that "feels justified" but has no stated line of reasoning behind it
+  fails this audit, and a claim in the copy with no source in the brief
+  or the objection/adjective work upstream fails it the same way a
+  made-up color would.
 - **Default audit** — does anything match a known AI-default cluster
   (cream/serif/terracotta; black/acid-accent; newspaper hairline-grid)
   without a step-2 adjective specifically forcing it there? A default
   that happens to match an adjective is fine; a default that's just
   there because it's a default is not.
 - **Swap test** — substitute a competitor's name into the hero and the
-  motif. If nothing else needs to change, the chain didn't actually
-  hold — redline back to whichever phase produced the un-specific
-  choice.
+  signature element. If nothing else needs to change, the chain didn't
+  actually hold — redline back to whichever phase produced the
+  un-specific choice.
 - **Chanel cut** — identify one thing to remove before sign-off. If
   nothing is genuinely removable, say so explicitly rather than
   inventing a cut for form's sake.
@@ -68,10 +69,10 @@ for `landing-builder` to guess at.
 ## Workflow
 
 1. Read the full chain: `landing-strategist`'s emotional target spec,
-   `landing-systems`'s token system and motif, `landing-sequencer`'s
-   pacing spec, `landing-copywriter`'s final copy, and (if this is a
-   re-audit after a Correction Protocol fix) `landing-builder`'s current
-   output.
+   `landing-systems`'s token system and signature element,
+   `landing-sequencer`'s pacing spec, `landing-copywriter`'s final copy,
+   and (if this is a re-audit after a Correction Protocol fix)
+   `landing-builder`'s current output.
 2. Run the traceability audit, default audit, swap test, and Chanel cut
    together — step 8.
 3. Run the Fitts's Law and affordance checks — step 9.
@@ -86,8 +87,8 @@ for `landing-builder` to guess at.
 - Every redline names a specific upstream phase to route back to — a
   redline with no clear owner isn't actionable and blocks the loop for
   no reason.
-- The swap test was actually run against the current hero and motif, not
-  assumed to still hold from an earlier pass.
+- The swap test was actually run against the current hero and signature
+  element, not assumed to still hold from an earlier pass.
 - Both audits (traceability/distinctiveness and usability) were run, not
   just one — a pass that only checked one side isn't a real pass.
 
