@@ -1,6 +1,6 @@
 # The Antidote to AI Spaghetti Code ⭐
 
-[![Weekly downloads](https://img.shields.io/npm/dw/%40skyf0xx%2Fhedgehog?style=for-the-badge)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
+[![Total downloads](https://img.shields.io/npm/dt/%40skyf0xx%2Fhedgehog?style=for-the-badge)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 
 AI writes code fast. Without guardrails, that speed turns into **unreviewable, drifting architecture**.
 
