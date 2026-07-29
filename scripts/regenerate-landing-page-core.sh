@@ -143,6 +143,15 @@ cat > src/styles/global.css <<'EOF'
   --font-display: 'system-ui', sans-serif;
   --font-body: 'system-ui', sans-serif;
 
+  /* Type scale — a ratio (here 1.25, Major Third), not independently
+     chosen sizes. Step 5 (Systems Designer) picks the ratio the target
+     feeling calls for and re-derives every size from it. */
+  --text-caption: 0.875rem;
+  --text-body: 1rem;
+  --text-h3: 1.25rem;
+  --text-h2: 1.5625rem;
+  --text-display: clamp(2.5rem, 5vw, 4rem);
+
   --spacing-unit: 0.25rem;
 
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
@@ -176,8 +185,8 @@ import '../styles/global.css';
 </html>
 EOF
 
-mkdir -p src/sections src/shapes
-touch src/sections/.gitkeep src/shapes/.gitkeep
+mkdir -p src/sections src/shapes src/assets
+touch src/sections/.gitkeep src/shapes/.gitkeep src/assets/.gitkeep
 
 # ── Step 7: package.json — name, scripts ──────────────────────────────────
 

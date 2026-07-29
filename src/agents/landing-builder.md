@@ -43,6 +43,15 @@ to the phase that owns it — never silently improvised around.
   personality and element family — don't simplify or embellish it during
   implementation. Use this skill for any other section shape, divider,
   or icon (Lucide) the build needs too.
+- **`astro:assets`** — every photographic or raster image goes through
+  `<Image />` (or `<Picture />` where art direction or multiple formats
+  are called for), imported as a module from `src/assets/`, never a bare
+  `<img>` pointing at `public/`. Astro emits width/height, so layout
+  doesn't shift as images load. Give the hero image `loading="eager"`
+  and `fetchpriority="high"`; everything below the fold stays lazy by
+  default. A raw `<img>` is a defect here, not a shortcut — it costs the
+  format conversion, the responsive `srcset`, and the reserved space all
+  at once.
 - **React Three Fiber** — only if the subject is genuinely spatial and
   `landing-systems`/`landing-sequencer` specified it; otherwise never
   reach for it.

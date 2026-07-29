@@ -71,7 +71,13 @@ through this quickly:
      (conveyor lines, riveted panels, ductwork) · cartography (routes,
      grid coordinates) · knotwork as straight interlace.
    - *Either* — celestial (orbits as circles = geometric, or soft glows
-     = organic) · textile/ribbon (folded = angular, draped = organic).
+     = organic) · textile/ribbon (folded = angular, draped = organic) ·
+     **oversized type as the graphic element itself** (a display word,
+     a huge numeral, or a repeated letterform used as the composition's
+     anchor rather than as reading matter — the shape work is
+     typographic, so the geometry personality shows up in the
+     letterform's character and how it's cropped, layered, or bled off
+     the edge).
    Commit fully to the family the Chain Method named — don't blend
    three.
 3. **Shape technique**, from the libraries below, matched to the

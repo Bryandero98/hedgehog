@@ -2,3 +2,4 @@
 .serena
 __pycache__/
 .pytest_cache/
+src/golden-cores/landing-page/node_modules

@@ -34,11 +34,13 @@ Hedgehog package, copied to the repo root:
 - `src/styles/global.css` — the Tailwind v4 CSS-first import and the
   `@theme` token block: no component classes, no plugin beyond the base.
   Ships with placeholder tokens (a neutral starting palette, a system
-  type stack, a 4px spacing unit) that `landing-systems` overwrites
-  entirely at its own phase — this block existing and being wired into
-  the build is what core guarantees, not any specific token values.
-- `src/sections/`, `src/shapes/` — empty, with a `.gitkeep`; real content
-  starts at the systems and build phases.
+  type stack, a 1.25-ratio `--text-*` scale, a 4px spacing unit) that
+  `landing-systems` overwrites entirely at its own phase — including
+  swapping the system type stack for real `@fontsource-variable` faces.
+  This block existing and being wired into the build is what core
+  guarantees, not any specific token values.
+- `src/sections/`, `src/shapes/`, `src/assets/` — empty, with a
+  `.gitkeep`; real content starts at the systems and build phases.
 
 `node_modules` is not part of the copy — `pnpm install` regenerates it
 from the committed `pnpm-lock.yaml`.

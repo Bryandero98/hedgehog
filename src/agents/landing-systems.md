@@ -119,14 +119,80 @@ technique:
 **Out:** the token system
 
 Collapse intentions into a small, consistent rule set: 4–6 named hex
-values, 2+ type roles, one corner-radius ruling, a spacing unit, an
-easing family, a copy voice — with top/heart/base timing attached to each
-token where relevant (e.g., an accent color that's vivid in the hero and
-desaturates by the footer). Reconcile any conflict between the visual
-dials, the copy voice, and the note timing surfaced by 4a/4b/4c. Write
-this as the real `@theme` block in `src/styles/global.css`, replacing the
-core's placeholder tokens entirely — nothing from Bootstrap's placeholder
-values survives this step.
+values, 2+ type roles, a **type scale ratio** (below), one corner-radius
+ruling, a spacing unit, an easing family, a copy voice — with
+top/heart/base timing attached to each token where relevant (e.g., an
+accent color that's vivid in the hero and desaturates by the footer).
+Reconcile any conflict between the visual dials, the copy voice, and the
+note timing surfaced by 4a/4b/4c. Write this as the real `@theme` block
+in `src/styles/global.css`, replacing the core's placeholder tokens
+entirely — nothing from Bootstrap's placeholder values survives this
+step.
+
+**Type scale is a ratio, not a guess per heading.** Pick one ratio and
+derive every size from it — never hand-pick a display size and a body
+size independently, which is how pages end up with a headline barely
+bigger than its subhead. Bind the ratio to the same adjectives driving
+every other dial:
+
+| Target feeling | Ratio | Display size (`clamp()`) | Body size |
+|---|---|---|---|
+| Minimal/zen, trustworthy/calm | 1.25 (Major Third) | `clamp(2.5rem, 5vw, 4rem)` | `1rem`–`1.125rem` |
+| Luxurious, cozy/intimate | 1.333 (Perfect Fourth) | `clamp(2.75rem, 6vw, 5rem)` | `1rem`–`1.125rem` |
+| Playful, nostalgic | 1.5 (Perfect Fifth) | `clamp(3rem, 7vw, 6rem)` | `1rem` |
+| Bold/confident, urgent/energetic | 1.75–2 | `clamp(3.5rem, 9vw, 7.5rem)` | `1rem` |
+| Futuristic, maximalist/entertain | 2+ (uncapped) | `clamp(4rem, 11vw, 10rem)` or larger | `0.9375rem`–`1rem` |
+
+The point of the ratio is contrast, not just a large number: body text
+stays put near 1rem while the display size climbs, so the jump between
+them reads as deliberate rather than merely "big." Express every type
+role as a `--text-*` token in `@theme` (Tailwind v4's font-size
+namespace — `--text-display` yields the `text-display` utility;
+`--font-size-*` generates nothing), derived from the ratio
+(`display = body × ratio⁴`, `h2 = body × ratio³`, etc.) rather than
+independently chosen numbers. A role that doesn't fit the ratio chain is
+a sign the scale itself needs revisiting, not an exception to carve out.
+
+**Pick and install the actual typefaces — never ship `system-ui`.** The
+core's placeholder font tokens are a system stack so the pipeline
+compiles, not a choice; leaving them is the single fastest way to make a
+page read as a template and undo the scale work above. Choose two faces
+from the letterform-character dial (4a) — a characterful display face
+and a restrained body face, matched to the target feeling, not a
+repeated default pair — and install them as pinned dependencies:
+
+```bash
+pnpm add @fontsource-variable/<display> @fontsource-variable/<body>
+```
+
+Prefer `@fontsource-variable/*` (one file, full weight/width axis, so a
+variable-weight or width shift costs no extra request). Fall back to
+`@fontsource/*` only when a face publishes no variable build, in which
+case add just the specific weights the dial table calls for. Import them
+once in `src/styles/global.css` above the `@theme` block, then point
+`--font-display` / `--font-body` at the family names — self-hosted and
+pinned, never a Google Fonts `<link>` or any other external request:
+
+```css
+@import 'tailwindcss';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/inter';
+
+@theme {
+  --font-display: 'Fraunces Variable', serif;
+  --font-body: 'Inter Variable', sans-serif;
+}
+```
+
+A `@fontsource-variable/*` face's CSS family name ends in `Variable`
+(`'Inter Variable'`, not `'Inter'`) — the non-variable `@fontsource/*`
+build uses the bare name. Getting this wrong is silent: the token
+resolves to nothing and the browser falls back, with no error.
+
+Verify the faces actually load and render before committing: a token
+naming a family that was never installed silently falls back to the
+browser default, which looks like a design choice rather than the bug it
+is.
 
 ### Step 6 — Signature Element
 

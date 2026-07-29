@@ -84,7 +84,11 @@ Sequencer pacing and top/heart/base fade timing) · **Lenis**
 (line/word/char copy-reveal splitting) · **Signature element & shape
 construction** — the `landing-shapes` skill: geometry personality, the
 curve/angular CSS and Canvas 2D technique library, Lucide as the pinned
-icon source · **`ogl`** (lightweight WebGL) or a raw shader (a
+icon source · **`@fontsource-variable/*`** (self-hosted variable
+typefaces, picked per brief at step 5 — never `system-ui`, never an
+external font request) · **`astro:assets`** (`<Image />`/`<Picture />`
+for every raster image — format conversion, `srcset`, and reserved
+space; a bare `<img>` is a defect) · **`ogl`** (lightweight WebGL) or a raw shader (a
 continuous background field spanning the full page height, so sections
 read as windows onto one surface) · **CSS `clip-path` irregular edges +
 `mix-blend-mode` overlap + negative-margin overlap** (section boundary
@@ -118,7 +122,8 @@ src/
   pages/              one file per page (usually just index.astro)
   sections/           one component per page section, in Sequencer order
   shapes/             the signature element + any other section shapes/dividers, built via landing-shapes
-  styles/             global.css — Tailwind v4 CSS-first import + the `@theme` token layer (hex values, type roles, spacing unit, easing family from Step 5)
+  assets/             raster images, imported as modules and rendered through astro:assets `<Image />`
+  styles/             global.css — @fontsource-variable imports + Tailwind v4 CSS-first import + the `@theme` token layer (hex values, font families, `--text-*` scale, spacing unit, easing family from Step 5)
 .hedgehog/
   BMAD/               vendored BMAD-METHOD shelf's raw output (brief, PR-FAQ, PRD, UX spec, research) —
                        write-once, from planner
