@@ -38,9 +38,8 @@ Method: nothing here is a default reached for out of habit.
 | Animation / pacing | Motion (CSS/transform targets only, no plugins) | Owns per-section pacing and top/heart/base fade timing via `animate()`/`scroll()`/`stagger()`. |
 | Scroll feel | Lenis | The "weight and suspension" dial, instead of default browser scroll physics. |
 | Copy reveal | SplitType | Line/word/char splitting, makes copy rhythm visible in motion, not just static text. |
-| Organic/generative motif | Paper.js | Motif described as a rule (noise, jitter, growth) driving a retained-mode scene graph instead of hand-typed path data or an imperative redraw. |
-| Static geometric motif | CSS `clip-path` / gradients / `border-radius` | Simple shapes (spines, chevrons, blobs) with zero coordinate-guessing risk; Motion-animatable directly. |
-| Measured/connective motif | Canvas 2D with computed coordinates | Threads/lines that align to real DOM positions, drawn from measured values, not imagined ones. |
+| Signature element & shape construction | CSS `clip-path` / gradients / `border-radius`, or Canvas 2D with formula-driven coordinates (`landing-shapes` skill) | Shapes come from a named, computable rule, never a hand-typed or hand-measured coordinate; zero coordinate-guessing risk, Motion-animatable directly. |
+| Icons | Lucide (`@lucide/astro`) | The one pinned, sourced icon set — importing a published icon isn't hand-authoring. |
 | Continuous background field | `ogl` (lightweight WebGL) or raw shader | One field spanning the full page height so sections read as windows onto one surface, not stacked blocks. |
 | Section boundary treatment | CSS `clip-path` irregular edges + `mix-blend-mode` overlap + negative-margin overlap | Breaks the hard horizontal seam between sections without any new dependency. |
 | Texture/grain | CSS `mask-image` + noise pattern | Materiality layer, no SVG filter needed. |
