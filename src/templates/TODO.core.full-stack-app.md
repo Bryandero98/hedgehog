@@ -44,3 +44,8 @@ that's Phase B, and doesn't start until every module below is checked. -->
       mockup/screenshot/Stitch or Figma export here if one exists
 - [ ] screen-web
 - [ ] screen-mobile (only if building for mobile)
+
+<!-- STOP before deleting this file: every box above checked means the
+build is complete. Offer the user a fresh-context handoff to `tweaker`
+first — see hedgehog-loop's Stop Condition. Only delete this file after
+that offer has been made (taken or declined). -->

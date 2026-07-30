@@ -79,10 +79,16 @@ step structure. To work from it:
 boxes off. Keep it thin.
 
 **When the build is done:** once every item in scope is checked, the
-build session is complete. **Delete `TODO.md`** — a finished checklist is
-noise, and the commit log is the durable record of what was built. Any
-archival planning-intake output this core produces stays — it's
-historical record, not a checklist.
+build session is complete. Before deleting `TODO.md`, offer the user a
+fresh-context handoff to the `tweaker` agent — it starts clean, reviews
+`.hedgehog/friction.md` once for a possible discipline-improvement
+suggestion (filed as a GitHub issue against the Hedgehog repo itself,
+never this project's repo, and only after showing the exact content and
+getting explicit approval), then takes any tweak requests one at a time.
+Once that handoff is offered (taken or declined), **delete `TODO.md`** —
+a finished checklist is noise, and the commit log is the durable record
+of what was built. Any archival planning-intake output this core
+produces stays — it's historical record, not a checklist.
 
 ## Managing context
 

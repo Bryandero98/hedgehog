@@ -125,6 +125,22 @@ self-test.
 Each commit batches exactly one phase's artifact; a wrong phase is fixed
 forward later via the Correction Protocol.
 
+## Friction log
+
+Real friction during a build — a phase's instructions were unclear,
+`landing-critic` had to redline the same underlying gap more than once,
+the user had to correct the same kind of mistake more than once, or
+user feedback implied something was wrong even without a direct
+correction (a preference stated once that, read plainly, means an
+earlier phase missed something) — is signal worth keeping past this
+session, separate from the Correction Protocol that fixes it in the
+moment. Append one entry to `.hedgehog/friction.md` (create it if it
+doesn't exist) when that happens: what was tried, what went wrong or was
+implied, why if visible, and the commit/redline it traces to. This is a
+log, not a todo list — don't let it block or slow the loop; append and
+keep moving. `tweaker` reads it once the build reaches its Stop
+Condition.
+
 ## Correction Protocol
 
 When a downstream phase reveals an upstream phase was wrong — most often
@@ -217,3 +233,13 @@ A build session ends when every phase in `TODO.md` is checked off and
 `landing-builder`'s artifact is committed, or when the subject statement
 or an adjective is ambiguous enough that continuing means guessing — ask
 one question and wait.
+
+On the former (a real build completion, not an ambiguity stop), offer a
+fresh-context handoff before doing anything else: tell the user the
+build is complete, that clearing context now costs nothing (`TODO.md`
+and the commit log hold everything), and that a `tweaker` session is the
+right next step for any adjustments — it starts clean, reviews
+`.hedgehog/friction.md` once for a possible discipline-improvement
+suggestion, and takes tweak requests one at a time from there. Don't
+start making tweaks in the current, already-large context; that's what
+the fresh session is for.

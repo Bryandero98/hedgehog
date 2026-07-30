@@ -23,3 +23,8 @@ noted. Do not start a phase until the one above it is checked. -->
 - [ ] copy — final headline, section body, and CTA text, reviewed and confirmed by the user — `landing-copywriter`
 - [ ] audit — traceability/distinctiveness + usability, reconciled to a pass — `landing-critic`
 - [ ] build — the artifact, in Astro — `landing-builder`
+
+<!-- STOP before deleting this file: every box above checked means the
+build is complete. Offer the user a fresh-context handoff to `tweaker`
+first — see hedgehog-landing-loop's Stop Condition. Only delete this
+file after that offer has been made (taken or declined). -->

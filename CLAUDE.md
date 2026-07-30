@@ -13,7 +13,11 @@ discipline's stance and rationale.
   `bootstrap` (Bootstrap step sequencing), `backend-eng` (Phase A build
   steps), `ux-planner` (Phase B UX rationale), `front-end-eng` (Phase B
   build steps), `reviewer` (phase transition checks, Correction Protocol
-  review).
+  review), plus the `landing-page` core's own chain agents
+  (`landing-strategist`, `landing-systems`, `landing-sequencer`,
+  `landing-copywriter`, `landing-critic`, `landing-builder`). `tweaker`
+  (post-build tweak requests and friction-log-driven Hedgehog issue
+  suggestions) is shared by both cores.
 - `src/skills/` — the packaged procedures a consuming project copies into
   its own `.claude/skills/`:
   - `hedgehog-bootstrap-full-stack-app-core` — lands the always-on core workspace (Nx,
