@@ -43,6 +43,29 @@ if a section is genuinely unwritable within them, flag it back to
 `landing-systems` rather than breaking the voice to make the section
 work.
 
+## Core principle
+
+Lead with the transformation the reader gets. Explain the mechanism
+second, as what earns the claim, not what opens it.
+
+Weak: "TDD and opinionated architecture for AI-guided development."
+Stronger: "Turn AI from a code generator into a reliable software
+engineer." Then earn it: "Hedgehog combines TDD, opinionated
+architecture, and small, verifiable loops to make that transformation
+possible." The headline creates desire; the subhead makes the promise
+credible. Prefer transformation forms (turn X into Y, go from X to Y,
+stop doing X and start getting Y) when one expresses the real value
+cleanly — not as a template to fill in by default.
+
+Build each section, when relevant, in this order — but don't force every
+section to hit all five:
+
+1. **Outcome** — what the reader gets or becomes
+2. **Problem** — what currently prevents it
+3. **Mechanism** — how the product changes the situation
+4. **Proof** — why the reader should believe it
+5. **Action** — what to do next
+
 ## Writing standard
 
 Every line ships or it doesn't — there is no draft tier. Apply these
@@ -50,7 +73,7 @@ directly while writing, not as a pass after:
 
 - **Cut inflated words.** No "delve," "landscape," "robust,"
   "comprehensive," "leverage," "seamless," "cutting-edge," "elevate,"
-  "unlock," "empower," "streamline," "game-changer," "unlock," "harness,"
+  "unlock," "empower," "streamline," "game-changer," "harness,"
   "revolutionize," or any word from that register. State the plain verb
   or noun instead.
 - **No negation formulas.** Never write "It's not X — it's Y" or "This
@@ -100,6 +123,10 @@ directly while writing, not as a pass after:
 - **End paragraphs on movement, not restatement.** Close each paragraph
   on an implication, a reframe, a transition, an invitation, or the
   action itself — never by repeating its own opening claim.
+- **Create contrast that clarifies, not drama that manufactures it.**
+  "Most AI tools help you generate more code. Hedgehog helps you keep
+  control of it." Contrast should sharpen the reader's picture of what
+  changes, not just raise the temperature of the prose.
 
 ## Headline mechanisms
 
@@ -171,19 +198,12 @@ deliver on what the headline promises?
 
 ## Self-test
 
+Before presenting, re-check the draft against every bullet in Writing
+standard — each one is a pass/fail check, not just a drafting tip. Beyond
+that pass, confirm:
+
 - Every section's copy matches its assigned beat from `landing-sequencer`
   — a payoff section that reads like a setup is a mismatch, fixed here.
-- No word from the cut list above survived a final read.
-- No negation formula, hedge stack, unnamed authority claim, or stock
-  closer survived a final read.
-- No em dash survived a final read.
-- Sentence length varies within each section — read it aloud; uniform
-  cadence is the tell.
-- Every sentence that shipped has a nameable job (tension, orient,
-  explain, prove, illustrate, transition, resolve, prompt action) — a
-  sentence you can't name a job for gets cut, not kept for flow.
-- Every claim that needs a number, name, or comparison to be checkable
-  has one, or has been cut.
 - The headline and its 2 backups came from at least 3 distinct
   mechanisms, not 3 phrasings of the same one.
 - The headline and every section trace to a named adjective or the
@@ -194,11 +214,10 @@ deliver on what the headline promises?
   what the reader gets, or does it name the thing that gets it to them?
   "One signature. Three uses." fails this (the signature is the
   subject); "Your agent's work outlives the session that made it."
-  passes (the outcome is the subject, and "signature" doesn't need to
-  appear at all). If the headline's first noun phrase is the product,
-  the feature, or the underlying mechanism rather than the change in the
-  reader's situation, rewrite it before presenting — don't let it pass
-  because it's otherwise on-voice and traceable.
+  passes. If the headline's first noun phrase is the product, the
+  feature, or the underlying mechanism rather than the change in the
+  reader's situation, rewrite it — don't let it pass because it's
+  otherwise on-voice and traceable.
 
 ## Constraints
 
