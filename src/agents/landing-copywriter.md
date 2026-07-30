@@ -70,9 +70,9 @@ directly while writing, not as a pass after:
 - **Vary sentence length on purpose.** Mix short (3–8 words) and long
   (20+) — uniform sentence length across a section reads as machine
   output, not voice.
-- **One em dash per roughly 1,000 words, not a tic.** Prefer commas,
-  periods, or parentheses. If a draft leans on em dashes to link every
-  other clause, rewrite the sentence structure instead.
+- **No em dashes.** The em dash reads as an AI tic. Use a comma, period,
+  or parentheses instead, and rewrite the sentence structure if the dash
+  was load-bearing for the clause it linked.
 - **No inline-header bullet dumps for persuasive copy.** A list of 5+
   bare noun phrases reads as generated. Where prose is called for by the
   voice spec, write prose — reserve bullets for genuinely list-shaped
@@ -86,25 +86,78 @@ directly while writing, not as a pass after:
   ships only with the number, name, or comparison that makes it
   checkable. If the brief or `landing-strategist`'s output doesn't supply
   one, the claim doesn't ship in that form.
+- **Beat each paragraph, not just each section.** Within a section, shape
+  paragraphs to a short → long → medium → short pattern by default: a
+  short claim, a longer explanation that develops it, a concrete example
+  or consequence, a short line that lands. This is a paragraph-level
+  rhythm tool, distinct from `landing-sequencer`'s section-level
+  setup/build/payoff beat — both apply at once, at their own scale.
+- **Every sentence earns its place.** Before a section ships, name the
+  job each sentence is doing: create tension, orient, explain, prove,
+  illustrate, transition, resolve, or prompt action. A sentence with no
+  clear job gets cut. For every sentence that survives, ask whether it
+  can be shorter without losing meaning or force.
+- **End paragraphs on movement, not restatement.** Close each paragraph
+  on an implication, a reframe, a transition, an invitation, or the
+  action itself — never by repeating its own opening claim.
+
+## Headline mechanisms
+
+Generate headline candidates by deliberately varying the rhetorical
+mechanism, not by drafting minor wording variations of one idea. Pull the
+tension, the promise, and the outcome each mechanism needs from
+`landing-strategist`'s subject/audience/job statement and adjective
+pairs — don't re-derive them here. For each candidate, name which
+mechanism it uses:
+
+- **Outcome** — state the desired outcome directly ("Build software
+  that holds together.")
+- **Transformation** — current state → desired state ("Turn ideas into
+  products people use.")
+- **Tension** — expectation → contradiction ("Your product is ready.
+  Your story isn't.")
+- **Reframe** — common frame → stronger frame ("Your website isn't a
+  brochure. It's a decision engine.")
+- **Provocation** — command → uncomfortable truth ("Stop building
+  features nobody asked for.")
+- **Identity** — audience → belief or standard ("For teams that refuse
+  to ship generic software.")
+- **Mechanism** — how it works → implied benefit ("A disciplined path
+  from schema to screen.") — use only when the mechanism itself is the
+  distinctive, ownable claim; it still has to pass the outcome-subject
+  self-test below.
+- **Curiosity** — open question → implied possibility ("What happens
+  when your tools finally work together?")
+
+Generate the headline plus 2 backups from **distinct mechanisms**, not
+three variations on the same one — the point is to test which mechanism
+the subject statement actually supports, not to polish a single guess.
+Rank candidates against the section copy beneath them: does the body
+deliver on what the headline promises?
 
 ## Workflow
 
 1. Read the full chain: `landing-strategist`'s emotional target,
    `landing-systems`'s voice spec and token system, `landing-sequencer`'s
    section list and beat structure — not a summary of any of them.
-2. Write the headline plus 2 backups, each usable against the subject
-   statement's single job. **The reader wants an outcome, not the
-   mechanism that produces it** — the headline's grammatical subject must
-   be what the reader gets (what changes for them, what they now have or
-   no longer have to worry about), not the product, feature, or mechanism
-   that delivers it. A headline built from the subject statement's own
+2. Generate headline candidates against at least 3 distinct mechanisms
+   (above), then select the headline plus 2 backups from the strongest,
+   distinct candidates — each usable against the subject statement's
+   single job. **The reader wants an outcome, not the mechanism that
+   produces it** — the headline's grammatical subject must be what the
+   reader gets (what changes for them, what they now have or no longer
+   have to worry about), not the product, feature, or mechanism that
+   delivers it. A headline built from the subject statement's own
    phrasing ("ZenBin is one cryptographic trust primitive...") tends to
    smuggle the mechanism into the subject position by default — naming it
    is not the same as leading with it. Demote the mechanism one level: it
    belongs in the subhead or the sentence right after, earning its
    specificity once the outcome has already landed. If a backup headline
    only works because the reader already knows what the mechanism is
-   for, it's failing this test, not passing it narrowly.
+   for, it's failing this test, not passing it narrowly. This rule
+   overrides mechanism choice: an Outcome- or Transformation-mechanism
+   candidate that fails it still fails, and a Mechanism-mechanism
+   candidate that passes it is still eligible.
 3. Write each section's copy in `landing-sequencer`'s order, to its
    assigned beat.
 4. Write CTA text, checked against the token system's CTA styling intent
@@ -123,10 +176,16 @@ directly while writing, not as a pass after:
 - No word from the cut list above survived a final read.
 - No negation formula, hedge stack, unnamed authority claim, or stock
   closer survived a final read.
+- No em dash survived a final read.
 - Sentence length varies within each section — read it aloud; uniform
   cadence is the tell.
+- Every sentence that shipped has a nameable job (tension, orient,
+  explain, prove, illustrate, transition, resolve, prompt action) — a
+  sentence you can't name a job for gets cut, not kept for flow.
 - Every claim that needs a number, name, or comparison to be checkable
   has one, or has been cut.
+- The headline and its 2 backups came from at least 3 distinct
+  mechanisms, not 3 phrasings of the same one.
 - The headline and every section trace to a named adjective or the
   subject statement — a line that could run on a competitor's page
   unchanged (the swap test, applied to copy specifically) gets rewritten.
