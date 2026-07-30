@@ -1,78 +1,102 @@
-# The Antidote to AI Spaghetti Code ⭐
+# Turn AI from a code generator into a reliable software engineer
 
 [![Total downloads](https://img.shields.io/npm/dt/%40skyf0xx%2Fhedgehog?style=for-the-badge)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 
-AI writes code fast. Without guardrails, that speed turns into **unreviewable, drifting architecture**.
+AI can write code in seconds.
 
-Hedgehog is a **build discipline** for Claude Code: a **fixed stack, an enforced build order**, and a set of agents and skills that make **good engineering the default** instead of something you have to ask for.
+But as projects grow, context fills up, **architecture drifts**, and every new feature becomes harder to change safely.
 
-Hedgehog runs BMAD for planning, then enforces the build that follows with tooling: Nx boundaries, commit hooks, and phase gates.
+Hedgehog gives AI a **disciplined way to build software**: TDD. Opinionated architecture. Small, verifiable steps.
+
+Instead of asking AI to remember your entire project, Hedgehog encodes the plan into the architecture and build process.
+
+The codebase carries the context, not the model.
+
+### Cleaner code, fewer tokens, faster builds
 
 ![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.png)
 
-## What Hedgehog builds
+## How it works
 
-1. **Full-stack TypeScript apps**: built module by module, backend first, on one fixed stack
-2. **Landing pages**: a fixed pipeline from brief to a distinct, traceable page on modern frameworks
+Hedgehog combines:
 
-## How it stays reliable
+- **BMAD for planning** — turn an idea into a clear brief, requirements, and architecture
+- **An opinionated stack** — remove unnecessary technical decisions
+- **TDD and progressive layering** — build one tested layer at a time
+- **Mechanical enforcement** — use tooling and phase gates instead of trusting the AI to follow instructions
+- **Small context loops** — keep every change focused, verifiable, and easy to review
 
-- **Progressive layering**: each core builds one stable layer at a time: types → schema → backend → UI on `full-stack-app`; brief → feeling → tokens → sequence → artifact on `landing-page`
-- **Small context loops**: work is decomposed into atomic, verifiable changes
-- **Self-documenting architecture**: the codebase carries the context, not the AI's memory
-- **Traceable evolution**: every decision is preserved through conventional commits
+Software that stays structured as it grows.
 
 ![Just describe what you want](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/handoff.jpg)
 
-## Why Hedgehog Exists
-
-AI coding starts fast, then breaks down. Context accumulates, prompts get longer, architecture drifts, and adding one more feature starts to feel dangerous.
-
-### Plans expire. Structure doesn't
-
-Without a mechanically enforced build order, an AI (or a person) has to hold the whole plan in its head (architecture, sequencing, past decisions) as an ever-growing prompt.
-
-Hedgehog doesn't ask the AI to remember a plan. It makes the plan visible in the structure of the build, so the architecture itself guides the next step.
-
-### The AI never has to guess what's next
-
-Hedgehog turns the build into a sequence of small, deterministic steps instead of asking the AI to hold an entire application in context. The exact sequence depends on the project's core: a stateful app and a landing page don't share a build order, so they don't share an enforcement mechanism either.
-
-For example, the `full-stack-app` core  builds each module progressively, schema → contract → repository → service → controller. Tests gate every step before the next one starts, and backend comes first, so every module gets a working, typed API before any screen is built. The frontend consumes stable capabilities instead of growing in parallel with backend complexity.
-
-The build order isn't something you negotiate with the AI. It's encoded into the process, per core (see **The Hedgehog Loop**, below).
-
-![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.png)
-
 ## The Hedgehog Loop
 
-Every core runs the same loop: plan, bootstrap, then build in a fixed,
-mechanically-enforced order on an opinionated stack.
-
 ``` text
-Planning intake - BMAD-METHOD's planning shelf, mined into this core's
-scoping artifact
+Plan
   ↓
 Bootstrap
   ↓
-Build in gated steps
+Build one small, tested layer
   ↓
-Repeat for the next step
+Verify
+  ↓
+Repeat
+```
+
+The build order is encoded into the project. The AI does not have to remember what comes next. It does not negotiate the architecture. It follows a proven path through the codebase.
+
+![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.png)
+
+## What Hedgehog builds
+
+### Full-stack applications
+
+A fixed TypeScript stack with a backend-first, test-driven build order:
+
+``` text
+Schema
+  ↓
+Contract
+  ↓
+Repository
+  ↓
+Service
+  ↓
+Controller
+  ↓
+UI
+```
+
+Every layer is verified before the next begins.
+
+### Landing pages
+
+A structured pipeline for producing distinctive, production-quality landing pages:
+
+``` text
+Brief
+  ↓
+Feeling
+  ↓
+Design tokens
+  ↓
+Sequence
+  ↓
+Artifact
 ```
 
 ![Why Hedgehog works: a different way to build with AI, comparing traditional AI workflow to Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
 
-Each core defines its own build order and stack.
+## Install
 
-## Installation
-
-From an empty project folder ask Claude to install:
+From an empty project folder:
 
 ``` bash
-# 1. Full-stack app (Nx, NestJS, Drizzle, ts-rest, Next.js)
+# Full-stack app
 npx @skyf0xx/hedgehog init --ts-full-stack-app
 
-# 2. Landing page (Astro, Tailwind, Motion)
+# Landing page
 npx @skyf0xx/hedgehog init --landing-page
 ```
 
@@ -88,37 +112,31 @@ This refreshes `.claude/agents/` and `.claude/skills/` only. It never
 touches `CLAUDE.md`, `TODO.md`, the core workspace, or
 `skills/BMAD`, since those carry project-specific or write-once content.
 
-## For Builders
+## Why Hedgehog
 
-Once the project brief is defined, Hedgehog takes over execution: breaking the work into steps, following the build order, validating progress, and keeping every decision traceable.
+Most AI coding tools improve prompting.
 
-Under the hood, it applies practices experienced engineers already rely on: iterative delivery, small units of work, clear architectural boundaries, ports and adapters, continuous verification, conventional commits. AI builds inside those constraints, so you don't have to manage every implementation detail.
+Hedgehog improves the **system AI builds inside**.
+
+| | Raw AI | BMAD | Hedgehog |
+| --- | --- | --- | --- |
+| **Planning** | Conversation | Multi-agent workflow | BMAD |
+| **Architecture** | AI decides | Documented | Opinionated and enforced |
+| **Build order** | Improvised | Guided by docs | Mechanically enforced |
+| **Context** | Held in the prompt | Large planning documents | Encoded in the codebase |
+| **Verification** | Optional | Process-dependent | Tests and phase gates |
+| **Result** | Fast code | Better plans | Reliable software |
 
 ## Architecture
 
-Hedgehog is a package of agents and skills, built on an opinionated stack per core so the build order above is mechanical and enforced by the tooling itself. See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
+Hedgehog uses a fixed stack and build order for each core. The tooling enforces architectural boundaries so correctness does not depend on the AI remembering instructions.
 
-## How Hedgehog Compares
-
-Superpowers and BMAD both improve on raw prompting: one gives the AI good habits, the other a planning process. Alone, either can still be broken by convention.
-
-Hedgehog runs BMAD for planning, then enforces the build that follows with tooling and tight boundaries.
-
-| | Superpowers | BMAD | Hedgehog + BMAD |
-| --- | --- | --- | --- |
-| **What it is** | A skills library: brainstorm, plan, TDD, debug, review | A multi-agent planning framework: PM, Architect, Dev, QA personas | BMAD planning (brief → PRD → docs) →  feeding a fixed-stack, enforced-order build |
-| **Order comes from** | Skill instructions the agent is told to follow | Sequenced documents (brief → PRD → architecture → stories) | Tooling (Nx, lefthook, phase gate) |
-| **Enforcement mechanism** | None. Prompted convention | None. One optional checklist between phases | Execution mechanically enforced |
-| **Unit of work** | A task, planned in worktree-isolated steps | A story, derived from PRD and architecture docs | A module layer (schema → contract → repo → service → controller → UI) |
-| **Stack** | Whatever the project already uses | No stack opinion | One locked stack per core, chosen once at planning intake |
-| **Context per step** | As much as the task pulls in | A full brief, PRD, and architecture doc per story | One module layer at a time - BMAD's docs are mined once, up front |
-| **Finding a bug** | Search wherever the task touched | Search wherever the story touched | Search one layer, in one module, in a fixed order |
-| **Real cost** | No safety net if the model shortcuts its own process | Documentation overhead most solo projects don't need | Stack and order aren't negotiable |
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
 ## Credits
 
-Planning intake runs on [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)
-(`bmad-code-org/BMAD-METHOD`) MIT-licensed.
+Hedgehog uses [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)
+(`bmad-code-org/BMAD-METHOD`) for planning, MIT-licensed.
 
 The `nx-generate`, `nx-run-tasks`, `nx-workspace`, and
 `link-workspace-packages` skills are adapted from
@@ -133,6 +151,6 @@ The `nx-generate`, `nx-run-tasks`, `nx-workspace`, and
 
 ## Support Hedgehog
 
-If Hedgehog helps you build better AI software, consider giving it a ⭐ on GitHub.
+If Hedgehog helps you build better software with AI, give it a ⭐ on GitHub.
 
 [![GitHub stars](https://img.shields.io/github/stars/skyf0xx/hedgehog?style=social)](https://github.com/skyf0xx/hedgehog/stargazers)
