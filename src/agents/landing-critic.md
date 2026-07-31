@@ -60,6 +60,11 @@ so Jakob's Law (platform-convention matching) is out of scope here:
 - **Affordance/signifier check** (Norman) — does an element's form
   honestly signal what it does: does a button look pressable, does a
   link look clickable?
+- **Gutter check** — formula, not aesthetic judgment: any
+  section-to-section gutter exceeding 15% of viewport height redlines,
+  naming whether the cause is `landing-sequencer` over-weighting that
+  transition or a gap in `landing-systems`'s spacing token scale forcing
+  the nearest oversized token.
 
 Reconcile both audits into one report before returning it — distinctive
 where it should be, legible where it must be. A finding from one audit
