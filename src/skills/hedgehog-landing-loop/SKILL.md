@@ -89,20 +89,26 @@ artifact; everything else is strictly sequential.
 | 6 | Systems Designer | `landing-systems` | The token system (hex values, type roles, spacing unit, easing family, copy voice, with note timing attached) | bundled into `feat(landing): systems` |
 | 7 | Signature Element | `landing-systems` | Signature element (source, persistence, continuity, scale range, literalness) | bundled into `feat(landing): systems` |
 | 8 | Sequencer | `landing-sequencer` | Per-section transition type, weight, spacing, beat structure | `feat(landing): sequence` |
-| 9 | Copywriter | `landing-copywriter` | Final page copy — headline (2 backups), every section's body text, CTA text, written to the voice spec and beat structure, reviewed and confirmed by the user | `feat(landing): copy` |
-| 10 | Critic + Usability Auditor | `landing-critic` | Redlines, or a pass — reconciled traceability/distinctiveness + usability audit | `feat(landing): audit` (no commit if redlined — see Correction Protocol) |
-| 11 | Builder | `landing-builder` | The built page, in Astro | `feat(landing): build` |
+| 9 | Headline | `landing-headline-writer` | The headline plus 2 backups, from 3 distinct rhetorical mechanisms, reviewed and locked by the user | `feat(landing): headline` |
+| 10 | Copywriter (one invocation per section) | `landing-copywriter` | One section's body text and CTA copy per invocation, to the fixed paragraph algorithm, reviewed and locked by the user before the next section starts | `feat(landing): copy` (one commit once every section locks, or extended per section — never split across an unlocked section) |
+| 11 | Critic + Usability Auditor | `landing-critic` | Redlines, or a pass — reconciled traceability/distinctiveness + usability audit | `feat(landing): audit` (no commit if redlined — see Correction Protocol) |
+| 12 | Builder | `landing-builder` | The built page, in Astro | `feat(landing): build` |
 
 Phases 1 through 4 are one agent's context (`landing-strategist`)
 because they're one continuous judgment call — subject into feeling into
 timing — not separable artifacts with different tool footprints. Same
 reasoning collapses 5–7 into `landing-systems` (everything that becomes
-a Tailwind token or a copy rule) and 10's reconciliation into a single
-`landing-critic` pass. Copy is its own phase, not folded into
-`landing-systems` or `landing-builder`, specifically so the user reads
-and confirms the actual words before either the audit or the build runs
-— see `landing-copywriter`'s own file for its writing standard and
-self-test.
+a Tailwind token or a copy rule) and 11's reconciliation into a single
+`landing-critic` pass. The headline is its own phase (9), one agent, one
+artifact, one review checkpoint, because it's the single highest-leverage
+line on the page — every section beneath it either delivers on its
+promise or doesn't, so it locks before any section body is drafted. Copy
+(10) is its own phase too, run once per section rather than once for the
+whole page, specifically so the user reads and confirms each section's
+actual words before the next section is drafted, and before either the
+audit or the build runs — see `landing-headline-writer`'s and
+`landing-copywriter`'s own files for their writing standards, the
+paragraph algorithm, and their self-tests.
 
 ## The Loop (every unit of work)
 
@@ -113,14 +119,20 @@ self-test.
 3. **Delegate exactly one phase** to its owning agent, passing it the
    full chain so far (every upstream artifact, not just the immediately
    prior one) — an agent that only sees its direct input can't verify its
-   own traceability back to the subject statement.
+   own traceability back to the subject statement. Phase 10
+   (`landing-copywriter`) is delegated once per section, in
+   `landing-sequencer`'s order — each invocation is still "exactly one
+   phase" in the sense this step means: one section, reviewed and locked,
+   before the next invocation starts.
 4. The agent **runs its self-test** (see that agent's own file for what
    it checks) before presenting its artifact.
 5. The agent **commits** using the exact Conventional Commit format
    above.
 6. **Check off the line in `TODO.md`** once the agent reports the commit
-   landed.
-7. **Repeat**, one delegated phase at a time.
+   landed. Phase 10 stays unchecked until every section in
+   `landing-sequencer`'s list has locked, not after the first section.
+7. **Repeat**, one delegated phase (or one section, at phase 10) at a
+   time.
 
 Each commit batches exactly one phase's artifact; a wrong phase is fixed
 forward later via the Correction Protocol.
@@ -152,8 +164,10 @@ subject statement, or matches a known AI-default cluster:
    agent.
 3. Fast-forward every dependent phase that breaks. A token system change
    (phase 6) ripples through the signature element (7), the sequence
-   (8), the copy (9, if the voice spec shifted), and the build (11) —
-   each gets its own small commit, in order, not one bundled fix.
+   (8), the headline (9, if the voice spec shifted) and every locked
+   section of copy (10, re-run per affected section, not the whole phase
+   over again), and the build (12) — each gets its own small commit, in
+   order, not one bundled fix.
 4. Re-run `landing-critic` against the patched chain before resuming.
 5. The commit messages are the explanation.
 6. Resume the loop.
@@ -168,12 +182,23 @@ confirm step 1's subject/audience/job statement has been shown to and
 confirmed by the user — not just drafted. This is the cheapest point in
 the whole chain to correct the core framing (nothing downstream exists
 yet); every phase after it inherits that framing silently, and by the
-time `landing-copywriter` is reviewed at phase 9, a wrong framing means
-unwinding four committed phases via the Correction Protocol instead of
-one free revision here.
+time copy is reviewed at phases 9–10, a wrong framing means unwinding
+several committed phases via the Correction Protocol instead of one free
+revision here.
 
-Before `landing-critic` starts, confirm `landing-copywriter`'s copy has
-been presented to and confirmed by the user, not just written —
+Before `landing-copywriter` starts (phase 10), confirm
+`landing-headline-writer`'s headline has been presented to and locked by
+the user, not just drafted — every section's copy is written against
+whichever headline is locked at phase 9, so an unlocked headline means
+every section written against it is provisional too.
+
+Before each `landing-copywriter` invocation after the first, confirm the
+previous section is locked, not just presented — the next section's
+continuity check (no repeated claims, no synonym drift) reads the prior
+section's actual locked text, not a draft still awaiting edits.
+
+Before `landing-critic` starts, confirm every section `landing-copywriter`
+wrote has been presented to and locked by the user, not just written —
 `landing-critic`'s traceability audit reads confirmed copy, not a draft
 still awaiting review.
 
@@ -181,7 +206,7 @@ Before `landing-builder` starts, confirm:
 
 - `landing-critic` returned a pass, not a redline — a redlined spec never
   reaches the Builder; it goes back to the phase the redline names.
-- Every phase 1–10 has its commit landed.
+- Every phase 1–11 has its commit landed.
 
 Before `landing-strategist` starts, confirm planning intake's Confirm &
 Lock has held and its commit has landed. If not, stop and ask.

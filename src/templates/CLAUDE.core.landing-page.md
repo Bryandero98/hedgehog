@@ -32,6 +32,13 @@ pinned icon source. Neither restates the other's decision.
   Lucide as the pinned icon source. `landing-systems` points into it
   when naming the signature element's family; `landing-sequencer` and
   `landing-builder` invoke it for the concrete recipe.
+- **`landing-copy-headline`, `landing-copy-hero`, `landing-copy-problem`,
+  `landing-copy-mechanism`, `landing-copy-proof`, `landing-copy-objection`,
+  `landing-copy-cta`** — the per-archetype copywriting algorithms: what
+  question each section type answers, what order to answer it in, and its
+  own self-test. `landing-headline-writer` invokes `landing-copy-headline`
+  for the headline; `landing-copywriter` invokes whichever of the other
+  six matches the section's role, as assigned by `landing-sequencer`.
 - **`conventional-commits`** — when a change spans several phases in one
   working-tree pass and needs splitting back into per-phase commits
   (mainly Correction Protocol cleanups).
@@ -55,19 +62,32 @@ pinned icon source. Neither restates the other's decision.
   the token system that reconciles them, and the signature element. Owns
   everything that becomes a Tailwind token or a copy rule.
 - **`landing-sequencer`** — per-section transition type, weight, spacing,
-  and beat structure — the Motion/Lenis pacing spec the Builder
+  beat structure, and copy archetype role (Hero/Problem/Mechanism/Proof/
+  Objection/CTA) — the Motion/Lenis pacing spec, plus the taxonomy
+  `landing-copywriter` reads to pick its per-section skill, the Builder
   implements against.
-- **`landing-copywriter`** — the final page copy: headline (2 backups),
-  every section's body text, CTA text — written to the voice spec and
-  the sequence's beat structure. Presented as its own artifact for the
-  user to read and confirm before the audit or the build runs.
+- **`landing-headline-writer`** — the headline, plus 2 backups from
+  distinct rhetorical mechanisms (via the `landing-copy-headline` skill),
+  written to the voice spec. Presented as its own artifact and locked by
+  the user before any section's body copy is drafted.
+- **`landing-copywriter`** — every section's body text and CTA text, one
+  section per invocation, in the sequence's order — each section written
+  to its archetype role's dedicated skill and a fixed paragraph-count
+  algorithm (one paragraph per beat `landing-sequencer` assigned it),
+  to the voice spec, and presented as its own artifact for the user to
+  read, edit, and lock before the next section is drafted. Output is
+  semantic markdown (paragraph/list/blockquote) so `landing-builder`
+  reads section structure directly.
 - **`landing-critic`** — the reconciled traceability/distinctiveness
-  audit (does every choice, including the copy, trace to the subject
-  statement, does anything match a known AI-default cluster) and the
-  usability pass (Fitts's Law on the CTA, affordance/signifier check).
-  Has veto power; cannot rewrite, only redline back to the owning agent.
+  audit (does every choice, including the headline and every section's
+  copy, trace to the subject statement, does anything match a known
+  AI-default cluster) and the usability pass (Fitts's Law on the CTA,
+  affordance/signifier check). Has veto power; cannot rewrite, only
+  redline back to the owning agent.
 - **`landing-builder`** — builds the audited spec exactly in Astro,
-  placing `landing-copywriter`'s copy verbatim. Anything that can't be
+  placing `landing-headline-writer`'s locked headline and
+  `landing-copywriter`'s section copy verbatim, mapping each section's
+  markdown structure to the matching markup. Anything that can't be
   built as specified is flagged back up the chain, never silently
   improvised around.
 

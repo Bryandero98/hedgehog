@@ -20,7 +20,8 @@ noted. Do not start a phase until the one above it is checked. -->
 - [ ] strategy — subject/audience/job + adjective pairs + visceral/behavioral/reflective sort + note timing — `landing-strategist`
 - [ ] systems — dial table + voice spec (parallel) → token system → signature element — `landing-systems`
 - [ ] sequence — per-section transitions, weight, spacing, beat structure — `landing-sequencer`
-- [ ] copy — final headline, section body, and CTA text, reviewed and confirmed by the user — `landing-copywriter`
+- [ ] headline — headline + 2 backups, from distinct mechanisms, reviewed and locked by the user — `landing-headline-writer`
+- [ ] copy — one section at a time, per the paragraph algorithm, each section reviewed and locked by the user before the next starts — `landing-copywriter`
 - [ ] audit — traceability/distinctiveness + usability, reconciled to a pass — `landing-critic`
 - [ ] build — the artifact, in Astro — `landing-builder`
 

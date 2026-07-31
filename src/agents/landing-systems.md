@@ -85,8 +85,8 @@ itself into noise instead of a mood — this is what the self-test's
 
 **In:** sorted emotional targets (from `landing-strategist`)
 **Out:** voice spec (sentence rhythm, verb mode, user-side naming, what's
-said vs. omitted) — rules for `landing-copywriter` to write from, not
-drafted copy itself
+said vs. omitted) — rules for `landing-headline-writer` and
+`landing-copywriter` to write from, not drafted copy itself
 
 Write from the user's side of the screen. Active voice by default. One
 job per line. You have veto power over an adjective: if it's effectively
