@@ -1,4 +1,4 @@
-# Turn AI from a code generator into a reliable software engineer
+# Turn AI from a code generator into a reliable software engineer ⭐
 
 [![Total downloads](https://img.shields.io/npm/dt/%40skyf0xx%2Fhedgehog?style=for-the-badge)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 
@@ -12,7 +12,7 @@ Instead of asking AI to remember your entire project, Hedgehog encodes the plan 
 
 The codebase carries the context, not the model.
 
-### Cleaner code, fewer tokens, faster builds
+## Cleaner code, fewer tokens, faster builds
 
 ![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.png)
 
@@ -90,7 +90,7 @@ Artifact
 
 ## Install
 
-From an empty project folder:
+From an empty project folder, ask Claude to run:
 
 ``` bash
 # Full-stack app
