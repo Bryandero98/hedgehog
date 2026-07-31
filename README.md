@@ -12,7 +12,7 @@ Instead of asking AI to remember your entire project, Hedgehog encodes the plan 
 
 The codebase carries the context, not the model.
 
-## Cleaner code, fewer tokens, faster builds
+## Cleaner code, fewer tokens, faster builds ⭐⭐⭐⭐
 
 ![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.png)
 
