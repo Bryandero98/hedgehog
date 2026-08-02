@@ -46,10 +46,10 @@ not restate their content.
 
 ## 3 — Compiler
 
-- [ ] `hedgehog plan` — reads pending intents + `intent_dependencies` +
+- [x] `hedgehog plan` — reads pending intents + `intent_dependencies` +
       the project's core definition, emits `tasks` + `dependencies` rows.
       Full-stack-app: layer × module. Landing-page: one task per phase.
-- [ ] Verify: one intent with no dependencies compiles to the full layer
+- [x] Verify: one intent with no dependencies compiles to the full layer
       chain for its module, each task's `depends_on` matching the core
       definition's order; a second intent depending on the first
       produces a task graph where its first task can't be `ready` until

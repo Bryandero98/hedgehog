@@ -11,9 +11,14 @@
 
 import { cp, mkdir, access, readdir, stat, rm, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import { dbInit, DB_PATH } from '../src/db/init.mjs';
+import { loadCore } from '../src/db/core.mjs';
+import { planTasks } from '../src/db/plan.mjs';
+
+const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = resolve(__dirname, '..');
@@ -169,6 +174,7 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog init --force              overwrite existing files
   npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
   npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
+  npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -311,6 +317,52 @@ async function dbCommand(args) {
   );
 }
 
+// Resolves the project's core definition: an authored .hedgehog/core.yaml
+// takes precedence (spec: "Authored cores"); otherwise the shipped Golden
+// Core landed at repo root by `init` (its core.yaml copies there along
+// with the rest of src/golden-cores/<core>).
+async function resolveCorePath() {
+  if (await exists(join(DEST_ROOT, AUTHORED_CORE_PATH))) {
+    return join(DEST_ROOT, AUTHORED_CORE_PATH);
+  }
+  const rootCore = join(DEST_ROOT, 'core.yaml');
+  if (await exists(rootCore)) return rootCore;
+  return null;
+}
+
+async function planCommand() {
+  const corePath = await resolveCorePath();
+  if (!corePath) {
+    console.error(
+      `${red('No core definition found.')} Expected ${bold(AUTHORED_CORE_PATH)} or a root ${bold('core.yaml')} (from \`hedgehog init\`).\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const core = await loadCore(corePath);
+  const db = new DatabaseSync(DB_PATH);
+  let result;
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    result = planTasks(db, core);
+  } finally {
+    db.close();
+  }
+
+  for (const id of result.compiled) console.log(`  ${green('compiled')}  ${id}`);
+  for (const id of result.skipped) console.log(`  ${dim('skipped')}  ${id} ${dim('(already compiled)')}`);
+  console.log(
+    `\n${green(bold('Plan complete.'))} ${dim(`${result.compiled.length} intent(s) compiled, ${result.skipped.length} skipped`)}\n`,
+  );
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -343,6 +395,11 @@ async function main() {
 
   if (cmd === 'db') {
     await dbCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'plan') {
+    await planCommand();
     return;
   }
 
