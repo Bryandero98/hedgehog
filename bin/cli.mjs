@@ -3,8 +3,9 @@
 // into the current repo, so the discipline travels with the project.
 //
 // Usage:
-//   npx @skyf0xx/hedgehog init                        scaffold, ts-full-stack-app core (default)
-//   npx @skyf0xx/hedgehog init --landing-page          scaffold the landing-page core instead
+//   npx @skyf0xx/hedgehog init                        no workspace yet — planner picks the core
+//   npx @skyf0xx/hedgehog init --ts-full-stack-app     scaffold the full-stack-app core now
+//   npx @skyf0xx/hedgehog init --landing-page          scaffold the landing-page core now
 //   npx @skyf0xx/hedgehog init --force                 overwrite files that already exist
 //   npx @skyf0xx/hedgehog update                       refresh .claude/agents + .claude/skills
 //   npx @skyf0xx/hedgehog --help
@@ -74,8 +75,16 @@ async function availableCores() {
 // Agents and skills for every core install regardless of which one is
 // chosen — planner needs the full toolset to run core selection at all,
 // and a project can only switch cores before it's bootstrapped anyway.
+//
+// `core` is `null` on a deferred install (plain `init`, no explicit
+// flag): which core applies hasn't been decided yet, so nothing
+// core-specific — no golden-core workspace, no filled CLAUDE.md section —
+// gets written speculatively. `bootstrap` lands the real workspace, for
+// whichever core `planner` picks, the first time either way. An explicit
+// flag (`--ts-full-stack-app`, `--landing-page`) is a confirmed choice,
+// not a guess, so it scaffolds immediately as before.
 function plan(core) {
-  return [
+  const base = [
     { type: 'dir', from: 'src/agents', to: '.claude/agents' },
     { type: 'dir', from: 'src/skills', to: '.claude/skills' },
     // The vendored BMAD-METHOD planning shelf that hedgehog-planning-intake
@@ -85,25 +94,25 @@ function plan(core) {
     // The vendored GSAP animation skill shelf that front-end-eng loads for
     // motion work — same repo-root-relative referencing as skills/BMAD.
     { type: 'dir', from: 'skills/GSAP', to: 'skills/GSAP' },
+  ];
+
+  if (core === null) {
+    return [
+      ...base,
+      // The shell with its {{CORE_SECTION}} placeholder left unfilled —
+      // whichever bootstrap-core skill runs first fills it in for the
+      // core planner actually picked.
+      { type: 'file', from: 'src/templates/CLAUDE.md', to: 'CLAUDE.md' },
+    ];
+  }
+
+  return [
+    ...base,
     {
       type: 'merge',
       shell: 'src/templates/CLAUDE.md',
       include: `src/templates/CLAUDE.core.${core}.md`,
       to: 'CLAUDE.md',
-    },
-    // The shell plus the authored-core section, landed unmerged so
-    // `hedgehog-bootstrap-authored-core` can rebuild CLAUDE.md from them
-    // when planning intake designs a core instead of taking a shipped
-    // one. Removed by that same step once it has used them.
-    {
-      type: 'file',
-      from: 'src/templates/CLAUDE.md',
-      to: '.hedgehog/templates/CLAUDE.md',
-    },
-    {
-      type: 'file',
-      from: 'src/templates/CLAUDE.core.authored.md',
-      to: '.hedgehog/templates/CLAUDE.core.authored.md',
     },
     // The pre-built, pre-verified workspace for the chosen core —
     // everything a fresh project of that shape needs at repo root
@@ -182,9 +191,9 @@ CLAUDE.md template and an empty build graph (${bold('.hedgehog/hedgehog.db')})
 into the repo root, so the discipline is committed alongside your code.
 
 ${bold('Usage')}
-  npx @skyf0xx/hedgehog init                      scaffold, ${DEFAULT_CORE} core (default)
-  npx @skyf0xx/hedgehog init --ts-full-stack-app  scaffold the full-stack-app core explicitly
-  npx @skyf0xx/hedgehog init --landing-page       scaffold the landing-page core instead
+  npx @skyf0xx/hedgehog init                      no workspace yet — planner picks the core
+  npx @skyf0xx/hedgehog init --ts-full-stack-app  scaffold the full-stack-app core now
+  npx @skyf0xx/hedgehog init --landing-page       scaffold the landing-page core now
   npx @skyf0xx/hedgehog init --force              overwrite existing files
   npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
   npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
@@ -208,10 +217,10 @@ off to bootstrap.
 Building something else (a CLI, library, browser extension, data
 pipeline, desktop app, etc.)? Run plain 'init' with no core flag rather
 than picking --ts-full-stack-app or --landing-page by elimination — it
-scaffolds ${DEFAULT_CORE}'s payload as a placeholder, but the planner
-agent designs and switches in an authored core at planning intake
-(hedgehog-core-design) before any workspace is generated for real.
-Describe the actual project and let Phase 0 route it.
+installs the agents, skills, and build graph only, nothing core-specific.
+The planner agent designs a core at planning intake (hedgehog-core-design)
+and bootstrap generates that workspace once it's confirmed. Describe the
+actual project and let Phase 0 route it.
 
 ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
@@ -223,19 +232,22 @@ updated deliberately, not by this command.
 }
 
 async function init({ force, core, explicitCore }) {
-  const cores = await availableCores();
-  if (!cores.includes(core)) {
-    console.error(
-      `${red('Unknown core:')} ${core}\n\nAvailable cores: ${cores.join(', ')}\n`,
-    );
-    process.exitCode = 1;
-    return;
+  if (explicitCore) {
+    const cores = await availableCores();
+    if (!cores.includes(core)) {
+      console.error(
+        `${red('Unknown core:')} ${core}\n\nAvailable cores: ${cores.join(', ')}\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
   }
 
   // Resolve the full list of writes up front so we can detect conflicts
-  // before touching anything.
+  // before touching anything. A deferred install (no explicit core) plans
+  // against `null` — no golden-core workspace, nothing core-specific.
   const groups = [];
-  for (const entry of plan(core)) {
+  for (const entry of plan(explicitCore ? core : null)) {
     const files = await plannedFiles(entry);
     groups.push({ entry, files });
   }
@@ -282,30 +294,40 @@ async function init({ force, core, explicitCore }) {
     )}\n`,
   );
   console.log('Next steps:');
-  console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
-  console.log(`  2. ${bold('pnpm install')}`);
-  console.log(`  3. Open Claude Code and describe what you want to build.`);
+  if (explicitCore) {
+    console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
+    console.log(`  2. ${bold('pnpm install')}`);
+    console.log(`  3. Open Claude Code and describe what you want to build.`);
+  } else {
+    console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
+    console.log(`  2. Open Claude Code and describe what you want to build.`);
+  }
   console.log(
     dim(
       `     The ${bold('planner')} agent runs planning intake, then hands off to bootstrap.`,
     ),
   );
   console.log();
-  console.log(
-    dim(
-      explicitCore
-        ? `Core: ${bold(core)}.`
-        : `Core: ${bold(core)} (installer default — planner may design an authored core instead).`,
-    ),
-  );
-  console.log(
-    dim(
-      core === DEFAULT_CORE
-        ? '(Nx, packages/config, packages/db, apps/api, apps/web) — bootstrap\n' +
-            'runs whichever add-ons (Auth, Queue, Mobile) intake calls for.'
-        : 'bootstrap runs whichever add-on steps this core defines, if any.',
-    ),
-  );
+  if (explicitCore) {
+    console.log(dim(`Core: ${bold(core)}.`));
+    console.log(
+      dim(
+        core === DEFAULT_CORE
+          ? '(Nx, packages/config, packages/db, apps/api, apps/web) — bootstrap\n' +
+              'runs whichever add-ons (Auth, Queue, Mobile) intake calls for.'
+          : 'bootstrap runs whichever add-on steps this core defines, if any.',
+      ),
+    );
+  } else {
+    console.log(
+      dim(
+        'Core: not chosen yet. Nothing core-specific landed — no workspace,\n' +
+          'no framework, no lockfile. planner decides which core applies at\n' +
+          'planning intake, then bootstrap lands that core\'s workspace for\n' +
+          'the first time.',
+      ),
+    );
+  }
 }
 
 async function update() {
@@ -359,8 +381,10 @@ async function dbCommand(args) {
 
 // Resolves the project's core definition: an authored .hedgehog/core.yaml
 // takes precedence (spec: "Authored cores"); otherwise the shipped Golden
-// Core landed at repo root by `init` (its core.yaml copies there along
-// with the rest of src/golden-cores/<core>).
+// Core landed at repo root by `bootstrap` (its core.yaml copies there
+// along with the rest of src/golden-cores/<core>). Neither exists yet on
+// a deferred install (plain `init`, no explicit core flag) until
+// `bootstrap` runs — this returns null until then.
 async function resolveCorePath() {
   if (await exists(join(DEST_ROOT, AUTHORED_CORE_PATH))) {
     return join(DEST_ROOT, AUTHORED_CORE_PATH);

@@ -59,15 +59,18 @@ re-copy: patch the specific file at its source.
 
 ### 2. Land `src/golden-cores/landing-page/`
 
-In the common case this is already done — `hedgehog init --landing-page`'s
-installer copies `src/golden-cores/landing-page/` to the repo root at
-install time, the same way it copies `src/agents` to `.claude/agents`.
-Check whether the core files are already present (same check as step 1).
-If they're missing — `hedgehog init` ran against an older package
-version, or the files were deleted — copy
-`src/golden-cores/landing-page/`'s contents to the repo root now as a
-fallback. Either way, by the end of this step every file listed in "What
-lands" above should be on disk.
+`hedgehog init --landing-page` copies `src/golden-cores/landing-page/` to
+the repo root at install time, the same way it copies `src/agents` to
+`.claude/agents` — check whether the core files are already present
+(same check as step 1) before copying again. On a project that ran plain
+`init` (no core flag) and only reaches `landing-page` because `planner`
+picked it at Phase 0, this hasn't happened yet: copy
+`src/golden-cores/landing-page/`'s contents to the repo root now. Also
+merge this core's `CLAUDE.md` section into root `CLAUDE.md`
+(`src/templates/CLAUDE.core.landing-page.md` fills the shell's
+`{{CORE_SECTION}}` placeholder left unfilled by a deferred install) —
+skip this if the section is already filled. Either way, by the end of
+this step every file listed in "What lands" above should be on disk.
 
 ### 3. Install
 

@@ -86,14 +86,18 @@ natively-installed Postgres. See **Local infra: Docker, always** below.
 
 ### 3. Land `src/golden-cores/full-stack-app/`
 
-In the common case this is already done — `hedgehog init`'s installer
-copies `src/golden-cores/full-stack-app/` to the repo root at install time, the same way
-it copies `src/agents` to `.claude/agents`. Check whether the core files
-are already present (same check as step 1). If they're missing —
-`hedgehog init` ran against an older package version, or the files were
-deleted — copy `src/golden-cores/full-stack-app/`'s contents to the repo root now as a
-fallback. Either way, by the end of this step every file listed in "What
-lands" above should be on disk.
+`hedgehog init --ts-full-stack-app` copies `src/golden-cores/full-stack-app/`
+to the repo root at install time, the same way it copies `src/agents` to
+`.claude/agents` — check whether the core files are already present
+(same check as step 1) before copying again. On a project that ran
+plain `init` (no core flag) and only reaches `full-stack-app` because
+`planner` picked it at Phase 0, this hasn't happened yet: copy
+`src/golden-cores/full-stack-app/`'s contents to the repo root now. Also
+merge this core's `CLAUDE.md` section into root `CLAUDE.md`
+(`src/templates/CLAUDE.core.full-stack-app.md` fills the shell's
+`{{CORE_SECTION}}` placeholder left unfilled by a deferred install) —
+skip this if the section is already filled. Either way, by the end of
+this step every file listed in "What lands" above should be on disk.
 
 ### 4. Install and start local infra
 

@@ -38,9 +38,8 @@ discipline's stance and rationale.
     still building something real. Invoked by `planner` as Phase 0's
     third outcome, after the BMAD shelf has run; Hedgehog designs the
     architecture here rather than asking the user to.
-  - `hedgehog-bootstrap-authored-core` — clears the default scaffold
-    `init` landed and generates the workspace for the stack
-    `hedgehog-core-design` chose, one pass, closing Bootstrap on an
+  - `hedgehog-bootstrap-authored-core` — generates the workspace for the
+    stack `hedgehog-core-design` chose, one pass, closing Bootstrap on an
     authored core.
   - `hedgehog-loop` — the operating loop for every unit of work on
     `full-stack-app` once bootstrap has run: the domain module step
@@ -70,9 +69,10 @@ discipline's stance and rationale.
   the `planner` fills at planning intake, plus the Hedgehog constants —
   stack, layout, rules, skill/agent pointers, and context-management
   guidance). One `CLAUDE.core.<core>.md` section per core fills that
-  shell's `{{CORE_SECTION}}`; the `authored` one also lands under
-  `.hedgehog/templates/` so `hedgehog-bootstrap-authored-core` can
-  rebuild the file once planning intake designs a core.
+  shell's `{{CORE_SECTION}}` — at install time when `init` is given an
+  explicit core flag, or by the matching bootstrap-core skill when `init`
+  ran with no flag and the shell landed with that placeholder still
+  unfilled.
 
 ## Working in this repo
 

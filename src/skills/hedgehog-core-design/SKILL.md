@@ -239,10 +239,9 @@ runs `hedgehog-planning-intake`'s Phase 1 mining against this core the
 same way it would against a shipped one, then hands off to `bootstrap`.
 
 This skill never touches the workspace itself — no `pnpm init`, no
-generator, no install. `init` already scaffolded a default golden-core
-payload speculatively before Phase 0 ever ran (the CLI has to copy
-something; `full-stack-app` is that default), and this skill's job ends
-at the design artifacts. `bootstrap`'s `hedgehog-bootstrap-authored-core`
-is what later removes that speculative default and generates the real
+generator, no install. `hedgehog init` lands nothing core-specific until
+a core is chosen, so there's nothing on disk yet for this skill to
+conflict with; its job ends at the design artifacts. `bootstrap`'s
+`hedgehog-bootstrap-authored-core` is what later generates the real
 workspace for the stack chosen here — a separate step, run only once
 Phase 1 mining and Confirm & Lock have both landed.

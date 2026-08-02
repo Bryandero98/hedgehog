@@ -1,25 +1,17 @@
 ---
 name: hedgehog-bootstrap-authored-core
-description: Use once, at the start of a new Hedgehog project on an authored core (`hedgehog-core-design` wrote `.hedgehog/core.yaml`), to clear the default scaffold `init` landed and generate a verified workspace for the stack `hedgehog-core-design` chose. Runs as the `bootstrap` agent's only move on this core, and closes Bootstrap.
+description: Use once, at the start of a new Hedgehog project on an authored core (`hedgehog-core-design` wrote `.hedgehog/core.yaml`), to generate a verified workspace for the stack `hedgehog-core-design` chose. Runs as the `bootstrap` agent's only move on this core, and closes Bootstrap.
 ---
 
 # Hedgehog Bootstrap — authored core
 
 Lands the workspace for a project whose core `hedgehog-core-design`
-designed. The stack varies per project (that skill's Step 2 stack
-table), so this workspace is generated live from the ecosystem's own
-tooling and verified before it's committed.
-
-## Why this exists
-
-`hedgehog init` scaffolds a default golden-core payload before `planner`
-runs Phase 0 — a CLI has to pick something to copy, and `full-stack-app`
-is that default (`bin/cli.mjs`'s `DEFAULT_CORE`). When Phase 0 designs a
-core instead, that scaffold (`nx.json`, `packages/`, `apps/api`,
-`apps/web`, the root `package.json`, full-stack-app's section of root
-`CLAUDE.md`) is speculative output this project never confirmed. Clearing
-it is this skill's first job: left in place, it collides with the
-generated workspace on `package.json`, lockfiles, and root config.
+designed. `hedgehog init` never scaffolds anything core-specific until a
+core is actually chosen, so nothing needs clearing here — this skill is
+the first thing that writes a workspace for this project. The stack
+varies per project (`hedgehog-core-design`'s Step 2 stack table), so it's
+generated live from the ecosystem's own tooling and verified before it's
+committed.
 
 ## Steps
 
@@ -33,43 +25,19 @@ produce (e.g. `wxt.config.ts` for a WXT browser extension,
 there. A workspace that looks wrong is a Correction Protocol case against
 the specific file.
 
-### 2. Remove the speculative default scaffold
+### 2. Fill in `CLAUDE.md`'s core section
 
-`init` lands `full-stack-app`'s golden-core payload by default, so
-`nx.json` at the repo root is the tell. Its presence means the scaffold
-is still in place; clear it before generating the real workspace:
+Root `CLAUDE.md` was landed by `init` as a shell with its
+`{{CORE_SECTION}}` placeholder still unfilled (no core was known yet).
+Read `src/templates/CLAUDE.core.authored.md` from the installed Hedgehog
+package and write its contents in place of the placeholder — every other
+line in root `CLAUDE.md`, including the `{{PROJECT_NAME}}`/
+`{{PROJECT_SUMMARY}}` values `planner` already filled at planning intake,
+stays untouched.
 
-- Delete these root files: `nx.json`, `package.json`,
-  `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `docker-compose.yml`,
-  `core.yaml` (full-stack-app's own core definition — the authored one
-  lives at `.hedgehog/core.yaml`), `tsconfig.json`, `tsconfig.base.json`,
-  `vitest.workspace.ts`, `eslint.config.mjs`, `commitlint.config.cjs`,
-  `lefthook.yml`, `.env.example`, `.prettierrc`, `.prettierignore`,
-  `.gitignore`.
-- Delete these root directories in full: `packages/` (`config`, `db`),
-  `apps/` (`api`, `api-e2e`, `web`, `web-e2e`), `tools/`
-  (`phase-gate.cjs`), `.github/` (`workflows/phase-gate.yml`),
-  `.vscode/`. None of it was ever installed — `pnpm install` hasn't run
-  on a fresh `init` — so this removes scaffolded source files, with no
-  running infra and no data involved.
-- The generator in step 4 lands its own `.gitignore`; if it doesn't,
-  write one for the chosen stack before committing.
-- Rebuild root `CLAUDE.md` from the templates `init` landed in
-  `.hedgehog/templates/`: take `CLAUDE.md` (the shell) and replace its
-  `{{CORE_SECTION}}` placeholder with the full contents of
-  `CLAUDE.core.authored.md`. Carry over the `{{PROJECT_NAME}}` and
-  `{{PROJECT_SUMMARY}}` values `planner` already filled into the current
-  root `CLAUDE.md` — those are project content, written at planning
-  intake, and the rebuild must not blank them. Delete
-  `.hedgehog/templates/` once the rebuild lands; it exists for this one
-  step.
-- Leave `.claude/agents/`, `.claude/skills/`, `skills/BMAD/`,
-  `skills/GSAP/`, and the rest of `.hedgehog/` in place — the build
-  graph, the planning archive, and the design files this step reads from
-  install the same regardless of which core Phase 0 picks.
-
-`nx.json` absent means the scaffold was already cleared — skip straight
-to the `CLAUDE.md` rebuild, which still applies.
+If the placeholder is already filled (a project that ran `init` with an
+explicit core flag and only reached an authored core through a later
+redesign), this step is a no-op — move on.
 
 ### 3. Read the stack choice
 
@@ -151,9 +119,6 @@ core's bootstrap, which closes Bootstrap. State plainly that
 - Write no domain content in the generated workspace — no business
   logic, no first layer's files. That's the first build task, started
   once this Bootstrap commit lands.
-- Step 2's deletions are safe by construction: `init`'s default scaffold
-  has never been installed or run on a project that reaches this skill,
-  since Phase 0 completes before any `pnpm install`. It's unused
-  template output.
-- A repo with no default scaffold at all makes step 2 a no-op on the
-  workspace files; the `CLAUDE.md` rebuild still runs.
+- Never overwrite `{{PROJECT_NAME}}`/`{{PROJECT_SUMMARY}}` in root
+  `CLAUDE.md` while filling `{{CORE_SECTION}}` — those are `planner`'s
+  content, not this skill's.

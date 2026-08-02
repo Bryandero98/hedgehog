@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: Use once per invocation, at the start of a new Hedgehog project, to land the workspace for whichever core `planner` selected at Phase 0. On full-stack-app, that's core (via hedgehog-bootstrap-full-stack-app-core, one pass) then exactly ONE add-on step of the hedgehog-bootstrap skill (0-3 steps depending on planning intake scope), handing off to a fresh instance of itself for the next add-on step. On landing-page, that's a single pass of hedgehog-bootstrap-landing-page-core with no add-on steps — one invocation, done. On an authored core (`.hedgehog/core.yaml` present), that's a single pass of hedgehog-bootstrap-authored-core, which also removes whatever default golden-core scaffold `init` speculatively landed before generating the real workspace. Not for per-phase/per-module work — that's this core's own loop skill and its agents. Skip entirely if the core's workspace already exists (nx.json for full-stack-app, astro.config.mjs for landing-page, or the matching `feat(<id>): workspace` commit for an authored core).
+description: Use once per invocation, at the start of a new Hedgehog project, to land the workspace for whichever core `planner` selected at Phase 0 — the first real workspace this project gets, since `init` with no explicit core flag lands only agents/skills/the build graph, nothing core-specific. On full-stack-app, that's core (via hedgehog-bootstrap-full-stack-app-core, one pass) then exactly ONE add-on step of the hedgehog-bootstrap skill (0-3 steps depending on planning intake scope), handing off to a fresh instance of itself for the next add-on step. On landing-page, that's a single pass of hedgehog-bootstrap-landing-page-core with no add-on steps — one invocation, done. On an authored core (`.hedgehog/core.yaml` present), that's a single pass of hedgehog-bootstrap-authored-core, generating the workspace live for the stack `hedgehog-core-design` chose. Not for per-phase/per-module work — that's this core's own loop skill and its agents. Skip entirely if the core's workspace already exists (nx.json for full-stack-app, astro.config.mjs for landing-page, or the matching `feat(<id>): workspace` commit for an authored core).
 model: sonnet
 color: green
 tools: Read, Glob, Grep, Edit, Write, Bash
@@ -27,10 +27,7 @@ What "bootstrap" means differs by core:
   there's no "next step" to hand off to.
 - **an authored core** (`.hedgehog/core.yaml` present, written by
   `hedgehog-core-design`) has one part, no add-on layer, like
-  landing-page: `hedgehog-bootstrap-authored-core` first removes whatever
-  default golden-core scaffold `init` speculatively landed (`init` always
-  scaffolds `full-stack-app` by default, since the CLI has to copy
-  something before `planner` ever runs Phase 0), then generates a fresh
+  landing-page: `hedgehog-bootstrap-authored-core` generates a fresh
   workspace live for the stack `hedgehog-core-design` chose — there's no
   pre-built template for an authored core's stack the way there is for
   the two shipped cores — verifies it, one commit. One invocation closes
@@ -145,10 +142,9 @@ Bootstrap is already closed and `hedgehog-authored-loop` owns everything
 from here (stop, say so).
 
 Open `hedgehog-bootstrap-authored-core` and follow it in full: confirm not
-already run, clear the default scaffold `init` landed (`nx.json` at repo
-root is the tell) and rebuild root `CLAUDE.md` from
-`.hedgehog/templates/`, read the stack choice from
-`.hedgehog/core-design.md` and `.hedgehog/core.yaml`, generate that
+already run, fill root `CLAUDE.md`'s `{{CORE_SECTION}}` placeholder with
+`CLAUDE.core.authored.md` if it's still unfilled, read the stack choice
+from `.hedgehog/core-design.md` and `.hedgehog/core.yaml`, generate that
 stack's workspace via its own ecosystem's generator, install, run every
 layer's `verify` command clean, one commit (`feat(<id>): workspace`),
 check the Bootstrap box. That's the whole of Bootstrap on this core —
@@ -167,8 +163,8 @@ there's no next Bootstrap step.
   add-on-style steps for this core; it doesn't have any.
 - **authored core**: one pass, one commit, no hand-off, no add-on layer.
   This pass generates the workspace from the stack in
-  `.hedgehog/core-design.md` and clears the default scaffold `init`
-  landed; `hedgehog-bootstrap-authored-core` owns both.
+  `.hedgehog/core-design.md` and fills root `CLAUDE.md`'s core section;
+  `hedgehog-bootstrap-authored-core` owns both.
 - Never re-run a step whose commit already exists — see the per-core
   "which step is yours" sections above. A felt need to redo a landed
   step is a Correction Protocol case (patch it at its source, per that
