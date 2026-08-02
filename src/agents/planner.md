@@ -59,13 +59,14 @@ always *which* core — "no core fits" is a narrow case, handled below.
   `hedgehog-planning-intake`'s Phase 0 first (an architecture can't be
   designed off a one-line description; the drivers that decide it are
   what BMAD elicits), then open `hedgehog-core-design` against that
-  archive: it names the system shape, derives the layers, decides the
-  module axis, and writes `.hedgehog/core.yaml` plus its rationale at its
-  own Confirm & Lock. An authored core is a weaker guarantee than a
-  Golden Core (the sequence was designed for this project, not
-  battle-tested across many) but carries the same enforcement — ordered
-  layers, scoped file access, verification before completion — and the
-  loader has no leniency for it (`src/db/core.mjs`). Once the file is
+  archive: it names the system shape, picks the stack, derives the
+  layers, decides the module axis, and writes `.hedgehog/core.yaml` plus
+  its rationale at its own Confirm & Lock. An authored core is a weaker
+  guarantee than a Golden Core (the sequence was designed for this
+  project, not battle-tested across many) but carries the same
+  enforcement — ordered layers, scoped file access, verification before
+  completion — and the loader has no leniency for it
+  (`src/db/core.mjs`). Once the file is
   written, Phase 1 mining proceeds as it would for any core; only the
   layer sequence a compiled task walks differs.
 - **Neither, and nothing is being built** — a one-off script, a slide

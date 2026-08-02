@@ -1,16 +1,16 @@
 ---
 name: hedgehog-core-design
-description: Use on full-stack-app and landing-page alike only when neither shipped Golden Core fits a project that is still building something real — designs the layer sequence for it and writes `.hedgehog/core.yaml`. Invoked by the `planner` agent as Phase 0's third outcome, after the vendored BMAD shelf has run; don't run standalone and don't run when a shipped core fits.
+description: Use on full-stack-app and landing-page alike only when neither shipped Golden Core fits a project that is still building something real — picks the stack and designs the layer sequence for it, and writes `.hedgehog/core.yaml`. Invoked by the `planner` agent as Phase 0's third outcome, after the vendored BMAD shelf has run; don't run standalone and don't run when a shipped core fits.
 ---
 
 # Hedgehog Core Design
 
 Designs a core definition for a project no shipped Golden Core fits.
-Hedgehog decides the architecture here — the layers, their order, their
-file scope, their verification — and shows it back for confirmation. The
-user is asked about their product, never asked to design layers; a person
-who could name the right layer sequence unprompted wouldn't need a build
-discipline to enforce it.
+Hedgehog decides the architecture here — the stack, the layers, their
+order, their file scope, their verification — and shows it back for
+confirmation. The user is asked about their product, never asked to pick
+a stack or design layers; a person who could name the right stack and
+layer sequence unprompted wouldn't need a build discipline to enforce it.
 
 The output is one file, `.hedgehog/core.yaml`, in the exact format
 shipped cores use (spec: "Core definitions"). Everything else this skill
@@ -45,7 +45,48 @@ you should say so and route back rather than author a near-copy of a
 shipped core under a new name. The same goes for a marketing page that
 grew a second page — still `landing-page`.
 
-## Step 2 — derive the layers
+## Step 2 — pick the stack
+
+Name the language, package manager, and the one or two frameworks that
+shape the architecture (a web/CLI/RPC framework, not every library the
+project will eventually need) before deriving layers — a layer's `verify`
+command can't be written until the test runner and build tooling are
+decided, and layer boundaries themselves often follow framework
+conventions (e.g. a middleware layer only exists if the framework has
+middleware). Don't ask the user to choose — the same reasoning Step 1
+applies to layers applies here: naming a stack is exactly what a build
+discipline exists to decide unprompted, and asking would just relocate
+the design work onto the person who came here to avoid doing it.
+
+Pick one default per system shape, the same way the shipped cores commit
+to one choice per row rather than a menu (`hedgehog-bootstrap`'s stack
+table). Substitute off a default only for a concrete, named constraint
+read from `.hedgehog/BMAD/` — never a general preference for variety:
+
+| System shape | Default stack | Substitute when |
+|---|---|---|
+| CLI | TypeScript + Node, Commander, Vitest, pnpm | the target users are a Python-first or Go-first ecosystem (data/ML tooling → Python + Typer + pytest; infra/systems tooling → Go + Cobra + `go test`) |
+| Library / SDK | TypeScript, tsup, Vitest, pnpm | the consuming ecosystem is fixed by the brief (a Python package → Python + Hatch + pytest; publishing to both → author the TS core first, wrap it) |
+| Data pipeline | Python, stdlib/argparse or Dagster for orchestration, pytest, uv or pip | the pipeline is thin glue over an existing Node/TS service mesh already named in the brief |
+| Browser extension | TypeScript, the target browser's WebExtension API (`@types/chrome` or WXT), Vitest, pnpm | none in practice — this shape has one real ecosystem |
+| Desktop app | TypeScript + Electron, Vitest + Playwright, pnpm | native platform integration is a stated hard requirement (macOS/Windows-only, deep OS API use) → Swift/AppKit or C#/WinUI, per platform, named explicitly |
+| Compiler / language tool | Rust, `cargo test`, Cargo | the brief is explicitly about fast iteration over raw performance, or targets a JS/TS-only toolchain (a Babel/ESLint plugin) → TypeScript, Vitest, pnpm |
+| Bot / agent | TypeScript, Vitest, pnpm | the brief calls for heavy ML/data-science library use → Python, pytest, uv |
+| Game | TypeScript + a canvas/WebGL engine already named in the brief (e.g. PixiJS, Three.js), Vitest, pnpm | a native/console target is explicit → the engine's native language (C#/Unity, C++), named per that engine |
+| Infra / deploy tool | Go, `go test`, Go modules | the tool is a thin wrapper generating config/manifests with no systems-level need → TypeScript, Vitest, pnpm |
+
+A shape not on this table is rare enough that no default has been
+battle-tested — reason from the same drivers `hedgehog-bootstrap`'s
+table encodes (ecosystem the target users already live in, deployment
+target, the language the brief's own examples or comparables are
+written in) and name the result as a judgment call, not a table lookup,
+in `core-design.md`'s rationale.
+
+Record the choice as one line — language, package manager, the named
+framework(s), test runner — before moving to Step 3; every layer's
+`scope` and `verify` in Step 3 draws from it.
+
+## Step 3 — derive the layers
 
 Read `.hedgehog/BMAD/` for what the system actually does, then decide the
 layers it builds in. A layer earns its place by owning a distinct
@@ -71,7 +112,7 @@ Four to seven layers is the usual range. Fewer than three means the
 project probably wanted a shipped core or no core at all; more than eight
 means several layers are one layer with internal steps.
 
-## Step 3 — decide the module axis
+## Step 4 — decide the module axis
 
 Answer explicitly, because it changes the shape of the whole graph:
 
@@ -95,7 +136,7 @@ intent A's task may write intent B's files and the scope enforcement that
 justifies authoring a core at all disappears. Check every glob before
 writing the file.
 
-## Step 4 — write `.hedgehog/core.yaml`
+## Step 5 — write `.hedgehog/core.yaml`
 
 The loader parses `id` plus a `layers` list of flat maps. Every layer
 needs all five fields — `depends_on` is omitted only on the first layer:
@@ -151,14 +192,16 @@ visible in the globs or absent from them. A `core.yaml` that throws at
 load time is the one failure mode that strands a project with no path
 forward.
 
-## Step 5 — write `.hedgehog/core-design.md`
+## Step 6 — write `.hedgehog/core-design.md`
 
 The rationale the engine doesn't read but the project needs: the system
-shape and why, the layers with a line each on what they own and why they
-sit where they do, the module-axis decision, and anything left
-unresolved. Written once, archival, never edited after — the same stance
-`.hedgehog/BMAD/` takes. Later changes to the architecture are Correction
-Protocol entries in the commit log, not edits here.
+shape and why, the stack and why (the default it came from, or the named
+constraint that justified a substitution), the layers with a line each on
+what they own and why they sit where they do, the module-axis decision,
+and anything left unresolved. Written once, archival, never edited after
+— the same stance `.hedgehog/BMAD/` takes. Later changes to the
+architecture are Correction Protocol entries in the commit log, not edits
+here.
 
 ## Confirm & Lock
 
@@ -169,6 +212,9 @@ to change only until the file lands. Hard stop.
 🔒 **Confirm & Lock**. Show, in full, not condensed:
 
 - The system shape, in the one line from step 1.
+- The stack: language, package manager, and named framework(s), plus
+  whether it's the shape's default or a substitution — and if a
+  substitution, the one-line constraint that justified it.
 - Each layer in order: what it owns, its scope globs, its verify command,
   its commit message.
 - The module-axis decision, named as such, with the consequence stated
