@@ -87,14 +87,16 @@ state.
 
 **When the build is done:** once `hedgehog status` shows every task
 `complete`, the build session is complete. Offer the user a
-fresh-context handoff to the `tweaker` agent — it starts clean, reviews
-the friction log (`hedgehog friction list`) once for a possible
-discipline-improvement suggestion (filed as a GitHub issue against the
-Hedgehog repo itself, never this project's repo, and only after showing
-the exact content and getting explicit approval), then takes any tweak
-requests one at a time. Nothing to delete once that handoff is offered —
-the build graph and the commit log are the permanent record, not a
-checklist to clean up.
+fresh-context handoff to the `tweaker` agent — it starts clean, once
+reviews the friction log (`hedgehog friction list`) for possible
+discipline-improvement issues and separately asks the user directly for
+feedback on the build, filing each real pattern or piece of feedback as
+its own GitHub issue against the Hedgehog repo itself, never this
+project's repo (friction as `bug`/`help wanted`, feedback as
+`suggestion`, each only after showing the exact content and getting
+explicit approval), then takes any tweak requests one at a time. Nothing
+to delete once that handoff is offered — the build graph and the commit
+log are the permanent record, not a checklist to clean up.
 
 ## Managing context
 
