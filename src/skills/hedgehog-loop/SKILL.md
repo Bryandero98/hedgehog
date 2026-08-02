@@ -137,10 +137,16 @@ writes `docs/design/<module>.md`, not its own compiled layer — the
 4. **Run `hedgehog verify <task-id>`.** It checks the touched files
    against the packet's ALLOWED SCOPE, runs the layer's VERIFICATION
    command, and on a pass writes the commit (the exact Conventional
-   Commit message from the tables above) and unlocks the next layer. On
-   a scope violation or a failing check, the task stays
-   `implemented`/`failed` and nothing downstream unlocks — fix it and
-   re-run `hedgehog verify`, don't hand-commit around it.
+   Commit message from the tables above, plus the updated build graph)
+   and unlocks the next layer. On a scope violation or a failing check,
+   the task stays `implemented`/`failed` and nothing downstream unlocks —
+   fix it and re-run `hedgehog verify <task-id>`, don't hand-commit
+   around it.
+
+   A stalled task is not pickable by `hedgehog next`, so both `hedgehog
+   next` and `hedgehog status` list it under NEEDS ATTENTION with the
+   task id to re-verify. If `hedgehog next` reports the graph blocked,
+   fix that task — don't treat it as "nothing left to do."
 5. **Repeat** — `hedgehog next` again for the following layer.
 
 Each `hedgehog verify` call commits exactly one layer, built right for

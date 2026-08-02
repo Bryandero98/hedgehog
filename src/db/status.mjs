@@ -47,19 +47,39 @@ function loadReadyTasks(db) {
   return db.prepare(READY_TASKS_SQL).all();
 }
 
-// Returns { counts, ready, total } — counts keyed by every status in the
-// tasks CHECK constraint (present even at zero), ready the full list of
-// currently-pickable tasks, total the sum across all statuses.
+// Tasks that need a human/agent decision before the graph can move again:
+// `failed` (verification ran and returned nonzero) and `implemented` (a
+// scope violation refused to run verification). Neither is pickable by
+// `hedgehog next`, so without listing them here a build whose only
+// remaining work is a failed task looks identical to a finished one —
+// "READY (none)" with no indication anything is wrong. Listing them is
+// what makes the fix-and-re-verify path in hedgehog-loop's Loop step 4
+// discoverable from a fresh context.
+const ATTENTION_TASKS_SQL = `
+  SELECT t.* FROM tasks t
+  WHERE t.status IN ('failed', 'implemented')
+  ORDER BY t.priority, t.id;
+`;
+
+function loadAttentionTasks(db) {
+  return db.prepare(ATTENTION_TASKS_SQL).all();
+}
+
+// Returns { counts, ready, attention, total } — counts keyed by every
+// status in the tasks CHECK constraint (present even at zero), ready the
+// full list of currently-pickable tasks, attention the stalled tasks
+// needing a re-verify, total the sum across all statuses.
 export function graphStatus(db) {
   const counts = countTasksByStatus(db);
   const ready = loadReadyTasks(db);
+  const attention = loadAttentionTasks(db);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  return { counts, ready, total };
+  return { counts, ready, attention, total };
 }
 
 // Renders a graphStatus() result into a plain-text overview: counts by
 // status (only non-zero ones, in lifecycle order), then the ready list.
-export function formatStatus({ counts, ready, total }) {
+export function formatStatus({ counts, ready, attention, total }) {
   const lines = [];
   lines.push(`TASKS  ${total}`);
   lines.push('');
@@ -75,6 +95,18 @@ export function formatStatus({ counts, ready, total }) {
     for (const task of ready) {
       lines.push(`  ${task.id}   ${task.layer}   ${task.objective}`);
     }
+  }
+
+  if (attention && attention.length > 0) {
+    lines.push('');
+    lines.push('NEEDS ATTENTION');
+    for (const task of attention) {
+      const reason =
+        task.status === 'failed' ? 'verification failed' : 'scope violation';
+      lines.push(`  ${task.id}   ${task.layer}   ${reason}`);
+    }
+    lines.push('');
+    lines.push('  Fix the work, then re-run: hedgehog verify <task-id>');
   }
 
   return lines.join('\n');

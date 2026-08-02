@@ -169,11 +169,37 @@ function runVerifyCommand(command) {
 // Determines created vs modified against HEAD, then stages and commits
 // exactly the task's touched paths with commit_message. Returns the new
 // commit sha.
+//
+// The build graph is committed in the same commit as the work it
+// describes. The spec's "SQLite as build state" requires the DB be
+// committed to git — that's what makes state survive `/clear`, machine
+// moves, and reclone. Committing it here (rather than leaving it dirty
+// for a later hand-commit) keeps the graph and the code it tracks
+// atomic: a checkout of any commit has a build graph that agrees with
+// the tree. The DB is excluded from the *scope check* (it's engine
+// state, not agent output — see isEngineStatePath) but still belongs in
+// the commit.
 function commitTouchedPaths(paths, commitMessage) {
   const quoted = paths.map((p) => JSON.stringify(p)).join(' ');
   execSync(`git add -- ${quoted}`, { stdio: 'pipe' });
   execSync(`git commit -m ${JSON.stringify(commitMessage)}`, { stdio: 'pipe' });
   return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+}
+
+// Amends the just-written commit to include the build graph. Run after
+// the DB transaction commits, so the file on disk already reflects this
+// task's completion — staging it earlier would capture a pre-commit
+// snapshot of the graph and defeat the point.
+function commitBuildGraph(commitSha) {
+  try {
+    execSync(`git add -- ${JSON.stringify(DB_PATH)}`, { stdio: 'pipe' });
+    execSync('git commit --amend --no-edit', { stdio: 'pipe' });
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    // The graph failing to commit must not undo verified work — the task
+    // is already complete and its code is already committed.
+    return commitSha;
+  }
 }
 
 function artifactKind(path) {
@@ -251,6 +277,10 @@ export function verifyTask(db, taskId) {
     db.exec('ROLLBACK');
     throw err;
   }
+
+  // Only now does the DB file on disk reflect this task's completion, so
+  // this is the first point the graph can be committed truthfully.
+  if (commitSha) commitSha = commitBuildGraph(commitSha);
 
   return { outcome: 'complete', exitCode, output, commitSha, unlocked, intentComplete };
 }

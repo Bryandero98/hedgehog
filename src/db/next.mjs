@@ -108,6 +108,24 @@ export function nextTask(db) {
   return assemblePacket(db, task);
 }
 
+// Tasks stalled awaiting a re-verify: `failed` (verification returned
+// nonzero) or `implemented` (scope violation refused to run it). Neither
+// is pickable by the readiness query, so when `nextTask` returns null the
+// caller uses this to tell "the build is finished" apart from "the build
+// is stuck on a task that needs fixing" — otherwise a failed task makes
+// a blocked graph look complete.
+export function stalledTasks(db) {
+  return db
+    .prepare(
+      `
+      SELECT t.* FROM tasks t
+      WHERE t.status IN ('failed', 'implemented')
+      ORDER BY t.priority, t.id
+    `,
+    )
+    .all();
+}
+
 // Renders a packet into the STATUS / INTENT / RELEVANT RULES / WHY NOW /
 // BLOCKED DOWNSTREAM / ALLOWED SCOPE / VERIFICATION format. The spec
 // splits this across two examples — the `hedgehog next` display and "The

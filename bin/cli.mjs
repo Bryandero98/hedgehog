@@ -18,7 +18,7 @@ import { dbInit, DB_PATH } from '../src/db/init.mjs';
 import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
 import { addIntent } from '../src/db/intent.mjs';
-import { nextTask, formatNext } from '../src/db/next.mjs';
+import { nextTask, formatNext, stalledTasks } from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
@@ -490,14 +490,32 @@ async function nextCommand() {
 
   const db = new DatabaseSync(DB_PATH);
   let packet;
+  let stalled = [];
   try {
     db.exec('PRAGMA foreign_keys = ON;');
     packet = nextTask(db);
+    if (!packet) stalled = stalledTasks(db);
   } finally {
     db.close();
   }
 
   if (!packet) {
+    // A stalled task is not pickable, so without naming it here "no ready
+    // task" reads identically whether the build is finished or wedged on
+    // a failed verification.
+    if (stalled.length > 0) {
+      console.error(`${red(bold('No ready task, but the graph is blocked.'))}\n`);
+      for (const task of stalled) {
+        const reason =
+          task.status === 'failed' ? 'verification failed' : 'scope violation';
+        console.error(`  ${red('✗')} ${bold(task.id)}   ${task.layer}   ${dim(reason)}`);
+      }
+      console.error(
+        `\nFix the work, then re-run ${bold('hedgehog verify <task-id>')}.\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
     console.log(`${dim('No ready task.')} Nothing is planned with all dependencies complete.\n`);
     return;
   }
