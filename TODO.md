@@ -25,16 +25,16 @@ paste the whole spec into every step's context.
 
 ## 2 — Core definition format
 
-- [ ] Define the core-definition YAML shape (spec: "Core definitions").
+- [x] Define the core-definition YAML shape (spec: "Core definitions").
       One loader, used identically for shipped and authored cores.
-- [ ] Write `src/golden-cores/full-stack-app/core.yaml` — schema →
+- [x] Write `src/golden-cores/full-stack-app/core.yaml` — schema →
       contract → repository → service → controller → hook → screen,
       each with `scope`, `verify`, `commit` (derive from
       `src/skills/hedgehog-loop`'s existing step tables).
-- [ ] Write `src/golden-cores/landing-page/core.yaml` — brief → feeling →
+- [x] Write `src/golden-cores/landing-page/core.yaml` — brief → feeling →
       tokens → sequence → artifact, linear chain, no module axis (spec:
       MVP scope item 5 — degenerate case of the layer graph).
-- [ ] Verify: loader parses both files, rejects a layer missing `scope`
+- [x] Verify: loader parses both files, rejects a layer missing `scope`
       or `verify`.
 
 ## 3 — Compiler
@@ -111,6 +111,13 @@ paste the whole spec into every step's context.
       "`hedgehog next`, delegate the packet, `hedgehog verify`."
 - [ ] Friction log: append to the `friction` table (via CLI) instead of
       `.hedgehog/friction.md`.
+- [ ] `landing-page/core.yaml`'s `feeling`/`tokens`/`sequence` layers ship
+      with a placeholder `verify: "true"` (step 2) — `hedgehog-landing-loop`
+      only documents these gates as agent self-test + user lock, no file
+      path or shell command. Decide and wire a real verify (e.g. self-test
+      result written to a file `verify` can check, or another mechanism)
+      before this core's `hedgehog verify` is anything but a no-op for
+      those three phases.
 
 ## 10 — Agent updates
 

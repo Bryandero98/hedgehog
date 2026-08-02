@@ -1,0 +1,44 @@
+# Shipped core definition for landing-page. A linear chain, no module
+# axis — the degenerate case of the layer graph (spec: MVP scope item 5).
+# Each phase groups the rows of src/skills/hedgehog-landing-loop's Chain
+# Method table that share one agent context and one commit:
+#   brief    — planning intake's mined subject statement (Phase 0)
+#   feeling  — Strategist/Brand Anthropologist/Psychologist/Perfumer (landing-strategist)
+#   tokens   — Ingredient Director/Copywriter/Systems Designer/Signature Element (landing-systems)
+#   sequence — Sequencer, Headline, per-section Copywriter (landing-sequencer, landing-headline-writer, landing-copywriter)
+#   artifact — Critic + Builder (landing-critic, landing-builder)
+#
+# verify/scope for feeling, tokens, and sequence are placeholders — see
+# TODO.md step 9. hedgehog-landing-loop documents these three phases'
+# gates only as agent self-test + user lock, with no file path or shell
+# command for any of them (unlike "brief", which names
+# .hedgehog/chain/00-brief.md, and "artifact", whose astro build is a
+# real command). Wiring self-test-to-CLI is step 9's job, not this one's
+# — `verify: "true"` here is an honest no-op standing in for that, not a
+# fabricated check.
+id: landing-page
+layers:
+  - id: brief
+    scope: [".hedgehog/chain/00-brief.md"]
+    verify: "test -s .hedgehog/chain/00-brief.md"
+    commit: "chore(planning): intake"
+  - id: feeling
+    depends_on: brief
+    scope: [".hedgehog/chain/**"]
+    verify: "true"
+    commit: "feat(landing): strategy"
+  - id: tokens
+    depends_on: feeling
+    scope: [".hedgehog/chain/**"]
+    verify: "true"
+    commit: "feat(landing): systems"
+  - id: sequence
+    depends_on: tokens
+    scope: [".hedgehog/chain/**"]
+    verify: "true"
+    commit: "feat(landing): sequence"
+  - id: artifact
+    depends_on: sequence
+    scope: ["src/**"]
+    verify: "pnpm build"
+    commit: "feat(landing): build"
