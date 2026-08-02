@@ -88,26 +88,9 @@ Artifact
 
 ### Anything else
 
-A CLI, a library, a data pipeline, a compiler — a project fitting neither
+A CLI, a library, a data pipeline, a compiler, etc. a project fitting neither
 shape gets its own build order, designed from your planning documents at
-intake rather than chosen from a menu. One CLI's layers might come out as:
-
-``` text
-Command model
-  ↓
-Domain
-  ↓
-Adapter
-  ↓
-Integration
-```
-
-You describe the product; Hedgehog designs the layers, shows them back
-for confirmation, and then enforces them exactly like a shipped core —
-ordered layers, scoped file access, verification before any step
-completes. A weaker guarantee than the two above, since the sequence was
-designed for one project instead of proven across many, but the same
-mechanical enforcement.
+intake rather than chosen from a menu.
 
 ![Why Hedgehog works: a different way to build with AI, comparing traditional AI workflow to Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
 
