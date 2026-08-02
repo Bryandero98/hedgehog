@@ -54,19 +54,22 @@ core, because "no core fits" is now a narrower case than it used to be:
   instead of stopping.
 - **Neither shipped core fits, but something is being built** — the
   description names a real artifact a Builder step would produce, just
-  not in either Golden Core's shape. Interview the user directly: what
-  layers does this project build in, in what order, what files does each
-  layer own, how is each layer verified. Write the answers to
-  `.hedgehog/core.yaml` in the same format Golden Cores use (spec: "Core
-  definitions") — every layer needs both a `scope` and a `verify`
-  command, or the loader rejects the file outright (`src/db/core.mjs`);
-  there is no leniency for an authored core over a shipped one. This is a
-  weaker guarantee than a Golden Core (the sequence was invented for this
-  project, not battle-tested across many) but the same enforcement:
-  ordered layers, scoped file access, verification before completion.
-  Once `.hedgehog/core.yaml` is written, planning intake proceeds as it
-  would for any core — Phase 1 mining still targets the PRD's Features
-  into intents; only the layer sequence a compiled task walks differs.
+  not in either Golden Core's shape. This project gets an **authored
+  core**, designed by you and written to `.hedgehog/core.yaml`. Don't ask
+  the user what layers to build in — someone who could name the right
+  sequence unprompted wouldn't need a discipline to enforce it. Run
+  `hedgehog-planning-intake`'s Phase 0 first (an architecture can't be
+  designed off a one-line description; the drivers that decide it are
+  what BMAD elicits), then open `hedgehog-core-design` against that
+  archive: it names the system shape, derives the layers, decides the
+  module axis, and writes `.hedgehog/core.yaml` plus its rationale at its
+  own Confirm & Lock. An authored core is a weaker guarantee than a
+  Golden Core (the sequence was designed for this project, not
+  battle-tested across many) but carries the same enforcement — ordered
+  layers, scoped file access, verification before completion — and the
+  loader has no leniency for it (`src/db/core.mjs`). Once the file is
+  written, Phase 1 mining proceeds as it would for any core; only the
+  layer sequence a compiled task walks differs.
 - **Neither, and nothing is being built** — a one-off script, a slide
   deck, a pure design exercise with no page to ship, anything with no
   artifact any core's Builder step would produce. Say so plainly and
@@ -175,9 +178,10 @@ accounts get added where there were none).
 
 - Decide which core applies before running any planning-intake skill —
   Phase 0 above. Neither shipped core fitting but something being built
-  means author `.hedgehog/core.yaml` (Phase 0's third outcome); nothing
-  to build at all means stop and say so, not force a discipline onto
-  nothing.
+  means an authored core: BMAD Phase 0, then `hedgehog-core-design`
+  designs the layer sequence and writes `.hedgehog/core.yaml` (Phase 0's
+  third outcome). Nothing to build at all means stop and say so, not
+  force a discipline onto nothing.
 - **full-stack-app**: run the vendored BMAD shelf in full to turn a
   person's description of a problem into planning documents, then mine
   `04-prd.md` only into intent records — one `intents` row per §4
@@ -204,9 +208,15 @@ accounts get added where there were none).
    status in the graph mark modules with a closed Phase A. Landing-page:
    a `complete` phase task marks that phase's artifact as committed.
 3. **Run Phase 0 — which core applies.** A shipped core fitting, no core
-   fitting but something being built (author `.hedgehog/core.yaml`), or
-   nothing to build (stop and say so) — the three outcomes above.
-4. **Run Phase 1 — that core's planning intake:**
+   fitting but something being built (authored core), or nothing to build
+   (stop and say so) — the three outcomes above.
+4. **On an authored core only, design it before mining**: run
+   `hedgehog-planning-intake`'s Phase 0, then `hedgehog-core-design`
+   through its own Confirm & Lock, which writes `.hedgehog/core.yaml` and
+   `.hedgehog/core-design.md`. Then continue at step 5 with that core's
+   Phase 1 mining — its Phase 0 has already run, so don't run the BMAD
+   shelf twice.
+5. **Run Phase 1 — that core's planning intake:**
    - full-stack-app: run the vendored BMAD shelf (or a scoped pass
      against it, if new scope is entering play on an existing project),
      then mine `04-prd.md` only into intent records per the PRD→graph-row
@@ -217,32 +227,36 @@ accounts get added where there were none).
      `.hedgehog/BMAD/` into a draft subject statement (subject, audience,
      single page job) — asking the user directly only for whatever
      BMAD's docs leave unresolved.
-5. **Run that core's Confirm & Lock** before writing anything.
-6. **Write the intent records**: full-stack-app writes each intent via
+6. **Run that core's Confirm & Lock** before writing anything.
+7. **Write the intent records**: full-stack-app writes each intent via
    `hedgehog intent add`, one call per PRD Feature, plus
    `.hedgehog/addons.yaml`; landing-page writes `.hedgehog/chain/00-brief.md`
    per its own Confirm & Lock, in the shape `hedgehog-landing-loop`'s
    planning-intake section defines.
-7. **Commit planning intake's output as one commit**,
+8. **Commit planning intake's output as one commit**,
    `chore(planning): intake` — the committed `.hedgehog/hedgehog.db` (its
    new intent rows on full-stack-app), `.hedgehog/addons.yaml`
    (full-stack-app only), this core's own archival planning output
-   (`.hedgehog/BMAD/` or `.hedgehog/chain/`), and root `CLAUDE.md`'s
-   filled placeholders. This is planning intake's own unit of work,
-   landed before `bootstrap` touches anything.
-8. **On first run only, hand off to the `bootstrap` agent** once the
+   (`.hedgehog/BMAD/` or `.hedgehog/chain/`), the authored core's
+   `.hedgehog/core.yaml` and `.hedgehog/core-design.md` if step 4 ran, and
+   root `CLAUDE.md`'s filled placeholders. This is planning intake's own
+   unit of work, landed before `bootstrap` touches anything.
+9. **On first run only, hand off to the `bootstrap` agent** once the
    commit lands — it scaffolds the chosen core's workspace (and, for
    full-stack-app, whichever add-ons are on) before any build step
    starts. Skip this on a later run (new scope entering play,
    full-stack-app only); the workspace already exists.
-9. **Return a summary**: which core, the intents added (or subject
-   statement, for landing-page), any open questions.
+10. **Return a summary**: which core (naming it as authored, if it is),
+    the intents added (or subject statement, for landing-page), any open
+    questions.
 
 ## Constraints
 
 - Never write or modify application code. Read-only against the
   codebase; you may write `.hedgehog/addons.yaml` (full-stack-app only —
-  see "The Add-ons decision" below), this core's own archival planning
+  see "The Add-ons decision" below), `.hedgehog/core.yaml` and
+  `.hedgehog/core-design.md` (authored cores only, via
+  `hedgehog-core-design`), this core's own archival planning
   output (`.hedgehog/BMAD/` or `.hedgehog/chain/` — write-once, never
   edited after it's written), and — first run only — root `CLAUDE.md`'s
   `{{PROJECT_NAME}}`/`{{PROJECT_SUMMARY}}` placeholders and its installer
@@ -269,11 +283,16 @@ accounts get added where there were none).
   the subject, audience, or job from BMAD's material where it's
   genuinely silent — a gap-fill question, not a guess.
 - Don't replan a step sequence within a core — fixed by that core's own
-  loop skill, not a per-project decision.
-- Don't replan a core's stack itself — fixed by that core's bootstrap
-  skill, not a per-project decision. Your scope decision is which core
-  applies (Phase 0) and, within full-stack-app, which add-ons turn on —
-  not whether a core applies at all once Phase 0 has picked one.
+  loop skill, not a per-project decision. On an authored core the
+  sequence is fixed at `hedgehog-core-design`'s Confirm & Lock and is
+  equally fixed after it: a later change to it is a Correction Protocol
+  entry, not a quiet edit to `.hedgehog/core.yaml`.
+- Don't replan a shipped core's stack itself — fixed by that core's
+  bootstrap skill, not a per-project decision. Your scope decision is
+  which core applies (Phase 0) and, within full-stack-app, which add-ons
+  turn on — not whether a core applies at all once Phase 0 has picked
+  one. Designing a stack and layer sequence is in scope only on Phase 0's
+  third outcome, and only through `hedgehog-core-design`.
 - Keep planning intake's written output thin. Intent records live in the
   build graph, not a design doc — rationale lives in the commit log via
   the Correction Protocol, and in this core's own archival planning

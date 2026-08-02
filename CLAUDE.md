@@ -32,6 +32,11 @@ discipline's stance and rationale.
     `full-stack-app`. Invoked by `planner`; `landing-page` runs this
     skill's shelf too, then mines the same archive through
     `hedgehog-landing-loop`'s own planning-intake section instead.
+  - `hedgehog-core-design` — designs a layer sequence and writes
+    `.hedgehog/core.yaml` when neither Golden Core fits a project that is
+    still building something real. Invoked by `planner` as Phase 0's
+    third outcome, after the BMAD shelf has run; Hedgehog designs the
+    architecture here rather than asking the user to.
   - `hedgehog-loop` — the operating loop for every unit of work once
     bootstrap has run: the domain module step sequence, phase rules, and
     Correction Protocol.

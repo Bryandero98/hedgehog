@@ -103,8 +103,8 @@ not restate their content.
       PR-FAQ/deep-recon stay archived, unread by mining.
 - [x] Mining writes intents via `hedgehog intent add`, not `TODO.md`.
 - [x] Phase 0 core selection gains the third outcome: no shipped core
-      fits → interview → write `.hedgehog/core.yaml` (spec: "Authored
-      cores").
+      fits → BMAD Phase 0 → `hedgehog-core-design` writes
+      `.hedgehog/core.yaml` (spec: "Authored cores").
 - [x] Confirm & Lock stage shows the compiled graph (via `hedgehog
       status` or equivalent), not a `TODO.md` preview.
 - [x] Verify: hand-traced a sample `04-prd.md` (one Feature/FR/Glossary

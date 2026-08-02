@@ -21,7 +21,7 @@ The codebase carries the context, not the model.
 Hedgehog combines:
 
 - **BMAD for planning** — turn an idea into a clear brief, requirements, and architecture
-- **An opinionated stack** — remove unnecessary technical decisions
+- **An opinionated stack** — remove unnecessary technical decisions, and settle the necessary ones once
 - **TDD and progressive layering** — build one tested layer at a time
 - **Mechanical enforcement** — use tooling and phase gates instead of trusting the AI to follow instructions
 - **Small context loops** — keep every change focused, verifiable, and easy to review
@@ -86,6 +86,29 @@ Sequence
 Artifact
 ```
 
+### Anything else
+
+A CLI, a library, a data pipeline, a compiler — a project fitting neither
+shape gets its own build order, designed from your planning documents at
+intake rather than chosen from a menu. One CLI's layers might come out as:
+
+``` text
+Command model
+  ↓
+Domain
+  ↓
+Adapter
+  ↓
+Integration
+```
+
+You describe the product; Hedgehog designs the layers, shows them back
+for confirmation, and then enforces them exactly like a shipped core —
+ordered layers, scoped file access, verification before any step
+completes. A weaker guarantee than the two above, since the sequence was
+designed for one project instead of proven across many, but the same
+mechanical enforcement.
+
 ![Why Hedgehog works: a different way to build with AI, comparing traditional AI workflow to Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
 
 ## Install
@@ -121,7 +144,7 @@ Hedgehog improves the **system AI builds inside**.
 | | Raw AI | BMAD | Hedgehog |
 | --- | --- | --- | --- |
 | **Planning** | Conversation | Multi-agent workflow | BMAD |
-| **Architecture** | AI decides | Documented | Opinionated and enforced |
+| **Architecture** | AI decides, drifts | Documented | Decided once, then enforced |
 | **Build order** | Improvised | Guided by docs | Mechanically enforced |
 | **Context** | Held in the prompt | Large planning documents | Encoded in the codebase |
 | **Verification** | Optional | Process-dependent | Tests and phase gates |
