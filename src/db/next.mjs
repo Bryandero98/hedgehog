@@ -108,11 +108,14 @@ export function nextTask(db) {
   return assemblePacket(db, task);
 }
 
-// Renders a packet into the exact STATUS / WHY NOW / BLOCKED DOWNSTREAM /
-// ALLOWED SCOPE / VERIFICATION format from the spec's `hedgehog next`
-// example.
+// Renders a packet into the STATUS / INTENT / RELEVANT RULES / WHY NOW /
+// BLOCKED DOWNSTREAM / ALLOWED SCOPE / VERIFICATION format. The spec
+// splits this across two examples — the `hedgehog next` display and "The
+// task packet" (which carries the intent and its rules) — but an agent
+// receives one thing, so the packet is one thing: everything the worker
+// needs to build the task without reading the plan.
 export function formatNext(packet) {
-  const { task, intent, dependents } = packet;
+  const { task, intent, requirements, dependents } = packet;
   const scopeGlobs = JSON.parse(task.scope_globs);
 
   const lines = [];
@@ -121,8 +124,21 @@ export function formatNext(packet) {
   lines.push('');
   lines.push('STATUS   READY');
   lines.push('');
+  lines.push('INTENT');
+  lines.push(`  ${intent.goal}`);
+  lines.push(`  ${intent.outcome}`);
+  lines.push('');
+  lines.push('RELEVANT RULES');
+  if (requirements.length === 0) {
+    lines.push('  (none recorded)');
+  } else {
+    for (const req of requirements) {
+      lines.push(`  - ${req.statement}`);
+    }
+  }
+  lines.push('');
   lines.push('WHY NOW');
-  lines.push(`  ✓ Intent "${intent.id}" ${intent.status}`);
+  lines.push(`  ✓ Intent "${intent.id}" compiled into the graph`);
   lines.push(`  ✓ Domain module "${task.module}" resolved`);
   lines.push('  ✓ No incomplete dependencies');
   lines.push('');

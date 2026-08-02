@@ -136,6 +136,23 @@ function unlockReadyDependents(db, taskId) {
   return unlocked;
 }
 
+// Marks `intentId` complete once every task compiled from it is
+// `complete`. Completion is terminal bookkeeping, not a cleanup trigger
+// (spec: "Traceability") — the intent's tasks, verifications, and
+// artifacts stay exactly where they are as the provenance trail; the
+// status change only stops `hedgehog plan` from treating it as pending
+// and lets `status`/`next` report the intent honestly.
+function completeIntentIfDone(db, intentId) {
+  const openTask = db
+    .prepare(
+      "SELECT 1 FROM tasks WHERE intent_id = ? AND status <> 'complete'",
+    )
+    .get(intentId);
+  if (openTask !== undefined) return false;
+  db.prepare("UPDATE intents SET status = 'complete' WHERE id = ?").run(intentId);
+  return true;
+}
+
 // Runs `command` via the shell, capturing combined stdout+stderr and exit
 // code without throwing on nonzero exit — a failing verify_command is an
 // expected outcome, not a Node exception.
@@ -205,6 +222,7 @@ export function verifyTask(db, taskId) {
   db.exec('BEGIN');
   let commitSha;
   let unlocked;
+  let intentComplete;
   try {
     runInsertVerification.run(task.id, task.verify_command, exitCode, output, 'passed');
     setTaskStatus(db, task.id, 'verified');
@@ -226,6 +244,7 @@ export function verifyTask(db, taskId) {
 
     setTaskStatus(db, task.id, 'complete');
     unlocked = unlockReadyDependents(db, task.id);
+    intentComplete = completeIntentIfDone(db, task.intent_id);
 
     db.exec('COMMIT');
   } catch (err) {
@@ -233,5 +252,5 @@ export function verifyTask(db, taskId) {
     throw err;
   }
 
-  return { outcome: 'complete', exitCode, output, commitSha, unlocked };
+  return { outcome: 'complete', exitCode, output, commitSha, unlocked, intentComplete };
 }

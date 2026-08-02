@@ -193,14 +193,26 @@ not restate their content.
 
 ## 12 — End-to-end proof
 
-- [ ] Fresh install (`npx @skyf0xx/hedgehog init --ts-full-stack-app`)
-      into a scratch repo → one intent through planning intake → full
-      Phase A for one module via `hedgehog next`/`verify` loop → `why`
-      traces a generated file back to the intent. This is the MVP's
-      stated proof (spec: "MVP") — the acceptance test for this whole
-      TODO.
-- [ ] Same proof on `--landing-page`: one intent → five-phase chain via
-      `next`/`verify` → artifact produced.
+- [x] Graph loop proven end to end in a scratch repo against
+      `full-stack-app/core.yaml`: two intents (one depending on the
+      other) → `plan` → the full seven-layer chain driven through
+      `next`/`verify` → each pass unlocking exactly its dependent → the
+      cross-intent edge releasing the second intent's chain only after
+      the first completed → `why` tracing a generated file back through
+      its task and verification to a named requirement and its intent.
+      Scope violations were refused pre-verification (task left
+      `implemented`, no `verifications` row).
+- [x] Same loop proven on `landing-page/core.yaml`: one intent → the
+      five-phase linear chain compiled with no module axis → `brief`
+      verified and committed via its `test -s` check.
+- [ ] Full install-path proof: `npx @skyf0xx/hedgehog init
+      --ts-full-stack-app` into a scratch repo, driven through real
+      planning intake (BMAD shelf → PRD mining) and a real toolchain
+      (`pnpm nx test`) rather than the graph mechanics in isolation.
+      This is the remaining gap — the loop above substituted trivially
+      passing verify commands to exercise the state machine, so the
+      shipped cores' actual `verify` commands are still unproven against
+      a generated workspace.
 
 ## Explicitly not in this pass
 

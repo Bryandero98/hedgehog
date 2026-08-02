@@ -98,6 +98,12 @@ function loadIntentDependencies(db) {
   return db.prepare('SELECT * FROM intent_dependencies').all();
 }
 
+function loadIntentRequirements(db, intentId) {
+  return db
+    .prepare('SELECT id FROM requirements WHERE intent_id = ? ORDER BY id')
+    .all(intentId);
+}
+
 function taskExists(db, taskId) {
   return db.prepare('SELECT 1 FROM tasks WHERE id = ?').get(taskId) !== undefined;
 }
@@ -116,6 +122,12 @@ const insertDependency = (db) =>
     VALUES (?, ?)
   `);
 
+const insertTaskRequirement = (db) =>
+  db.prepare(`
+    INSERT OR IGNORE INTO task_requirements (task_id, requirement_id)
+    VALUES (?, ?)
+  `);
+
 // Compiles every pending intent against `core` and writes tasks +
 // dependencies to `db`. Idempotent per intent: an intent whose tasks
 // already exist (by id) is skipped entirely, so re-running `hedgehog
@@ -125,6 +137,16 @@ const insertDependency = (db) =>
 // on B), A's first task in layer order gets an extra `dependencies` row
 // on B's last task in layer order — so A's chain cannot start until B's
 // chain is entirely `complete`.
+//
+// Requirement linkage: every task an intent compiles to is linked to all
+// of that intent's requirements via `task_requirements`. The compiler has
+// no basis for splitting requirements across layers — a rule like
+// "invitations expire after 7 days" constrains the schema, the service,
+// and the screen alike — so each layer carries the whole set and the task
+// packet shows the agent every rule its intent is bound by. Without this
+// the traceability chain (spec: "Traceability") has no middle link:
+// `hedgehog why` could reach the intent but never name the requirement a
+// file satisfies.
 export function planTasks(db, core) {
   const intents = loadPendingIntents(db);
   const intentDependencies = loadIntentDependencies(db);
@@ -141,6 +163,7 @@ export function planTasks(db, core) {
 
   const runInsert = insertTask(db);
   const runInsertDep = insertDependency(db);
+  const runInsertTaskReq = insertTaskRequirement(db);
 
   const compiledIntentIds = [];
   const skippedIntentIds = [];
@@ -155,6 +178,7 @@ export function planTasks(db, core) {
       }
 
       const { tasks, dependencies } = compileIntentTasks(intent, core);
+      const requirementIds = loadIntentRequirements(db, intent.id).map((r) => r.id);
       for (const t of tasks) {
         runInsert.run(
           t.id,
@@ -167,6 +191,9 @@ export function planTasks(db, core) {
           t.commit_message,
           t.priority,
         );
+        for (const requirementId of requirementIds) {
+          runInsertTaskReq.run(t.id, requirementId);
+        }
       }
       for (const d of dependencies) {
         runInsertDep.run(d.task_id, d.depends_on_task_id);
@@ -178,6 +205,10 @@ export function planTasks(db, core) {
         const depLastTaskId = taskId(depIntentId, lastLayerId);
         runInsertDep.run(firstTaskId, depLastTaskId);
       }
+
+      // An intent whose tasks now exist is no longer `proposed` — it's
+      // been compiled into the graph and is being built.
+      db.prepare("UPDATE intents SET status = 'active' WHERE id = ?").run(intent.id);
 
       compiledIntentIds.push(intent.id);
     }

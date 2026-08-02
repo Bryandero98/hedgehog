@@ -555,6 +555,9 @@ async function verifyCommand(args) {
   } else {
     for (const id of result.unlocked) console.log(`  ${green('ready')}  ${id}`);
   }
+  if (result.intentComplete) {
+    console.log(`  ${green('intent complete')}  ${dim('every task for this intent is done')}`);
+  }
 }
 
 async function statusCommand() {
@@ -612,9 +615,21 @@ async function frictionCommand(args) {
   }
 
   if (sub === 'add') {
-    const taskIdx = args.indexOf('--task');
-    const taskId = taskIdx !== -1 ? args[taskIdx + 1] : undefined;
-    const note = args.slice(1).filter((a, i) => a !== '--task' && args[i - 1] !== '--task').join(' ');
+    // Split `--task <id>` out of the note words by index, not by value —
+    // filtering on the *value* dropped the flag but kept its argument in
+    // the note (and would mangle a note that legitimately contains the
+    // word "--task").
+    const rest = args.slice(1);
+    const taskIdx = rest.indexOf('--task');
+    const taskId = taskIdx !== -1 ? rest[taskIdx + 1] : undefined;
+    if (taskIdx !== -1 && !taskId) {
+      console.error(`${red('--task requires a task id')}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const note = rest
+      .filter((_, i) => taskIdx === -1 || (i !== taskIdx && i !== taskIdx + 1))
+      .join(' ');
     if (!note) {
       console.error(`${red('Usage:')} hedgehog friction add "<note>" [--task <task-id>]\n`);
       process.exitCode = 1;
