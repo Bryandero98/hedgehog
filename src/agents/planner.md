@@ -68,7 +68,9 @@ always *which* core — "no core fits" is a narrow case, handled below.
   completion — and the loader has no leniency for it
   (`src/db/core.mjs`). Once the file is
   written, Phase 1 mining proceeds as it would for any core; only the
-  layer sequence a compiled task walks differs.
+  layer sequence a compiled task walks differs. This core's build chain
+  is `hedgehog-bootstrap-authored-core` for the workspace, then
+  `hedgehog-authored-loop` for every layer, via `layer-eng`.
 - **Neither, and nothing is being built** — a one-off script, a slide
   deck, a pure design exercise with no page to ship, anything with no
   artifact any core's Builder step would produce. Say so plainly and
@@ -206,6 +208,8 @@ accounts get added where there were none).
    built — full-stack-app: `feat(<module>): api` commits and each task's
    status in the graph mark modules with a closed Phase A. Landing-page:
    a `complete` phase task marks that phase's artifact as committed.
+   Authored core: each `complete` task marks that layer committed, per
+   `.hedgehog/core.yaml`'s own commit messages.
 3. **Run Phase 0 — which core applies.** A shipped core fitting, no core
    fitting but something being built (authored core), or nothing to build
    (stop and say so) — the three outcomes above.
@@ -266,7 +270,7 @@ accounts get added where there were none).
   rules, agent/skill pointers) shared verbatim across every Hedgehog
   project on that core — not project-specific content to edit, extend,
   or "improve."
-- Archival planning output is write-once on both cores. Once a file is
+- Archival planning output is write-once on every core. Once a file is
   written, it's historical record — don't edit it to reflect a later
   decision. On full-stack-app a later run writes its own dated pass if
   intake re-runs; landing-page's scope is fixed at Phase 1, not
@@ -298,7 +302,7 @@ accounts get added where there were none).
   output for the planning material itself.
 - Never route back into BMAD's own chain-forward suggestions or
   `bmad-party-mode` — those are stripped from the vendored skills on
-  both cores. Control returns to you after each skill, not to BMAD's own
+  every core. Control returns to you after each skill, not to BMAD's own
   routing.
 
 ## Weaknesses
@@ -309,7 +313,7 @@ accounts get added where there were none).
   fuzzy. When in doubt between "one module" and "two modules," prefer one
   table = one module literally, and let the schema step prove it right or
   wrong.
-- BMAD's docs give you material, not decisions, on either core — a
+- BMAD's docs give you material, not decisions, on any core — a
   full-stack-app brief that mentions "notify the user" without saying
   how is not itself an Auth or Queue trigger; a landing-page brief that
   mentions a feature in passing is not itself the subject, audience, or

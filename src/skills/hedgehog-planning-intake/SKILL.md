@@ -1,6 +1,6 @@
 ---
 name: hedgehog-planning-intake
-description: Use once per project, at the start, on either core — Phase 0 (running the vendored BMAD-METHOD planning shelf) is shared by full-stack-app and landing-page alike; Phase 1 (mining `04-prd.md` into intent records plus the Add-ons decision) is full-stack-app's own procedure, run again on a scoped pass when new domain scope enters play. Invoked by the `planner` agent after Phase 0 core selection; don't run standalone. landing-page runs this skill's Phase 0, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1.
+description: Use once per project, at the start, on any core — Phase 0 (running the vendored BMAD-METHOD planning shelf) is shared by every core; Phase 1 (mining `04-prd.md` into intent records plus the Add-ons decision) is full-stack-app's own procedure, run again on a scoped pass when new domain scope enters play. Invoked by the `planner` agent after Phase 0 core selection; don't run standalone. landing-page runs this skill's Phase 0, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1. An authored core runs this skill's Phase 0, then `hedgehog-core-design`, then this skill's Phase 1 mining against the designed layer sequence.
 ---
 
 # Hedgehog Planning Intake
@@ -17,7 +17,7 @@ Lock either way) belongs to `planner`; this skill (Phase 0, and Phase 1 on
 full-stack-app) and `hedgehog-landing-loop` (landing-page's own mining)
 are the fixed procedures that judgment runs inside.
 
-## Phase 0 — BMAD elicitation (both cores)
+## Phase 0 — BMAD elicitation (every core)
 
 State the BMAD attribution, then run the vendored shelf in full
 sequence, every time — no per-project skip logic, no reduced default
@@ -59,7 +59,7 @@ Every file/folder carries a one-line attribution header. `00-manifest.md`
 states the source repo, pinned version (`skills/BMAD/ATTRIBUTION.md` has
 the pinned commit), date, and which skills ran.
 
-`.hedgehog/BMAD/` is archival and immutable once written, on both cores.
+`.hedgehog/BMAD/` is archival and immutable once written, on every core.
 Nothing in `hedgehog-loop`'s day-to-day operation, `hedgehog-bootstrap`,
 or `reviewer` reads this folder live — `planner` reads it exactly once,
 right after the shelf completes, to mine it (this skill's Phase 1 below

@@ -88,9 +88,15 @@ Artifact
 
 ### Anything else
 
-A CLI, a library, a data pipeline, a compiler, etc. a project fitting neither
-shape gets its own build order, designed from your planning documents at
-intake rather than chosen from a menu.
+A CLI, a library, a browser extension, a data pipeline, a compiler — a
+project fitting neither shape gets its own build order, designed from
+your planning documents at intake rather than chosen from a menu. Run
+`init` with no core flag: planning intake names the system shape, picks
+the stack, derives the layers, and locks them to `.hedgehog/core.yaml`,
+then generates that workspace and builds it one verified layer at a time.
+
+The layers are bespoke, the enforcement is the same — ordered steps,
+scoped file access, a verification command per layer, one commit each.
 
 ![Why Hedgehog works: a different way to build with AI, comparing traditional AI workflow to Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
 
@@ -104,12 +110,18 @@ npx @skyf0xx/hedgehog init --ts-full-stack-app
 
 # Landing page
 npx @skyf0xx/hedgehog init --landing-page
+
+# Anything else (CLI, library, browser extension, data pipeline, etc.)
+npx @skyf0xx/hedgehog init
 ```
 
 Then open Claude Code and describe what you want to build.
 
-Building something that's neither e.g. a CLI, a library, pipeline, etc.? Skip `init` and describe the project to Claude Code directly.
-Planning intake designs an opinionated build order and stack, then scaffolds the workspace for you.
+Plain `init` (no core flag) scaffolds a placeholder — planning intake
+designs an opinionated build order and stack for what you actually
+describe, then bootstrap replaces the placeholder with the real
+workspace. Don't pick `--ts-full-stack-app` or `--landing-page` by
+elimination when neither actually fits.
 
 To update:
 

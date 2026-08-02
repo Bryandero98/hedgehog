@@ -68,7 +68,7 @@ read from `.hedgehog/BMAD/` — never a general preference for variety:
 | CLI | TypeScript + Node, Commander, Vitest, pnpm | the target users are a Python-first or Go-first ecosystem (data/ML tooling → Python + Typer + pytest; infra/systems tooling → Go + Cobra + `go test`) |
 | Library / SDK | TypeScript, tsup, Vitest, pnpm | the consuming ecosystem is fixed by the brief (a Python package → Python + Hatch + pytest; publishing to both → author the TS core first, wrap it) |
 | Data pipeline | Python, stdlib/argparse or Dagster for orchestration, pytest, uv or pip | the pipeline is thin glue over an existing Node/TS service mesh already named in the brief |
-| Browser extension | TypeScript, the target browser's WebExtension API (`@types/chrome` or WXT), Vitest, pnpm | none in practice — this shape has one real ecosystem |
+| Browser extension | TypeScript + WXT (bundles the content-script/background/popup entry points and the WebExtension API types), Vitest, pnpm | none in practice — this shape has one real ecosystem |
 | Desktop app | TypeScript + Electron, Vitest + Playwright, pnpm | native platform integration is a stated hard requirement (macOS/Windows-only, deep OS API use) → Swift/AppKit or C#/WinUI, per platform, named explicitly |
 | Compiler / language tool | Rust, `cargo test`, Cargo | the brief is explicitly about fast iteration over raw performance, or targets a JS/TS-only toolchain (a Babel/ESLint plugin) → TypeScript, Vitest, pnpm |
 | Bot / agent | TypeScript, Vitest, pnpm | the brief calls for heavy ML/data-science library use → Python, pytest, uv |
@@ -236,4 +236,13 @@ Wait for an explicit go-ahead. A revision here is another design pass —
 update the draft, re-run this stage, write nothing until the confirmation
 holds. Once confirmed and written, control returns to `planner`, which
 runs `hedgehog-planning-intake`'s Phase 1 mining against this core the
-same way it would against a shipped one.
+same way it would against a shipped one, then hands off to `bootstrap`.
+
+This skill never touches the workspace itself — no `pnpm init`, no
+generator, no install. `init` already scaffolded a default golden-core
+payload speculatively before Phase 0 ever ran (the CLI has to copy
+something; `full-stack-app` is that default), and this skill's job ends
+at the design artifacts. `bootstrap`'s `hedgehog-bootstrap-authored-core`
+is what later removes that speculative default and generates the real
+workspace for the stack chosen here — a separate step, run only once
+Phase 1 mining and Confirm & Lock have both landed.

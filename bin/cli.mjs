@@ -91,6 +91,20 @@ function plan(core) {
       include: `src/templates/CLAUDE.core.${core}.md`,
       to: 'CLAUDE.md',
     },
+    // The shell plus the authored-core section, landed unmerged so
+    // `hedgehog-bootstrap-authored-core` can rebuild CLAUDE.md from them
+    // when planning intake designs a core instead of taking a shipped
+    // one. Removed by that same step once it has used them.
+    {
+      type: 'file',
+      from: 'src/templates/CLAUDE.md',
+      to: '.hedgehog/templates/CLAUDE.md',
+    },
+    {
+      type: 'file',
+      from: 'src/templates/CLAUDE.core.authored.md',
+      to: '.hedgehog/templates/CLAUDE.core.authored.md',
+    },
     // The pre-built, pre-verified workspace for the chosen core —
     // everything a fresh project of that shape needs at repo root
     // (lands the root package.json too, so there's no separate
@@ -191,6 +205,14 @@ After it runs, commit the payload, open Claude Code, and describe what
 you want to build — the planner agent runs planning intake, then hands
 off to bootstrap.
 
+Building something else (a CLI, library, browser extension, data
+pipeline, desktop app, etc.)? Run plain 'init' with no core flag rather
+than picking --ts-full-stack-app or --landing-page by elimination — it
+scaffolds ${DEFAULT_CORE}'s payload as a placeholder, but the planner
+agent designs and switches in an authored core at planning intake
+(hedgehog-core-design) before any workspace is generated for real.
+Describe the actual project and let Phase 0 route it.
+
 ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
 agent/skill changes from a newer release. It always overwrites those two
@@ -200,7 +222,7 @@ updated deliberately, not by this command.
 `);
 }
 
-async function init({ force, core }) {
+async function init({ force, core, explicitCore }) {
   const cores = await availableCores();
   if (!cores.includes(core)) {
     console.error(
@@ -269,7 +291,13 @@ async function init({ force, core }) {
     ),
   );
   console.log();
-  console.log(dim(`Core: ${bold(core)} (installer default — planner may override it).`));
+  console.log(
+    dim(
+      explicitCore
+        ? `Core: ${bold(core)}.`
+        : `Core: ${bold(core)} (installer default — planner may design an authored core instead).`,
+    ),
+  );
   console.log(
     dim(
       core === DEFAULT_CORE
@@ -719,7 +747,7 @@ async function main() {
   const core = coreFlag ? CORE_FLAGS[coreFlag] : DEFAULT_CORE;
 
   if (cmd === 'init') {
-    await init({ force, core });
+    await init({ force, core, explicitCore: Boolean(coreFlag) });
     return;
   }
 

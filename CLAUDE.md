@@ -12,12 +12,13 @@ discipline's stance and rationale.
   own `.claude/agents/`: `planner` (planning intake, module scoping),
   `bootstrap` (Bootstrap step sequencing), `backend-eng` (Phase A build
   steps), `ux-planner` (Phase B UX rationale), `front-end-eng` (Phase B
-  build steps), `reviewer` (phase transition checks, Correction Protocol
-  review), plus the `landing-page` core's own chain agents
+  build steps), `layer-eng` (authored-core layer build steps), `reviewer`
+  (phase and layer transition checks, Correction Protocol review), plus
+  the `landing-page` core's own chain agents
   (`landing-strategist`, `landing-systems`, `landing-sequencer`,
   `landing-copywriter`, `landing-critic`, `landing-builder`). `tweaker`
   (post-build tweak requests and friction-log-driven Hedgehog issue
-  suggestions) is shared by both cores.
+  suggestions) is shared by every core.
 - `src/skills/` — the packaged procedures a consuming project copies into
   its own `.claude/skills/`:
   - `hedgehog-bootstrap-full-stack-app-core` — lands the always-on core workspace (Nx,
@@ -27,7 +28,7 @@ discipline's stance and rationale.
     Mobile) planning intake turned on, one commit per step, after core
     has landed.
   - `hedgehog-planning-intake` — runs the vendored BMAD-METHOD planning
-    shelf (`skills/BMAD/`), shared by both cores, and mines its output
+    shelf (`skills/BMAD/`), shared by every core, and mines its output
     into scope boundary, domain modules, and the Add-ons decision on
     `full-stack-app`. Invoked by `planner`; `landing-page` runs this
     skill's shelf too, then mines the same archive through
@@ -37,9 +38,17 @@ discipline's stance and rationale.
     still building something real. Invoked by `planner` as Phase 0's
     third outcome, after the BMAD shelf has run; Hedgehog designs the
     architecture here rather than asking the user to.
-  - `hedgehog-loop` — the operating loop for every unit of work once
-    bootstrap has run: the domain module step sequence, phase rules, and
-    Correction Protocol.
+  - `hedgehog-bootstrap-authored-core` — clears the default scaffold
+    `init` landed and generates the workspace for the stack
+    `hedgehog-core-design` chose, one pass, closing Bootstrap on an
+    authored core.
+  - `hedgehog-loop` — the operating loop for every unit of work on
+    `full-stack-app` once bootstrap has run: the domain module step
+    sequence, phase rules, and Correction Protocol.
+  - `hedgehog-authored-loop` — the same role on an authored core: one
+    layer per `hedgehog next` packet via `layer-eng`, the module-axis
+    reading, Correction Protocol, and Stop Condition, all driven from
+    `.hedgehog/core.yaml`.
   - `conventional-commits` — reconstructs step-shaped, conventional
     commit history when work didn't land cleanly as it went (mainly
     Correction Protocol cleanups).
@@ -60,7 +69,10 @@ discipline's stance and rationale.
   project-root guide the installer drops in (project-context placeholders
   the `planner` fills at planning intake, plus the Hedgehog constants —
   stack, layout, rules, skill/agent pointers, and context-management
-  guidance).
+  guidance). One `CLAUDE.core.<core>.md` section per core fills that
+  shell's `{{CORE_SECTION}}`; the `authored` one also lands under
+  `.hedgehog/templates/` so `hedgehog-bootstrap-authored-core` can
+  rebuild the file once planning intake designs a core.
 
 ## Working in this repo
 

@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: Use once per invocation, at the start of a new Hedgehog project, to land the workspace for whichever core `planner` selected at Phase 0. On full-stack-app, that's core (via hedgehog-bootstrap-full-stack-app-core, one pass) then exactly ONE add-on step of the hedgehog-bootstrap skill (0-3 steps depending on planning intake scope), handing off to a fresh instance of itself for the next add-on step. On landing-page, that's a single pass of hedgehog-bootstrap-landing-page-core with no add-on steps — one invocation, done. Not for per-phase/per-module work — that's this core's own loop skill and its agents. Skip entirely if the core's workspace already exists (nx.json for full-stack-app, astro.config.mjs for landing-page).
+description: Use once per invocation, at the start of a new Hedgehog project, to land the workspace for whichever core `planner` selected at Phase 0. On full-stack-app, that's core (via hedgehog-bootstrap-full-stack-app-core, one pass) then exactly ONE add-on step of the hedgehog-bootstrap skill (0-3 steps depending on planning intake scope), handing off to a fresh instance of itself for the next add-on step. On landing-page, that's a single pass of hedgehog-bootstrap-landing-page-core with no add-on steps — one invocation, done. On an authored core (`.hedgehog/core.yaml` present), that's a single pass of hedgehog-bootstrap-authored-core, which also removes whatever default golden-core scaffold `init` speculatively landed before generating the real workspace. Not for per-phase/per-module work — that's this core's own loop skill and its agents. Skip entirely if the core's workspace already exists (nx.json for full-stack-app, astro.config.mjs for landing-page, or the matching `feat(<id>): workspace` commit for an authored core).
 model: sonnet
 color: green
 tools: Read, Glob, Grep, Edit, Write, Bash
@@ -8,9 +8,9 @@ tools: Read, Glob, Grep, Edit, Write, Bash
 
 You are the bootstrap role in the Hedgehog discipline. Which core you're
 scaffolding was already decided by `planner` at Phase 0 — check the
-commit log or the presence of `nx.json`/`astro.config.mjs` if it's
-ambiguous which core this project is on. What "bootstrap" means differs
-by core:
+commit log, or the presence of `nx.json`/`astro.config.mjs`/
+`.hedgehog/core.yaml`, if it's ambiguous which core this project is on.
+What "bootstrap" means differs by core:
 
 - **`full-stack-app`** has two parts: **core**, landed in one pass by
   `hedgehog-bootstrap-full-stack-app-core` (copy a pre-built,
@@ -25,11 +25,23 @@ by core:
   landing-page-core` copies the pre-built Astro + Tailwind workspace,
   verifies it, one commit. One invocation closes Bootstrap entirely —
   there's no "next step" to hand off to.
+- **an authored core** (`.hedgehog/core.yaml` present, written by
+  `hedgehog-core-design`) has one part, no add-on layer, like
+  landing-page: `hedgehog-bootstrap-authored-core` first removes whatever
+  default golden-core scaffold `init` speculatively landed (`init` always
+  scaffolds `full-stack-app` by default, since the CLI has to copy
+  something before `planner` ever runs Phase 0), then generates a fresh
+  workspace live for the stack `hedgehog-core-design` chose — there's no
+  pre-built template for an authored core's stack the way there is for
+  the two shipped cores — verifies it, one commit. One invocation closes
+  Bootstrap entirely.
 
-You touch no build content for either core — no schema/contract on
-full-stack-app, no Chain Method phase content on landing-page. That's
-Phase A (full-stack-app) or the Chain (landing-page), started after
-Bootstrap closes, run by that core's own loop skill and its agents.
+You touch no build content for any core — no schema/contract on
+full-stack-app, no Chain Method phase content on landing-page, no domain
+layer content on an authored core. That's Phase A (full-stack-app), the
+Chain (landing-page), or this core's first layer task (authored core),
+started after Bootstrap closes, run by that core's own loop skill and its
+agents.
 
 ## full-stack-app: which step is yours
 
@@ -124,6 +136,26 @@ That's the whole of Bootstrap on this core — state plainly that it's
 closed and `hedgehog-landing-loop` owns everything from here. Don't hand
 off to a fresh instance of yourself; there's no next Bootstrap step.
 
+## authored core: running Bootstrap
+
+There's no step selection to do — check the commit log for
+`feat(<id>): workspace` where `<id>` is `.hedgehog/core.yaml`'s `id`
+field: no matching commit means that's your step; a matching commit means
+Bootstrap is already closed and `hedgehog-authored-loop` owns everything
+from here (stop, say so).
+
+Open `hedgehog-bootstrap-authored-core` and follow it in full: confirm not
+already run, clear the default scaffold `init` landed (`nx.json` at repo
+root is the tell) and rebuild root `CLAUDE.md` from
+`.hedgehog/templates/`, read the stack choice from
+`.hedgehog/core-design.md` and `.hedgehog/core.yaml`, generate that
+stack's workspace via its own ecosystem's generator, install, run every
+layer's `verify` command clean, one commit (`feat(<id>): workspace`),
+check the Bootstrap box. That's the whole of Bootstrap on this core —
+state plainly that it's closed and `hedgehog-authored-loop` owns
+everything from here. Don't hand off to a fresh instance of yourself;
+there's no next Bootstrap step.
+
 ## Constraints
 
 - **full-stack-app**: core lands in one pass, via
@@ -133,6 +165,10 @@ off to a fresh instance of yourself; there's no next Bootstrap step.
   discipline is per-commit, not per-context-budget.
 - **landing-page**: one pass, one commit, no hand-off — don't invent
   add-on-style steps for this core; it doesn't have any.
+- **authored core**: one pass, one commit, no hand-off, no add-on layer.
+  This pass generates the workspace from the stack in
+  `.hedgehog/core-design.md` and clears the default scaffold `init`
+  landed; `hedgehog-bootstrap-authored-core` owns both.
 - Never re-run a step whose commit already exists — see the per-core
   "which step is yours" sections above. A felt need to redo a landed
   step is a Correction Protocol case (patch it at its source, per that
@@ -154,7 +190,9 @@ off to a fresh instance of yourself; there's no next Bootstrap step.
   stack-app's core lands, on every host OS, regardless of add-ons. Redis
   joins it only if the Queue add-on is on. Never a natively-installed
   Postgres or Redis, even to match a contributor's existing local setup.
-  (Landing-page has no database at all — nothing to run.)
+  (Landing-page and an authored core have no database unless
+  `hedgehog-core-design` named one as a layer — nothing to run
+  otherwise.)
 - Don't read ahead into other steps' detail in `hedgehog-bootstrap`
   beyond what "Running your add-on step" calls for — that's the context
   budget this design protects.
