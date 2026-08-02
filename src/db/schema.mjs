@@ -39,9 +39,12 @@ CREATE TABLE IF NOT EXISTS tasks (
   verify_command TEXT NOT NULL,
   commit_message TEXT NOT NULL,
   priority       INTEGER NOT NULL DEFAULT 100,
+  -- Every value here is one the engine actually writes. A CHECK listing
+  -- states nothing can produce documents a lifecycle that doesn't exist
+  -- and invites writing one the engine can't handle.
   status         TEXT NOT NULL DEFAULT 'proposed'
-                 CHECK (status IN ('proposed','planned','ready','in_progress',
-                                   'implemented','verifying','verified',
+                 CHECK (status IN ('proposed','planned','ready',
+                                   'implemented','verified',
                                    'complete','failed')),
   created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );

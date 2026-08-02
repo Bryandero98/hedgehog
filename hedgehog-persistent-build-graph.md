@@ -218,22 +218,32 @@ file satisfies.
 ## Task lifecycle
 
 ```text
-proposed → planned → ready → in_progress → implemented → verifying
-                                                            │
-                                          ┌─────────────────┴──────┐
-                                          ▼                        ▼
-                                       verified                 failed
-                                          │                        │
-                                          ▼                    (diagnostics
-                                       complete                 retained,
-                                                              dependents stay
-                                                                blocked)
+proposed → planned → ready → (agent works) → hedgehog verify
+                                                    │
+                        ┌───────────────────────────┼───────────────────┐
+                        ▼                           ▼                   ▼
+                   implemented                   verified            failed
+                 (scope violation:                  │              (diagnostics
+                  verification never                ▼               retained,
+                  ran, no verifications          complete          dependents
+                  row written)                      │              stay blocked)
+                        │                           ▼
+                        └──── fix, re-verify ──▶ unlocks dependents
 ```
 
 A task becomes `ready` only when every dependency is `complete`.
 Verification failure preserves the diagnostic output and leaves
-dependents blocked — there is no path from `implemented` to `complete`
-that skips `verified`.
+dependents blocked — there is no path to `complete` that skips
+`verified`.
+
+Every status here is one the engine writes. `implemented` is
+specifically the scope-violation state: `hedgehog verify` refused to run
+the verification command because a touched path fell outside
+`scope_globs`. Neither `implemented` nor `failed` is pickable by
+`hedgehog next`, so both are surfaced by `hedgehog next` and `hedgehog
+status` under NEEDS ATTENTION with the id to re-verify; fixing the work
+and re-running `hedgehog verify <task-id>` is the only way forward from
+either.
 
 ### Intent lifecycle
 
@@ -313,8 +323,8 @@ CREATE TABLE tasks (
   commit_message TEXT NOT NULL,
   priority       INTEGER NOT NULL DEFAULT 100,
   status         TEXT NOT NULL DEFAULT 'proposed'
-                 CHECK (status IN ('proposed','planned','ready','in_progress',
-                                   'implemented','verifying','verified',
+                 CHECK (status IN ('proposed','planned','ready',
+                                   'implemented','verified',
                                    'complete','failed')),
   created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );

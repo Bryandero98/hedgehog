@@ -11,13 +11,13 @@
 // every task meeting that condition, not just the one `hedgehog next`
 // would pick.
 
+// The task lifecycle in order, matching the tasks CHECK constraint in
+// schema.mjs exactly — every status the engine can write, and no others.
 const TASK_STATUSES = [
   'proposed',
   'planned',
   'ready',
-  'in_progress',
   'implemented',
-  'verifying',
   'verified',
   'complete',
   'failed',
