@@ -49,12 +49,12 @@ gate structurally cannot:
 - **Phase leakage**: any hook or screen code, or frontend-shaped
   reasoning, showing up before this module has a `feat(<module>): api`
   commit?
-- **Queue seam**: if the Queue add-on is on and the queue step was added,
+- **Queue seam**: if the Queue add-on is on and queue infra was added,
   does the operation genuinely need async (long-running, retries,
   fan-out) — or was the seam reached for out of habit? If the Queue
-  add-on is off (check `TODO.md`'s `## Add-ons` block), there should be
-  no `apps/worker` and no queue step at all for this module — a queue
-  step appearing anyway is itself a finding, not something to review the
+  add-on is off (check `.hedgehog/addons.yaml`'s `queue.on`), there should
+  be no `apps/worker` and no queue infra at all for this module — queue
+  infra appearing anyway is itself a finding, not something to review the
   contents of.
 - **Intra-step conventions**: does the module follow the conventions the
   gate can't see — domain errors thrown (not `null` returned), repository

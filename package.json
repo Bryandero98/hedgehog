@@ -1,6 +1,6 @@
 {
   "name": "@skyf0xx/hedgehog",
-  "version": "2.0.13",
+  "version": "3.0.0",
   "description": "Install the Hedgehog build discipline (agents + skills) into a repo.",
   "type": "module",
   "repository": {
@@ -19,6 +19,7 @@
   "files": [
     "bin",
     "src/agents",
+    "src/db",
     "src/skills",
     "src/templates",
     "src/golden-cores",
@@ -26,7 +27,7 @@
     "skills/GSAP"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22.5.0"
   },
   "keywords": [
     "claude",

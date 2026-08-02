@@ -1,6 +1,6 @@
 ---
 name: hedgehog-bootstrap
-description: Use once, at the start of a new Hedgehog project, to land the core workspace and scaffold whichever add-ons (Auth, Queue, Mobile) planning intake turned on (TODO.md's Add-ons block). Runs when the `bootstrap` agent runs, which `planner` invokes automatically after Confirm & Lock. Scoped to project scaffolding; per-module work runs through the `hedgehog-loop` skill, one step at a time.
+description: Use once, at the start of a new Hedgehog project, to land the core workspace and scaffold whichever add-ons (Auth, Queue, Mobile) planning intake turned on (`.hedgehog/addons.yaml`). Runs when the `bootstrap` agent runs, which `planner` invokes automatically after Confirm & Lock. Scoped to project scaffolding; per-module work runs through the `hedgehog-loop` skill, one step at a time.
 ---
 
 # Hedgehog Bootstrap
@@ -10,8 +10,9 @@ whichever named add-ons (Auth, Queue, Mobile) planning intake's scope
 boundary (`planner`, running BMAD-METHOD's planning shelf then mining it
 — see that agent) actually calls for. This is Phase 2 (Scaffold) of the
 overall bootstrap sequence — Phase 0 (BMAD elicitation) and Phase 1
-(mining into `TODO.md`) already closed by the time this skill runs. After
-this closes, `hedgehog-loop` takes over per module, one step at a time.
+(mining into the build graph and `.hedgehog/addons.yaml`) already closed
+by the time this skill runs. After this closes, `hedgehog-loop` takes
+over per module, one step at a time.
 This skill touches no domain modules — no schema, no contract, nothing
 under `libs/<module>/`. That's Phase A, started fresh after Bootstrap
 closes.
@@ -72,10 +73,10 @@ Bootstrap runs — not a per-project hand-edit after landing core.
 ### Add-ons (scaffolded only when planning intake calls for them)
 
 Each row is independent — on or off per project, decided at planning
-intake's Confirm & Lock (`planner`) and recorded in `TODO.md`'s
-`## Add-ons` block. Turning one on inserts its Bootstrap step(s) into the
-sequence below; turning it off means that step is skipped entirely, not
-stubbed or partially wired.
+intake's Confirm & Lock (`planner`) and recorded in
+`.hedgehog/addons.yaml`. Turning one on inserts its Bootstrap step(s)
+into the sequence below; turning it off means that step is skipped
+entirely, not stubbed or partially wired.
 
 | Add-on | Trigger (from planning intake scope) | Adds |
 |---|---|---|
@@ -137,28 +138,27 @@ bar doesn't get the seam at all — see the Add-ons table above.
 
 ## Before running
 
-Confirm planning intake already happened — a scope boundary and domain
-vocabulary should exist (`planner` produces these from BMAD's planning
-shelf), **and** `TODO.md` should carry an explicit `## Add-ons` block
-recording which add-ons (Auth, Queue, Mobile) are on for this project. No
-scope boundary yet, or a `TODO.md` with no `## Add-ons` block: stop and
-point to `planner` rather than guessing which add-ons apply.
+Confirm planning intake already happened — intent records should exist in
+the build graph (`hedgehog status`) and `.hedgehog/addons.yaml` should
+exist, recording which add-ons (Auth, Queue, Mobile) are on for this
+project. No intents yet, or no `.hedgehog/addons.yaml`: stop and point to
+`planner` rather than guessing which add-ons apply.
 
 Run `hedgehog-bootstrap-full-stack-app-core` first, unconditionally, if it hasn't
-already landed core (check `TODO.md`'s Bootstrap section, or `nx.json`
-at the repo root). That skill has its own re-run guard and Docker check
-— don't duplicate those here.
+already landed core (check the commit log, or `nx.json` at the repo
+root). That skill has its own re-run guard and Docker check — don't
+duplicate those here.
 
 ## Steps (run in sequence, one commit per step that actually runs)
 
 ### 1. `packages/auth` — Better Auth config *(Auth add-on only)*
 
 Skip this step entirely if Auth isn't on for this project (check
-`TODO.md`'s `## Add-ons` block) — don't scaffold a credential store with
-no login anywhere in scope. If skipped, check its
-`TODO.md` line off as skipped-and-confirmed (per the `bootstrap` agent's
-handling of conditional steps), same treatment as an out-of-scope
-`apps/mobile`.
+`.hedgehog/addons.yaml`) — don't scaffold a credential store with no
+login anywhere in scope. If skipped, say so plainly (per the `bootstrap`
+agent's handling of conditional steps) and move on — `.hedgehog/addons.yaml`'s
+`auth.on: false` entry is already the durable record, nothing further to
+write — same treatment as an out-of-scope `apps/mobile`.
 
 ```bash
 npx nx g @nx/js:lib packages/auth --bundler=none --unitTestRunner=vitest
@@ -187,18 +187,18 @@ Commit: `feat(auth): better auth config + global guard`
 ### 2. `apps/worker` — BullMQ seam (Redis, no consumers yet) *(Queue add-on only)*
 
 Skip this step entirely if Queue isn't on for this project (check
-`TODO.md`'s `## Add-ons` block) — no operation in scope is long-running,
+`.hedgehog/addons.yaml`) — no operation in scope is long-running,
 retried, or fanned out, so there's nothing for a queue to seam in for. If
-skipped, check its `TODO.md` line off as
-skipped-and-confirmed, same treatment as an out-of-scope `apps/mobile`.
+skipped, say so plainly and move on — same treatment as an out-of-scope
+`apps/mobile`.
 
 ```bash
 npx nx g @nx/node:app apps/worker
 pnpm add bullmq ioredis
 ```
 
-Add a `redis` service to the root `docker-compose.yml`
-`hedgehog-bootstrap-full-stack-app-core` landed (Postgres-only until now) and
+Add a `redis` service to the root `docker-compose.yml` that
+`hedgehog-bootstrap-full-stack-app-core` landed (Postgres-only) and
 `REDIS_URL: z.string().url()` to `packages/config/env.schema.ts` (it
 doesn't exist in the core schema), plus a matching `REDIS_URL=` line in
 the root `.env.example` pointing at that same `docker-compose.yml`
@@ -232,10 +232,9 @@ Commit: `feat(worker): bullmq seam, no consumers`
 ### 3. `apps/mobile` — Expo shell *(Mobile add-on only)*
 
 Skip this step entirely if Mobile isn't on for this project (check
-`TODO.md`'s `## Add-ons` block) — don't scaffold speculative infra. If
-skipped, check its `TODO.md` line off as skipped-and-confirmed, not left
-dangling for a future run to wonder about — same pattern as Auth (step 1)
-and Queue (step 2) when their add-on is off.
+`.hedgehog/addons.yaml`) — don't scaffold speculative infra. If skipped,
+say so plainly and move on — same pattern as Auth (step 1) and Queue
+(step 2) when their add-on is off.
 
 ```bash
 npx nx g @nx/expo:app apps/mobile
@@ -278,23 +277,21 @@ A per-app override request signals to fix the base config at the source.
 
 ## After Bootstrap
 
-Update `TODO.md`: check off every add-on line now built or explicitly
-skipped (core's four lines are already checked by
-`hedgehog-bootstrap-full-stack-app-core`). Leave Phase A/B sections as-is (per-module,
-filled in by `planner` during planning intake or when new scope enters play).
-Hand off to `hedgehog-loop` — from here, every domain module goes
-through Phase A steps 1–5(a) one at a time, gated by lefthook, each its
-own commit.
+Once every `on` add-on in `.hedgehog/addons.yaml` has its commit landed
+(core's commit already landed via
+`hedgehog-bootstrap-full-stack-app-core`), hand off to `hedgehog-loop` —
+from here, every domain module goes through Phase A layers one at a
+time via `hedgehog next`/`hedgehog verify`, each its own commit.
 
 ## Constraints
 
 - Run `hedgehog-bootstrap-full-stack-app-core` first, unconditionally, before any step
   in this file — never scaffold an add-on against a core that hasn't
   landed and verified clean.
-- Add-on steps (Auth, Queue, Mobile) run only if `TODO.md`'s `## Add-ons`
-  block (written by `planner` at planning intake) turns that add-on on —
-  check off its `TODO.md` line as skipped-and-confirmed otherwise, don't
-  leave it dangling.
+- Add-on steps (Auth, Queue, Mobile) run only if `.hedgehog/addons.yaml`
+  (written by `planner` at planning intake) turns that add-on on — say so
+  plainly and skip otherwise, don't leave it ambiguous whether the step
+  was considered.
 - Don't add domain schema, contracts, or any `libs/<module>/*` content —
   that's Phase A, started after Bootstrap, one module at a time.
 - Don't deviate from the package/library choices above, for whichever

@@ -42,7 +42,7 @@ Run in parallel:
 - `git diff` (unstaged)
 - `git diff --staged` (anything pre-staged)
 - `git log -10 --oneline` to confirm the project's existing commit style
-- Check `TODO.md` for which steps/modules are in flight
+- Run `hedgehog status` for which steps/modules are in flight
 
 Read every changed file's diff fully. You cannot group changes you
 haven't read.

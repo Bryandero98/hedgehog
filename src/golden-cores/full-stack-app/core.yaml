@@ -1,0 +1,41 @@
+# Shipped core definition for full-stack-app. Layer order, scope, and
+# verify commands are the same shape src/skills/hedgehog-loop's Domain
+# Module step tables describe in prose — this file is their data form.
+# {module} is filled in by the compiler with the domain module name a
+# task is generated for.
+id: full-stack-app
+layers:
+  - id: schema
+    scope: ["packages/db/src/schema/**"]
+    verify: "pnpm nx test db && pnpm typecheck"
+    commit: "feat({module}): schema"
+  - id: contract
+    depends_on: schema
+    scope: ["packages/contracts/src/**"]
+    verify: "pnpm nx test contracts && pnpm typecheck"
+    commit: "feat({module}): contract"
+  - id: repository
+    depends_on: contract
+    scope: ["libs/{module}/repository/**"]
+    verify: "pnpm nx test {module}-repository"
+    commit: "feat({module}): repository"
+  - id: service
+    depends_on: repository
+    scope: ["libs/{module}/service/**"]
+    verify: "pnpm nx test {module}-service"
+    commit: "feat({module}): service"
+  - id: controller
+    depends_on: service
+    scope: ["apps/api/**"]
+    verify: "pnpm nx test api"
+    commit: "feat({module}): api"
+  - id: hook
+    depends_on: controller
+    scope: ["packages/hooks/src/**"]
+    verify: "pnpm nx test hooks && pnpm typecheck"
+    commit: "feat({module}): hooks"
+  - id: screen
+    depends_on: hook
+    scope: ["apps/web/**", "apps/mobile/**"]
+    verify: "pnpm nx test web && pnpm nx test mobile"
+    commit: "feat({module}): screen-web"

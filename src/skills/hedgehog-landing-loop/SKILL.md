@@ -1,15 +1,18 @@
 ---
 name: hedgehog-landing-loop
-description: Use for every unit of work on the landing-page core, from planning intake through the final build phase — the Chain Method's brief → feeling → tokens/element → sequence → artifact pipeline, gated and committed one phase at a time, checked off TODO.md. Triggers on "next step", "next phase", "what's next", or the start of any work session on a bootstrapped landing-page project. Also covers this core's own planning intake and Correction Protocol.
+description: Use for every unit of work on the landing-page core, from planning intake through the final build phase — the Chain Method's brief → feeling → tokens/element → sequence → artifact pipeline, gated by `hedgehog verify` and committed one phase at a time. Triggers on "next step", "next phase", "what's next", or the start of any work session on a bootstrapped landing-page project. Also covers this core's own planning intake and Correction Protocol.
 ---
 
 # Hedgehog Landing Loop
 
-The operating loop for a bootstrapped `landing-page` project: pick the
-next phase, run it through its owning agent, gate it, commit it, check it
-off. `TODO.md` at repo root is the live list — read it before starting.
-It's thin: a context blurb plus a checklist mirroring the phase structure
-below. Checked/unchecked is its only state.
+The operating loop for a bootstrapped `landing-page` project: `hedgehog
+next` emits the packet for one ready phase, run it through its owning
+agent, `hedgehog verify` gates and commits it. The build graph
+(`.hedgehog/hedgehog.db`) is the live list — query it via `hedgehog
+status`/`hedgehog next`, never re-derive state from prose. The five
+compiled phases (`src/golden-cores/landing-page/core.yaml`, already the
+source of truth) are the degenerate one-module case of the layer graph:
+one task per phase, each depending on the one before it.
 
 This is the **Chain Method**: a pipeline where every visual choice traces
 back to a reason. No agent may introduce a choice that doesn't originate
@@ -55,19 +58,29 @@ back at Confirm & Lock for the user to accept or correct.
    `.hedgehog/BMAD/`.
 4. **Confirm & Lock** — show the mined subject statement, audience, and
    job back in plain terms, alongside which BMAD skills ran and where
-   their output lives (`.hedgehog/BMAD/`), before writing `TODO.md`.
-   State plainly what happens on confirmation: *"This locks in the
-   brief, commits it (`chore(planning): intake`), and hands off to
-   `bootstrap` to scaffold the Astro workspace. The Strategist phase
+   their output lives (`.hedgehog/BMAD/`), before writing anything to the
+   build graph. State plainly what happens on confirmation: *"This locks
+   in the brief, adds the `landing` intent to the build graph
+   (`hedgehog intent add`), compiles it into the five-phase chain
+   (`hedgehog plan`), commits (`chore(planning): intake`), and hands off
+   to `bootstrap` to scaffold the Astro workspace. The Strategist phase
    starts once that closes. Anything wrong or missing — say so now."*
    Wait for explicit go-ahead — a revision here is just another mining
    pass against the same BMAD archive, not a Correction Protocol entry,
    since nothing downstream exists yet.
-5. **Write `TODO.md`** mirroring the phase table below, then commit
-   planning intake's output as one commit, `chore(planning): intake` —
-   `TODO.md`, `.hedgehog/BMAD/`, `.hedgehog/chain/00-brief.md`, and root
-   `CLAUDE.md`'s filled placeholders.
-6. **Hand off to `bootstrap`** once the commit lands.
+5. **Add the intent and compile the graph**: `hedgehog intent add --id
+   landing --goal "<subject statement>" --outcome "<audience + single
+   job>"` — one call, no `--rule`/`--depends-on` needed; landing-page has
+   no module axis, so this single intent is what `hedgehog plan` compiles
+   against `src/golden-cores/landing-page/core.yaml` into the five phase
+   tasks. Run `hedgehog plan` next, then `hedgehog status` to show the
+   compiled chain.
+6. **Commit planning intake's output as one commit**,
+   `chore(planning): intake` — the committed `.hedgehog/hedgehog.db` (the
+   `landing` intent and its compiled tasks), `.hedgehog/BMAD/`,
+   `.hedgehog/chain/00-brief.md`, and root `CLAUDE.md`'s filled
+   placeholders.
+7. **Hand off to `bootstrap`** once the commit lands.
 
 `planner` owns this section; see that agent for when it runs.
 
@@ -78,6 +91,15 @@ agent works from anything but what was actually handed to it. Steps 4a
 (inside `landing-systems`) and 4c (inside `landing-strategist`) are the
 only parallel-input point in the chain, both reading the same upstream
 artifact; everything else is strictly sequential.
+
+This table's 12 rows are the fine-grained, per-agent-dispatch view. The
+compiled build graph (`src/golden-cores/landing-page/core.yaml`) has only
+5 layers — `brief`/`feeling`/`tokens`/`sequence`/`artifact` — because it's
+the coarser, one-task-per-commit view: rows 1–4 compile into one `feeling`
+task, 5–7 into one `tokens` task, 8–10 into one `sequence` task, 11–12
+into one `artifact` task. These are intentionally not 1:1; don't "fix"
+either one to match the other's granularity — see The Loop below for how
+one delegated phase relates to one compiled task.
 
 | # | Phase | Agent | Produces | Commit |
 |---|---|---|---|---|
@@ -112,30 +134,39 @@ paragraph algorithm, and their self-tests.
 
 ## The Loop (every unit of work)
 
-1. **Pick the next phase** per the table above, from `TODO.md`. One phase
-   at a time, in order.
-2. **Check the gate.** The prior phase is checkpointed and committed
-   first.
-3. **Delegate exactly one phase** to its owning agent, passing it the
-   full chain so far (every upstream artifact, not just the immediately
-   prior one) — an agent that only sees its direct input can't verify its
-   own traceability back to the subject statement. Phase 10
-   (`landing-copywriter`) is delegated once per section, in
-   `landing-sequencer`'s order — each invocation is still "exactly one
-   phase" in the sense this step means: one section, reviewed and locked,
-   before the next invocation starts.
-4. The agent **runs its self-test** (see that agent's own file for what
-   it checks) before presenting its artifact.
-5. The agent **commits** using the exact Conventional Commit format
-   above.
-6. **Check off the line in `TODO.md`** once the agent reports the commit
-   landed. Phase 10 stays unchecked until every section in
-   `landing-sequencer`'s list has locked, not after the first section.
-7. **Repeat**, one delegated phase (or one section, at phase 10) at a
-   time.
+1. **Run `hedgehog next`.** It emits the task packet for one ready
+   compiled layer (STATUS/WHY NOW/BLOCKED DOWNSTREAM/ALLOWED
+   SCOPE/VERIFICATION) — trust it: `hedgehog next` never emits a layer
+   whose dependency isn't `complete`, so there's no separate gate check to
+   run by hand.
+2. **Map the packet's layer to the fine-grained phases it bundles**, per
+   the table above (`feeling` = phases 1–4, `tokens` = 5–7, `sequence` =
+   8–10, `artifact` = 11–12), and **delegate to that layer's owning
+   agent(s)**, passing the full chain so far (every upstream artifact,
+   not just the immediately prior one) — an agent that only sees its
+   direct input can't verify its own traceability back to the subject
+   statement. Within a bundled layer, run its phases in order and in one
+   continuous pass: phase 10 (`landing-copywriter`) still runs once per
+   section, in `landing-sequencer`'s order, every section reviewed and
+   locked before the next starts, all still inside the one `sequence`
+   task.
+3. Each agent **runs its own self-test** (see that agent's own file for
+   what it checks) before presenting its artifact — necessary, not
+   sufficient. This is a sanity check the agent does for itself; it does
+   not move the task and the agent does not commit its own work.
+4. Once every phase inside the packet's layer has been presented and
+   locked by the user, **run `hedgehog verify <task-id>`.** It checks the
+   touched files against the packet's ALLOWED SCOPE, runs the layer's
+   `VERIFICATION` command, and on a pass writes the commit (the exact
+   Conventional Commit message from the table above) and unlocks the next
+   layer. On a scope violation or a failing check, the task stays
+   `implemented`/`failed` and nothing downstream unlocks — fix it and
+   re-run `hedgehog verify`, don't hand-commit around it.
+5. **Repeat** — `hedgehog next` again for the following layer.
 
-Each commit batches exactly one phase's artifact; a wrong phase is fixed
-forward later via the Correction Protocol.
+Each `hedgehog verify` call commits exactly one compiled layer's
+artifact; a wrong phase is fixed forward later via the Correction
+Protocol.
 
 ## Friction log
 
@@ -146,12 +177,13 @@ user feedback implied something was wrong even without a direct
 correction (a preference stated once that, read plainly, means an
 earlier phase missed something) — is signal worth keeping past this
 session, separate from the Correction Protocol that fixes it in the
-moment. Append one entry to `.hedgehog/friction.md` (create it if it
-doesn't exist) when that happens: what was tried, what went wrong or was
-implied, why if visible, and the commit/redline it traces to. This is a
-log, not a todo list — don't let it block or slow the loop; append and
-keep moving. `tweaker` reads it once the build reaches its Stop
-Condition.
+moment. Log one entry via `hedgehog friction add "<note>" [--task
+<task-id>]` when that happens: what was tried, what went wrong or was
+implied, why if visible, and the commit/redline it traces to, all in the
+note text; pass `--task` with the compiled layer's task id when the
+friction traces to one. This is a log, not a todo list — don't let it
+block or slow the loop; log and keep moving. `tweaker` reads it (via
+`hedgehog friction list`) once the build reaches its Stop Condition.
 
 ## Correction Protocol
 
@@ -206,7 +238,8 @@ Before `landing-builder` starts, confirm:
 
 - `landing-critic` returned a pass, not a redline — a redlined spec never
   reaches the Builder; it goes back to the phase the redline names.
-- Every phase 1–11 has its commit landed.
+- `hedgehog status` shows the `sequence` task `complete` (phases 1–11's
+  commits have landed).
 
 Before `landing-strategist` starts, confirm planning intake's Confirm &
 Lock has held and its commit has landed. If not, stop and ask.
@@ -254,17 +287,18 @@ procedure:
 
 ## Stop Condition
 
-A build session ends when every phase in `TODO.md` is checked off and
-`landing-builder`'s artifact is committed, or when the subject statement
-or an adjective is ambiguous enough that continuing means guessing — ask
-one question and wait.
+A build session ends when `hedgehog status` shows the `artifact` task
+`complete` (`landing-builder`'s artifact is committed and every task in
+the chain is done), or when the subject statement or an adjective is
+ambiguous enough that continuing means guessing — ask one question and
+wait.
 
 On the former (a real build completion, not an ambiguity stop), offer a
 fresh-context handoff before doing anything else: tell the user the
-build is complete, that clearing context now costs nothing (`TODO.md`
-and the commit log hold everything), and that a `tweaker` session is the
-right next step for any adjustments — it starts clean, reviews
-`.hedgehog/friction.md` once for a possible discipline-improvement
-suggestion, and takes tweak requests one at a time from there. Don't
-start making tweaks in the current, already-large context; that's what
-the fresh session is for.
+build is complete, that clearing context now costs nothing (the build
+graph and the commit log hold everything), and that a `tweaker` session
+is the right next step for any adjustments — it starts clean, reviews
+the friction log (`hedgehog friction list`) once for a possible
+discipline-improvement suggestion, and takes tweak requests one at a
+time from there. Don't start making tweaks in the current, already-large
+context; that's what the fresh session is for.

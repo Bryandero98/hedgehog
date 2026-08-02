@@ -1,0 +1,113 @@
+// `hedgehog status` — graph overview: task counts by status, and the
+// current ready list. See hedgehog-persistent-build-graph.md, "Task
+// lifecycle" for the status set and "The CLI is the only writer" for the
+// `hedgehog status` line.
+//
+// The ready list reuses next.mjs's readiness query rather than
+// reimplementing it: a task is pickable by `hedgehog next` when its
+// status is `planned` or `ready` (plan.mjs inserts `planned`;
+// verify.mjs's unlockReadyDependents sets `ready` directly) and it has
+// no dependency whose status isn't `complete`. `hedgehog status` lists
+// every task meeting that condition, not just the one `hedgehog next`
+// would pick.
+
+// The task lifecycle in order, matching the tasks CHECK constraint in
+// schema.mjs exactly — every status the engine can write, and no others.
+const TASK_STATUSES = [
+  'proposed',
+  'planned',
+  'ready',
+  'implemented',
+  'verified',
+  'complete',
+  'failed',
+];
+
+const READY_TASKS_SQL = `
+  SELECT t.* FROM tasks t
+  WHERE t.status IN ('planned', 'ready')
+    AND NOT EXISTS (
+      SELECT 1 FROM dependencies d
+      JOIN tasks dep ON dep.id = d.depends_on_task_id
+      WHERE d.task_id = t.id AND dep.status <> 'complete'
+    )
+  ORDER BY t.priority, t.id;
+`;
+
+function countTasksByStatus(db) {
+  const rows = db
+    .prepare('SELECT status, COUNT(*) AS n FROM tasks GROUP BY status')
+    .all();
+  const counts = Object.fromEntries(TASK_STATUSES.map((s) => [s, 0]));
+  for (const row of rows) counts[row.status] = row.n;
+  return counts;
+}
+
+function loadReadyTasks(db) {
+  return db.prepare(READY_TASKS_SQL).all();
+}
+
+// Tasks that need a human/agent decision before the graph can move again:
+// `failed` (verification ran and returned nonzero) and `implemented` (a
+// scope violation refused to run verification). Neither is pickable by
+// `hedgehog next`, so without listing them here a build whose only
+// remaining work is a failed task looks identical to a finished one —
+// "READY (none)" with no indication anything is wrong. Listing them is
+// what makes the fix-and-re-verify path in hedgehog-loop's Loop step 4
+// discoverable from a fresh context.
+const ATTENTION_TASKS_SQL = `
+  SELECT t.* FROM tasks t
+  WHERE t.status IN ('failed', 'implemented')
+  ORDER BY t.priority, t.id;
+`;
+
+function loadAttentionTasks(db) {
+  return db.prepare(ATTENTION_TASKS_SQL).all();
+}
+
+// Returns { counts, ready, attention, total } — counts keyed by every
+// status in the tasks CHECK constraint (present even at zero), ready the
+// full list of currently-pickable tasks, attention the stalled tasks
+// needing a re-verify, total the sum across all statuses.
+export function graphStatus(db) {
+  const counts = countTasksByStatus(db);
+  const ready = loadReadyTasks(db);
+  const attention = loadAttentionTasks(db);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  return { counts, ready, attention, total };
+}
+
+// Renders a graphStatus() result into a plain-text overview: counts by
+// status (only non-zero ones, in lifecycle order), then the ready list.
+export function formatStatus({ counts, ready, attention, total }) {
+  const lines = [];
+  lines.push(`TASKS  ${total}`);
+  lines.push('');
+  for (const status of TASK_STATUSES) {
+    if (counts[status] === 0) continue;
+    lines.push(`  ${status.padEnd(12)} ${counts[status]}`);
+  }
+  lines.push('');
+  lines.push('READY');
+  if (ready.length === 0) {
+    lines.push('  (none)');
+  } else {
+    for (const task of ready) {
+      lines.push(`  ${task.id}   ${task.layer}   ${task.objective}`);
+    }
+  }
+
+  if (attention && attention.length > 0) {
+    lines.push('');
+    lines.push('NEEDS ATTENTION');
+    for (const task of attention) {
+      const reason =
+        task.status === 'failed' ? 'verification failed' : 'scope violation';
+      lines.push(`  ${task.id}   ${task.layer}   ${reason}`);
+    }
+    lines.push('');
+    lines.push('  Fix the work, then re-run: hedgehog verify <task-id>');
+  }
+
+  return lines.join('\n');
+}

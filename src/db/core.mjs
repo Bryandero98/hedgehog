@@ -1,0 +1,141 @@
+// Core-definition loader. Parses `core.yaml` (shipped Golden Cores under
+// src/golden-cores/*/core.yaml, or an authored .hedgehog/core.yaml) into
+// the same in-memory shape either way. See
+// hedgehog-persistent-build-graph.md, "Core definitions".
+//
+// The YAML subset here is deliberately narrow — top-level `id` (scalar)
+// and `layers` (a list of flat maps of scalars/inline string lists). That
+// subset is all a core definition ever needs, so this hand-rolled parser
+// covers it without adding a YAML dependency, the same "no dependency"
+// stance src/db/schema.mjs takes with node:sqlite.
+
+import { readFile } from 'node:fs/promises';
+
+function stripComment(line) {
+  // '#' only starts a comment outside a quoted string.
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === "'" && !inDouble) inSingle = !inSingle;
+    else if (ch === '"' && !inSingle) inDouble = !inDouble;
+    else if (ch === '#' && !inSingle && !inDouble) return line.slice(0, i);
+  }
+  return line;
+}
+
+function parseScalar(raw) {
+  const s = raw.trim();
+  if (
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
+function parseInlineList(raw) {
+  const s = raw.trim();
+  if (!s.startsWith('[') || !s.endsWith(']')) {
+    throw new Error(`expected an inline list ("[...]"), got: ${raw}`);
+  }
+  const inner = s.slice(1, -1).trim();
+  if (inner === '') return [];
+  return inner.split(',').map((item) => parseScalar(item));
+}
+
+function indentOf(line) {
+  return line.length - line.trimStart().length;
+}
+
+// Parses the narrow subset of YAML a core definition needs:
+//   id: <scalar>
+//   layers:
+//     - id: <scalar>
+//       depends_on: <scalar>          # optional
+//       scope: [<scalar>, <scalar>]
+//       verify: <scalar>
+//       commit: <scalar>
+export function parseCoreYaml(text) {
+  const rawLines = text.split('\n');
+  const lines = [];
+  for (const rawLine of rawLines) {
+    const noComment = stripComment(rawLine);
+    if (noComment.trim() === '') continue;
+    lines.push({ indent: indentOf(noComment), text: noComment.trim() });
+  }
+
+  const core = { id: undefined, layers: [] };
+  let i = 0;
+
+  while (i < lines.length && lines[i].indent === 0) {
+    const line = lines[i];
+    if (line.text === 'layers:') {
+      i++;
+      break;
+    }
+    const match = line.text.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    if (!match) throw new Error(`unparseable line: ${line.text}`);
+    const [, key, value] = match;
+    if (key === 'id') core.id = parseScalar(value);
+    i++;
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.indent === 0) break;
+    const itemMatch = line.text.match(/^-\s*([A-Za-z0-9_]+):\s*(.*)$/);
+    if (!itemMatch) throw new Error(`expected a layer list item: ${line.text}`);
+    const layerIndent = line.indent;
+    const layer = {};
+    const [, firstKey, firstValue] = itemMatch;
+    layer[firstKey] = firstValue;
+    i++;
+
+    while (i < lines.length && lines[i].indent > layerIndent) {
+      const fieldMatch = lines[i].text.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+      if (!fieldMatch) throw new Error(`unparseable layer field: ${lines[i].text}`);
+      const [, fieldKey, fieldValue] = fieldMatch;
+      layer[fieldKey] = fieldValue;
+      i++;
+    }
+
+    core.layers.push({
+      id: parseScalar(layer.id ?? ''),
+      depends_on:
+        layer.depends_on !== undefined ? parseScalar(layer.depends_on) : null,
+      scope: layer.scope !== undefined ? parseInlineList(layer.scope) : [],
+      verify: layer.verify !== undefined ? parseScalar(layer.verify) : '',
+      commit: layer.commit !== undefined ? parseScalar(layer.commit) : '',
+    });
+  }
+
+  return core;
+}
+
+// Enforces the interview's rule (spec: "Authored cores") — a layer without
+// scope or without a verify command is rejected. Applied uniformly to
+// shipped and authored cores alike; the loader has no shipped-core-only
+// leniency.
+export function validateCore(core) {
+  if (!core.id) throw new Error('core definition missing top-level id');
+  if (!Array.isArray(core.layers) || core.layers.length === 0) {
+    throw new Error('core definition has no layers');
+  }
+  for (const layer of core.layers) {
+    if (!layer.id) throw new Error('layer missing id');
+    if (!layer.scope || layer.scope.length === 0) {
+      throw new Error(`layer "${layer.id}" missing scope`);
+    }
+    if (!layer.verify) {
+      throw new Error(`layer "${layer.id}" missing verify`);
+    }
+  }
+  return core;
+}
+
+export async function loadCore(path) {
+  const text = await readFile(path, 'utf8');
+  return validateCore(parseCoreYaml(text));
+}
