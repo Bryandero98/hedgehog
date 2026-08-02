@@ -13,6 +13,7 @@ import { cp, mkdir, access, readdir, stat, rm, readFile, writeFile } from 'node:
 import { constants } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
+import { dbInit, DB_PATH } from '../src/db/init.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = resolve(__dirname, '..');
@@ -167,6 +168,7 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog init --landing-page       scaffold the landing-page core instead
   npx @skyf0xx/hedgehog init --force              overwrite existing files
   npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
+  npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -294,6 +296,21 @@ async function update() {
   );
 }
 
+async function dbCommand(args) {
+  const sub = args[0];
+  if (sub !== 'init') {
+    console.error(`${red('Unknown db subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog db init\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const { created, path } = await dbInit(DB_PATH);
+  console.log(
+    created
+      ? `  ${green('create')}  ${path}`
+      : `  ${dim('exists')}  ${path} ${dim('(no-op)')}`,
+  );
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -321,6 +338,11 @@ async function main() {
 
   if (cmd === 'update') {
     await update();
+    return;
+  }
+
+  if (cmd === 'db') {
+    await dbCommand(args.slice(1));
     return;
   }
 

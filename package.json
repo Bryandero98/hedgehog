@@ -19,6 +19,7 @@
   "files": [
     "bin",
     "src/agents",
+    "src/db",
     "src/skills",
     "src/templates",
     "src/golden-cores",
@@ -26,7 +27,7 @@
     "skills/GSAP"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22.5.0"
   },
   "keywords": [
     "claude",
