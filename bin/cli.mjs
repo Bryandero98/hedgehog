@@ -17,6 +17,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { dbInit, DB_PATH } from '../src/db/init.mjs';
 import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
+import { addIntent } from '../src/db/intent.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
@@ -175,6 +176,8 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
   npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
   npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies
+  npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
+  npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -363,6 +366,112 @@ async function planCommand() {
   );
 }
 
+// Parses `hedgehog intent add` args into the same record shape
+// src/db/intent.mjs#normalizeIntent expects. Two sources: `--file <path>`
+// (a JSON file matching the intent record shape verbatim), or flags —
+// `--id`, `--goal`, `--outcome`, `--priority`, repeatable `--rule`
+// / `--constraint` / `--acceptance` / `--depends-on`. Mixing the two
+// is rejected: one intent, one unambiguous source.
+async function parseIntentArgs(args) {
+  const fileIdx = args.indexOf('--file');
+  const hasFlags = args.some((a) => a.startsWith('--') && a !== '--file');
+
+  if (fileIdx !== -1) {
+    if (hasFlags) {
+      throw new Error('--file cannot be combined with other intent flags');
+    }
+    const filePath = args[fileIdx + 1];
+    if (!filePath) throw new Error('--file requires a path');
+    const text = await readFile(resolve(DEST_ROOT, filePath), 'utf8');
+    return JSON.parse(text);
+  }
+
+  const record = { rules: [], constraints: [], acceptance: [], depends_on: [] };
+  for (let i = 0; i < args.length; i++) {
+    const flag = args[i];
+    const value = args[i + 1];
+    switch (flag) {
+      case '--id':
+        record.id = value;
+        i++;
+        break;
+      case '--goal':
+        record.goal = value;
+        i++;
+        break;
+      case '--outcome':
+        record.outcome = value;
+        i++;
+        break;
+      case '--priority':
+        record.priority = Number(value);
+        i++;
+        break;
+      case '--rule':
+        record.rules.push(value);
+        i++;
+        break;
+      case '--constraint':
+        record.constraints.push(value);
+        i++;
+        break;
+      case '--acceptance':
+        record.acceptance.push(value);
+        i++;
+        break;
+      case '--depends-on':
+        record.depends_on.push(value);
+        i++;
+        break;
+      default:
+        throw new Error(`Unknown intent flag: ${flag}`);
+    }
+  }
+  return record;
+}
+
+async function intentCommand(args) {
+  const sub = args[0];
+  if (sub !== 'add') {
+    console.error(
+      `${red('Unknown intent subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog intent add --id <id> --goal <goal> --outcome <outcome> [--rule <r>]... [--depends-on <id>]...\n   or: hedgehog intent add --file <path.json>\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  let record;
+  try {
+    record = await parseIntentArgs(args.slice(1));
+  } catch (err) {
+    console.error(`${red('Invalid arguments:')} ${err.message}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = new DatabaseSync(DB_PATH);
+  let intent;
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    intent = addIntent(db, record);
+  } catch (err) {
+    console.error(`${red('Failed to add intent:')} ${err.message}\n`);
+    process.exitCode = 1;
+    return;
+  } finally {
+    db.close();
+  }
+
+  console.log(`  ${green('added')}  ${intent.id}`);
+  console.log(`  ${dim(`${intent.requirements.length} requirement(s), ${intent.depends_on.length} dependency(ies)`)}`);
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -400,6 +509,11 @@ async function main() {
 
   if (cmd === 'plan') {
     await planCommand();
+    return;
+  }
+
+  if (cmd === 'intent') {
+    await intentCommand(args.slice(1));
     return;
   }
 

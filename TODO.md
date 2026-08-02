@@ -57,10 +57,10 @@ not restate their content.
 
 ## 4 — `hedgehog intent add`
 
-- [ ] CLI command writing an `intents` row (+ `requirements`,
+- [x] CLI command writing an `intents` row (+ `requirements`,
       `intent_dependencies`) from flags or a JSON file (spec: "Intent
       records").
-- [ ] Verify: round-trip — add an intent, query it back via `sqlite3`.
+- [x] Verify: round-trip — add an intent, query it back via `sqlite3`.
 
 ## 5 — `hedgehog next`
 
