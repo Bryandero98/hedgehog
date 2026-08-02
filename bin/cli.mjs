@@ -19,6 +19,7 @@ import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
 import { addIntent } from '../src/db/intent.mjs';
 import { nextTask, formatNext } from '../src/db/next.mjs';
+import { verifyTask } from '../src/db/verify.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
@@ -180,6 +181,7 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
   npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
   npx @skyf0xx/hedgehog next                      print the task packet for one ready task
+  npx @skyf0xx/hedgehog verify <task-id>          run scope + verify checks, commit on pass
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -498,6 +500,58 @@ async function nextCommand() {
   console.log(formatNext(packet));
 }
 
+async function verifyCommand(args) {
+  const taskId = args[0];
+  if (!taskId) {
+    console.error(`${red('Usage:')} hedgehog verify <task-id>\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = new DatabaseSync(DB_PATH);
+  let result;
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    result = verifyTask(db, taskId);
+  } catch (err) {
+    console.error(`${red('Verify failed:')} ${err.message}\n`);
+    process.exitCode = 1;
+    return;
+  } finally {
+    db.close();
+  }
+
+  if (result.outcome === 'scope_violation') {
+    console.error(`${red(bold('Scope violation.'))} Task ${bold(taskId)} stays ${bold('implemented')}.\n`);
+    console.error('Touched paths outside allowed scope:');
+    for (const path of result.offending) console.error(`  ${red('✗')} ${path}`);
+    console.error();
+    process.exitCode = 1;
+    return;
+  }
+
+  if (result.outcome === 'failed') {
+    console.error(`${red(bold('Verification failed.'))} Task ${bold(taskId)} is now ${bold('failed')} (exit ${result.exitCode}).\n`);
+    if (result.output) console.error(result.output);
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(`${green(bold('Verified.'))} Task ${bold(taskId)} is now ${bold('complete')}.`);
+  if (result.commitSha) console.log(`  ${dim('commit')}  ${result.commitSha}`);
+  if (result.unlocked.length === 0) {
+    console.log(`  ${dim('no dependents unlocked')}`);
+  } else {
+    for (const id of result.unlocked) console.log(`  ${green('ready')}  ${id}`);
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -545,6 +599,11 @@ async function main() {
 
   if (cmd === 'next') {
     await nextCommand();
+    return;
+  }
+
+  if (cmd === 'verify') {
+    await verifyCommand(args.slice(1));
     return;
   }
 

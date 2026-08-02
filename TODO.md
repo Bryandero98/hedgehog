@@ -75,15 +75,15 @@ not restate their content.
 
 ## 6 — `hedgehog verify`
 
-- [ ] Scope pre-check: `git diff --name-only` against `scope_globs`;
+- [x] Scope pre-check: `git diff --name-only` against `scope_globs`;
       violation refuses to run verification, task stays `implemented`
       (spec: "Scope enforcement is a hard pre-verification check").
-- [ ] On scope pass: run `verify_command`, write a `verifications` row,
+- [x] On scope pass: run `verify_command`, write a `verifications` row,
       on exit 0 → `verified` → record `artifacts` → commit with
       `commit_message` → `complete` → re-evaluate dependents to `ready`.
       On nonzero exit → `failed`, output retained, dependents stay
       blocked.
-- [ ] Verify: a task edited outside its scope is refused pre-verify; a
+- [x] Verify: a task edited outside its scope is refused pre-verify; a
       task edited in-scope with a failing test lands as `failed` with
       output queryable; a passing task unlocks exactly its direct
       dependents.
