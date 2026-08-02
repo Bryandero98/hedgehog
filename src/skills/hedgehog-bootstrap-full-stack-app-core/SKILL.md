@@ -17,9 +17,9 @@ calls this skill first, unconditionally, then continues with its own
 add-on steps (Auth, Queue, Mobile) — those genuinely vary per project
 and stay live.
 
-This skill has no per-project decisions to make: no `TODO.md` Add-ons
-dependency, no Add-ons check, nothing to ask. Core is identical on every
-Hedgehog project.
+This skill has no per-project decisions to make: no Add-ons dependency,
+no Add-ons check, nothing to ask. Core is identical on every Hedgehog
+project.
 
 ## What lands
 
@@ -142,13 +142,9 @@ Homebrew-installed shadow.
 feat(config): workspace + shared config
 ```
 
-One commit for all of core, landed as a verified copy.
-
-### 7. `TODO.md`'s core lines
-
-The four core Bootstrap lines ship pre-checked in the `TODO.md` template.
-If step 3's fallback copy ran, check them now. Leave every add-on line
-(Auth/Queue/Mobile) untouched; `hedgehog-bootstrap` owns those.
+One commit for all of core, landed as a verified copy. That commit
+existing is the record that core landed — `bootstrap` checks for it via
+the commit log, not a checklist line.
 
 ## Known issues baked into the full-stack-app core
 
@@ -249,8 +245,8 @@ not here.
 
 - Run once per project, always as `hedgehog-bootstrap`'s first move —
   never invoked on its own by a user.
-- No add-on awareness. If a check here ever seems to need `TODO.md`'s
-  `## Add-ons` block, that check belongs in `hedgehog-bootstrap`
+- No add-on awareness. If a check here ever seems to need
+  `.hedgehog/addons.yaml`, that check belongs in `hedgehog-bootstrap`
   instead — this skill's whole point is being identical across every
   project.
 - Don't hand-edit any file this step lands to work around a verification

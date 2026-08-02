@@ -16,9 +16,10 @@ This piece is deterministic — the same commands produce the same output
 on every project — so the output is committed once, upstream, and copied
 here instead of re-derived by an agent on every run.
 
-This skill has no per-project decisions to make: no add-ons, no `TODO.md`
-dependency beyond checking its own Bootstrap line, nothing to ask.
-Landing-page's core is identical on every project running it.
+This skill has no per-project decisions to make: no add-ons, no
+dependency beyond confirming its own commit hasn't already landed,
+nothing to ask. Landing-page's core is identical on every project
+running it.
 
 ## What lands
 
@@ -98,12 +99,9 @@ the same gate every phase in this core's loop runs.
 feat(landing): workspace
 ```
 
-One commit for all of core, landed as a verified copy.
-
-### 6. `TODO.md`'s core line
-
-The Bootstrap line ships pre-checked in the `landing-page` `TODO.md`
-template. If step 2's fallback copy ran, check it now.
+One commit for all of core, landed as a verified copy. That commit
+existing is the record that core landed — `bootstrap` checks for it via
+the commit log, not a checklist line.
 
 ## Known issues baked into the landing-page core
 

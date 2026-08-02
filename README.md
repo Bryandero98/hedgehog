@@ -109,7 +109,7 @@ npx @skyf0xx/hedgehog update
 ```
 
 This refreshes `.claude/agents/` and `.claude/skills/` only. It never
-touches `CLAUDE.md`, `TODO.md`, the core workspace, or
+touches `CLAUDE.md`, the build graph, the core workspace, or
 `skills/BMAD`, since those carry project-specific or write-once content.
 
 ## Why Hedgehog

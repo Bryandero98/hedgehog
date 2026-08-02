@@ -19,11 +19,13 @@ pinned icon source. Neither restates the other's decision.
 ### The skills — invoke these, don't improvise
 
 - **`hedgehog-landing-loop`** — every unit of work once bootstrapped:
-  pick the next step from `TODO.md`, run exactly one Chain Method phase
-  through its owning agent, gate it, commit it, check it off. Also holds
-  the Correction Protocol for fixing a wrong upstream phase (e.g. a
-  signature element that doesn't trace back to the subject statement).
-  Invoke it at the start of any build session and for "what's next".
+  `hedgehog next` emits the packet for one ready compiled layer, run the
+  fine-grained Chain Method phases it bundles through their owning
+  agents, gate the layer via `hedgehog verify`, which commits it on a
+  pass. Also holds the Correction Protocol for fixing a wrong upstream
+  phase (e.g. a signature element that doesn't trace back to the subject
+  statement). Invoke it at the start of any build session and for
+  "what's next".
 - **`hedgehog-bootstrap-landing-page-core`** — run **once**, at project
   start, to land the pre-verified Astro + Tailwind workspace. Skip if
   `astro.config.mjs` already exists.
@@ -47,8 +49,9 @@ pinned icon source. Neither restates the other's decision.
 
 - **`planner`** — planning intake (which core applies, then this core's
   own brief intake: the vendored BMAD-METHOD shelf, run in full and
-  mined into subject, audience, single page job) at project start.
-  Writes `TODO.md`, `.hedgehog/BMAD/`, and `.hedgehog/chain/00-brief.md`.
+  mined into subject, audience, single page job) at project start. Writes
+  the `landing` intent (`hedgehog intent add`, one call — this core has
+  no module axis), `.hedgehog/BMAD/`, and `.hedgehog/chain/00-brief.md`.
   On first run, hands off to the `bootstrap` agent once Confirm & Lock
   holds.
 - **`bootstrap`** — runs `hedgehog-bootstrap-landing-page-core`'s steps.
@@ -145,6 +148,7 @@ src/
   assets/             raster images, imported as modules and rendered through astro:assets `<Image />`
   styles/             global.css — @fontsource-variable imports + Tailwind v4 CSS-first import + the `@theme` token layer (hex values, font families, `--text-*` scale, spacing unit, easing family from Step 5)
 .hedgehog/
+  hedgehog.db         the build graph — the landing intent, its five compiled tasks, verifications, committed to git
   BMAD/               vendored BMAD-METHOD shelf's raw output (brief, PR-FAQ, PRD, UX spec, research) —
                        write-once, from planner
   chain/              this core's own archival planning intake output — subject statement, adjective tables,

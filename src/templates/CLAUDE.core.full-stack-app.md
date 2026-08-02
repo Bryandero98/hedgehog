@@ -4,18 +4,20 @@ Backend-first, schema → contract → repository → service → controller, th
 hook → UX rationale → screen, per domain module. See `.hedgehog/BMAD/` for
 the archival planning intake output — BMAD-METHOD's brainstorming, brief,
 PRD, and UX spec, written once by `planner` and never edited after.
-`TODO.md` also carries this core's `## Add-ons` block (Auth/Queue/Mobile,
-each on or off) — check it before assuming any add-on's infra exists.
+`.hedgehog/addons.yaml` carries this core's Add-ons decision
+(Auth/Queue/Mobile, each on or off) — check it before assuming any
+add-on's infra exists.
 
 ### The skills — invoke these, don't improvise
 
 The discipline is packaged as skills. Use them; don't reconstruct their
 steps from memory:
 
-- **`hedgehog-loop`** — every unit of work once bootstrapped: pick the
-  next step from `TODO.md`, build exactly one, gate it, commit it, check
-  it off. Also holds the Correction Protocol for fixing a wrong upstream
-  step. Invoke it at the start of any build session and for "what's next".
+- **`hedgehog-loop`** — every unit of work once bootstrapped: `hedgehog
+  next` emits the packet for one ready layer, build exactly one, gate it
+  via `hedgehog verify`, which commits it on a pass. Also holds the
+  Correction Protocol for fixing a wrong upstream step. Invoke it at the
+  start of any build session and for "what's next".
 - **`hedgehog-bootstrap`** — run **once**, at project start, to scaffold
   the core stack, the enforcement config, and whichever add-ons (Auth,
   Queue, Mobile) planning intake turned on. Skip if `nx.json` already
@@ -28,22 +30,25 @@ steps from memory:
 
 - **`planner`** — planning intake (which core applies, then
   `hedgehog-planning-intake`'s BMAD-METHOD brainstorming/brief/PRD/UX-spec
-  shelf, mined into scope boundary, the Add-ons decision, and domain
+  shelf, mined into intent records, the Add-ons decision, and domain
   vocabulary) at project start, and module scoping when new scope enters
-  play. Writes `TODO.md` (including its `## Add-ons` block),
-  `.hedgehog/BMAD/`, and `docs/design/<module>-notes.md`. On first run,
-  hands off to the `bootstrap` agent once Confirm & Lock holds.
+  play. Writes intents via `hedgehog intent add`, `.hedgehog/addons.yaml`,
+  and `.hedgehog/BMAD/`. On first run, hands off to the `bootstrap` agent
+  once Confirm & Lock holds.
 - **`bootstrap`** — runs `hedgehog-bootstrap`'s core steps (always) plus
   whichever add-on steps planning intake turned on. Triggered
   automatically by `planner` after its first run; skip if `nx.json`
   already exists.
-- **`backend-eng`** — builds each module's Phase A steps (schema →
-  contract → repository → service → controller → queue?), one step at a
-  time, gated and committed in its own context.
+- **`backend-eng`** — builds each module's Phase A layers (schema →
+  contract → repository → service → controller → queue?), one
+  `hedgehog next` packet at a time, gated by `hedgehog verify`.
 - **`ux-planner`** — once per module in Phase B, after the hook exists and
-  before the screen: writes `docs/design/<module>.md`.
-- **`front-end-eng`** — builds each module's Phase B steps (hook, screen)
-  from the ux-planner rationale, one step at a time, in its own context.
+  before the screen: writes `docs/design/<module>.md`, reading
+  `.hedgehog/BMAD/05-ux-spec/` directly (or
+  `docs/design/<module>-notes.md` if a prior run already filed one).
+- **`front-end-eng`** — builds each module's Phase B layers (hook, screen)
+  from the ux-planner rationale, one `hedgehog next` packet at a time,
+  gated by `hedgehog verify`.
 - **`reviewer`** — phase-transition and Correction Protocol checks the
   mechanical gate can't make (port discipline, FK-by-ID discipline,
   contract shape).
@@ -61,8 +66,8 @@ Pino logging · Vitest + Playwright (tests) · Conventional Commits +
 commitlint + lefthook · Sentry.
 
 **Add-ons** — each on or off per project, decided at planning intake and
-recorded in `TODO.md`'s `## Add-ons` block; check that block for this
-project's actual picks rather than assuming any of these are present:
+recorded in `.hedgehog/addons.yaml`; check that file for this project's
+actual picks rather than assuming any of these are present:
 
 | Add-on | Adds |
 | --- | --- |
@@ -72,8 +77,8 @@ project's actual picks rather than assuming any of these are present:
 
 An add-on that's off means the corresponding piece of infra genuinely
 isn't in this codebase — don't write code assuming `packages/auth`,
-`apps/worker`, or `apps/mobile` exist without checking `TODO.md`'s
-`## Add-ons` block first.
+`apps/worker`, or `apps/mobile` exist without checking
+`.hedgehog/addons.yaml` first.
 
 Don't substitute libraries, in core or in whichever add-ons are on. If a
 package or generator name changed upstream, verify against current docs
@@ -99,13 +104,15 @@ packages/
 libs/
   <module>/port · <module>/repository · <module>/service   (one triplet per table)
 .hedgehog/
-  BMAD/      archival planning intake output (brief, PRD, UX spec, research) — write-once, from planner
+  hedgehog.db    the build graph — intents, tasks, dependencies, verifications, committed to git
+  addons.yaml    the Add-ons decision (Auth/Queue/Mobile), from planner
+  BMAD/          archival planning intake output (brief, PRD, UX spec, research) — write-once, from planner
 docs/
-  design     <module>-notes.md (planner, sourced from BMAD's UX spec) and <module>.md (ux-planner)
+  design     <module>.md (ux-planner, reading .hedgehog/BMAD/05-ux-spec/ directly)
 ```
 
-Check `TODO.md`'s `## Add-ons` block before assuming any "only if" line
-above is actually present in this codebase.
+Check `.hedgehog/addons.yaml` before assuming any "only if" line above is
+actually present in this codebase.
 
 ### Core rules
 

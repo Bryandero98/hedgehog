@@ -1,6 +1,6 @@
 ---
 name: hedgehog-planning-intake
-description: Use once per project, at the start, on either core — Phase 0 (running the vendored BMAD-METHOD planning shelf) is shared by full-stack-app and landing-page alike; Phase 1 (mining BMAD's output into scope boundary/domain modules/the Add-ons decision) is full-stack-app's own procedure, run again on a scoped pass when new domain scope enters play. Invoked by the `planner` agent after Phase 0 core selection; don't run standalone. landing-page runs this skill's Phase 0, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1.
+description: Use once per project, at the start, on either core — Phase 0 (running the vendored BMAD-METHOD planning shelf) is shared by full-stack-app and landing-page alike; Phase 1 (mining `04-prd.md` into intent records plus the Add-ons decision) is full-stack-app's own procedure, run again on a scoped pass when new domain scope enters play. Invoked by the `planner` agent after Phase 0 core selection; don't run standalone. landing-page runs this skill's Phase 0, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1.
 ---
 
 # Hedgehog Planning Intake
@@ -8,13 +8,12 @@ description: Use once per project, at the start, on either core — Phase 0 (run
 Turns a person's description of a problem into planning material, by
 running the vendored BMAD-METHOD planning shelf (Phase 0, shared by both
 cores) and mining its output. On full-stack-app that mining is this
-skill's own Phase 1, into scope boundary/domain modules/Add-ons; on
-landing-page it's `hedgehog-landing-loop`'s planning-intake section, into
-a subject/audience/job statement. This is the mechanics `planner` calls
-once its Phase 0 core-selection check has picked a core — the
-interpretive judgment (scope boundary, module split, Add-ons decision on
-full-stack-app; subject statement on landing-page; Confirm & Lock either
-way) belongs to `planner`; this skill (Phase 0, and Phase 1 on
+skill's own Phase 1, into intent records written via `hedgehog intent
+add`; on landing-page it's `hedgehog-landing-loop`'s planning-intake
+section, into a subject/audience/job statement. This is the mechanics
+`planner` calls once its Phase 0 core-selection check has picked a core —
+the interpretive judgment (which Feature becomes which intent, Confirm &
+Lock either way) belongs to `planner`; this skill (Phase 0, and Phase 1 on
 full-stack-app) and `hedgehog-landing-loop` (landing-page's own mining)
 are the fixed procedures that judgment runs inside.
 
@@ -73,86 +72,63 @@ relationship the commit log has to a merged PR.
 landing-page's counterpart to this Phase 1 is
 `hedgehog-landing-loop`'s own planning-intake section, run once Phase 0
 above completes: it mines the same `.hedgehog/BMAD/` archive into a
-subject/audience/job statement, in place of the scope boundary/domain
-modules/Add-ons decision this Phase 1 produces.
+subject/audience/job statement, in place of the intents this Phase 1
+produces.
 
-Read `.hedgehog/BMAD/` once and do the interpretive work BMAD's docs
-don't do for you — none of BMAD's outputs contain a ready-made
-Auth/Queue/Mobile toggle or a module-ownership/FK table; the PRD's
-Glossary is the closest thing, but it's vocabulary-shaped prose, not a
-decision table:
+Read `.hedgehog/BMAD/04-prd.md` only — §3 Glossary and §4 Features.
+Nothing else in `.hedgehog/BMAD/` is read again: brainstorming, brief,
+PR-FAQ, and deep-recon existed to produce a good PRD, and the UX spec is
+read later, once per module, by `ux-planner`, not by this mining pass.
+Mining is mechanical, not interpretive — one graph row per PRD element,
+per this table:
 
-1. **Scope boundary** — derive from the brief's Scope section plus the
-   PRD's Glossary/Features. In scope: what the elicited material actually
-   called for. Out of scope: anything the brief or PRD flagged as
-   deferred, painful-but-not-now, or explicitly excluded.
-2. **Domain modules** — derive from the PRD's Glossary (entity,
-   relationships, cardinality): one table = one module, same rule as
-   Hedgehog has always used. A cluster with its own lifecycle, referenced
-   by other things, is a candidate module; a thing mentioned only as a
-   property of another isn't.
-3. **Cross-module references** — from the Glossary's relationships/
-   cardinality, identify which module's schema holds the FK, so build
-   order between modules is clear before anyone writes a schema.
-4. **Add-ons decision** (Auth, Queue, Mobile) — check BMAD's docs (brief,
-   PRD, UX spec) for each trigger first:
-   - **Auth** — on if the material describes accounts, logins, or
-     per-user/per-account data.
-   - **Queue** — on if at least one described operation is genuinely
-     long-running, needs retries, or fans out.
-   - **Mobile** — on if the material explicitly wants a mobile app
-     alongside or instead of web.
+| PRD element | Graph row |
+| --- | --- |
+| §4 Feature | one `intents` row — the feature's description already reads as `goal` + `outcome` |
+| FR "Consequences (testable)" item | `requirements` row, `kind='acceptance'` |
+| Feature-specific NFR / cross-cutting rule | `requirements` row, `kind='rule'` |
+| §3 Glossary relationship/cardinality | `intent_dependencies` row (the referencing feature's intent depends on the referenced feature's intent) |
 
-   Infer first, gap-fill second — this is not a second full interview.
-   For any add-on the text leaves genuinely unresolved (not mentioned
-   either way), ask the user directly, the same direct-question posture
-   as an ambiguous scope boundary: "does this need user accounts/login,
-   or is it just for you?", "is anything here a background job, or is it
-   all instant reads and writes?", "web only, or mobile too?" A "no" is a
-   resolved answer, not a gap. Never default an add-on on or off without
-   either a concrete trigger in BMAD's docs or a direct answer — an
-   unasked add-on question is a guess.
-5. **Run Confirm & Lock** (below) before writing anything.
-6. **Write `TODO.md`** — the checklist mirroring Bootstrap, Phase A, and
-   Phase B steps per module and add-on in scope, plus the `## Add-ons`
-   block (see "The Add-ons block" below).
-7. **File `docs/design/<module>-notes.md` per module** — sourced from
-   `.hedgehog/BMAD/05-ux-spec/EXPERIENCE.md` (information architecture,
-   states, flows) and `DESIGN.md` (visual identity): file each module's
-   slice into its own notes file, same fixed filename pattern, same
-   "every module gets one, even if empty" rule as always — a module with
-   no UX-spec material yet still gets a `docs/design/<module>-notes.md`
-   stating that plainly, not a missing file. `ux-planner` reads this file
-   as raw screen/flow material at that module's Phase B.
-8. **Fill root `CLAUDE.md`'s `{{PROJECT_NAME}}` and `{{PROJECT_SUMMARY}}`
+Procedure:
+
+1. **Walk §4 Features top to bottom.** For each Feature, that's one
+   intent: `id` a short kebab-case slug of the Feature's name, `goal` and
+   `outcome` drawn directly from the Feature's description (split the
+   description across the two if it names both the capability and the
+   result; otherwise the same sentence can serve both).
+2. **Walk that Feature's FRs.** Each FR's "Consequences (testable)" list
+   items become that intent's `requirements` with `kind='acceptance'`,
+   one per item, verbatim or lightly tightened — no rephrasing that
+   changes what's being tested.
+3. **Collect any NFR or cross-cutting rule scoped to that Feature**
+   (not a project-wide NFR with no single owning Feature) as a
+   `requirements` row with `kind='rule'` on that intent.
+4. **Walk §3 Glossary relationships and cardinality.** Each relationship
+   between two entities that belong to different Features' intents
+   becomes one `intent_dependencies` row: the intent for the entity
+   holding the foreign key depends on the intent for the entity it
+   references. A relationship entirely inside one Feature's entities
+   produces no row — it's already the same intent.
+5. **Run the Add-ons decision** (`planner`'s own judgment call — see that
+   agent's "The Add-ons decision") for Auth, Queue, and Mobile.
+6. **Run Confirm & Lock** (below) before writing anything.
+7. **Write each intent via `hedgehog intent add`** — one invocation per
+   Feature: `--acceptance` per row from step 2, `--rule` per row from step
+   3, `--depends-on` per row from step 4, or an equivalent `--file
+   <path.json>` batch matching the same shape (`{ id, goal, outcome,
+   rules, acceptance, depends_on, priority }`). This is Phase 1's only
+   write to the build graph.
+8. **Write `.hedgehog/addons.yaml`** with the Add-ons decision from step 5.
+9. **Fill root `CLAUDE.md`'s `{{PROJECT_NAME}}` and `{{PROJECT_SUMMARY}}`
    placeholders**, first run only, then delete the installer's HTML
    comment block at the top of that file. Leave every other line
    untouched.
 
-On a later run (new scope entering play), skip steps 4 and 8 unless new
-scope genuinely changes an add-on trigger (e.g. accounts get added where
-there were none) or the project's identity itself changed — append new
-module sections to `TODO.md` only, never touch an existing module's
-checked boxes or reorder modules already in progress.
-
-## The Add-ons block
-
-`TODO.md` carries the Add-ons decision directly — no side-channel
-document. Write a short, fixed-format `## Add-ons` block into `TODO.md`:
-
-```
-## Add-ons
-- Auth: on — accounts/login in scope
-- Queue: off — no long-running ops
-- Mobile: off — not requested
-```
-
-Each line: the add-on, on/off, a one-line reason it landed there. This is
-the single stable, machine-checkable field every downstream check reads
-— `hedgehog-bootstrap`, `bootstrap`, `hedgehog-loop`, and `reviewer` all
-check `TODO.md`'s `## Add-ons` block, not any other file. An absent
-`## Add-ons` block reads as "never decided," not "decided off" — those
-two are distinct and downstream checks treat them differently.
+On a later run (new scope entering play), skip steps 8 and 9 unless new
+scope genuinely changes an add-on trigger or the project's identity
+itself changed — mine only the PRD's new or changed Features into
+additional `hedgehog intent add` calls, never re-add or edit an intent
+already in the graph.
 
 ## Confirm & Lock
 
@@ -162,25 +138,24 @@ stops being true, so it's a hard stop, not a recap in passing.
 
 🔒 **Confirm & Lock**. Show, in full, not condensed:
 
-- The scope boundary (in / out), sourced from the brief + PRD.
+- Each intent about to be added: `id`, `goal`, `outcome`, its
+  `requirements` (rule/acceptance), and its `depends_on` list.
 - The Add-ons decision (Auth / Queue / Mobile, each explicitly on or
-  off, with the one-line reason — from BMAD's docs or a direct answer).
-- The domain vocabulary / module list, in build order, with any
-  cross-module FK dependencies flagged.
+  off, with the one-line reason).
 - Which BMAD skills ran and where their output lives
   (`.hedgehog/BMAD/`).
 
 Then state plainly what happens on confirmation, before it happens:
 
-> This locks in `TODO.md` (with the `## Add-ons` block) and
-> `docs/design/<module>-notes.md` per module, commits them in one pass
-> (`chore(planning): intake`), and hands off to the `bootstrap` agent to
-> scaffold the workspace and whichever add-ons are on. Phase A build
-> (schema first) starts on the first module once that closes. Anything
-> wrong or missing — say so now; it's a normal edit before this point,
-> and a Correction Protocol entry after. Confirm to proceed, or tell me
-> what to change.
+> This writes each intent above via `hedgehog intent add` and the
+> Add-ons decision to `.hedgehog/addons.yaml`, then shows the compiled
+> graph with `hedgehog status`. Phase A build (schema first) starts on
+> the first ready task once that closes. Anything wrong or missing — say
+> so now; it's a normal edit before this point, and a Correction Protocol
+> entry after. Confirm to proceed, or tell me what to change.
 
 Wait for an explicit go-ahead. A revision here is just another mining
 pass — update the draft, re-run this stage, don't write anything until
-the confirmation holds.
+the confirmation holds. Once confirmed, after every `hedgehog intent add`
+call lands, run `hedgehog status` and show it in full as the graph's
+confirmation view.

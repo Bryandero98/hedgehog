@@ -22,6 +22,7 @@ import { nextTask, formatNext } from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
+import { addFriction, listFriction } from '../src/db/friction.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
@@ -90,12 +91,6 @@ function plan(core) {
       include: `src/templates/CLAUDE.core.${core}.md`,
       to: 'CLAUDE.md',
     },
-    {
-      type: 'merge',
-      shell: 'src/templates/TODO.md',
-      include: `src/templates/TODO.core.${core}.md`,
-      to: 'TODO.md',
-    },
     // The pre-built, pre-verified workspace for the chosen core —
     // everything a fresh project of that shape needs at repo root
     // (lands the root package.json too, so there's no separate
@@ -109,11 +104,11 @@ function plan(core) {
 // project-specific or write-once content: `update` re-copies exactly
 // this, always overwriting, since a consuming project's own
 // .claude/agents and .claude/skills are supposed to match upstream
-// verbatim. CLAUDE.md/TODO.md carry project-filled content, the core
-// workspace is verified once by its bootstrap-core skill, and
-// skills/BMAD and skills/GSAP are re-vendored only deliberately (a
-// manual re-vendor, per each shelf's ATTRIBUTION.md) — none of those
-// belong in an update.
+// verbatim. CLAUDE.md carries project-filled content, the build graph
+// and core workspace are verified once by their own init/bootstrap-core
+// steps, and skills/BMAD and skills/GSAP are re-vendored only
+// deliberately (a manual re-vendor, per each shelf's ATTRIBUTION.md) —
+// none of those belong in an update.
 const UPDATE_PLAN = [
   { type: 'dir', from: 'src/agents', to: '.claude/agents' },
   { type: 'dir', from: 'src/skills', to: '.claude/skills' },
@@ -168,9 +163,9 @@ async function help() {
   console.log(`
 ${bold('Hedgehog installer')}
 
-Copies the Hedgehog agents and skills into ${bold('.claude/')} and drops the
-CLAUDE.md / TODO.md templates into the repo root, so the discipline is
-committed alongside your code.
+Copies the Hedgehog agents and skills into ${bold('.claude/')}, drops the
+CLAUDE.md template and an empty build graph (${bold('.hedgehog/hedgehog.db')})
+into the repo root, so the discipline is committed alongside your code.
 
 ${bold('Usage')}
   npx @skyf0xx/hedgehog init                      scaffold, ${DEFAULT_CORE} core (default)
@@ -186,6 +181,8 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog verify <task-id>          run scope + verify checks, commit on pass
   npx @skyf0xx/hedgehog status                    graph overview: counts by status, ready list
   npx @skyf0xx/hedgehog why <path>                provenance chain for a file
+  npx @skyf0xx/hedgehog friction add "<note>"     log a friction note [--task <task-id>]
+  npx @skyf0xx/hedgehog friction list             list logged friction, oldest first
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -197,9 +194,9 @@ off to bootstrap.
 ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
 agent/skill changes from a newer release. It always overwrites those two
-directories and never touches CLAUDE.md, TODO.md, the core workspace, or
-skills/BMAD and skills/GSAP — those are project-specific or updated
-deliberately, not by this command.
+directories and never touches CLAUDE.md, the build graph, the core
+workspace, or skills/BMAD and skills/GSAP — those are project-specific or
+updated deliberately, not by this command.
 `);
 }
 
@@ -252,6 +249,10 @@ async function init({ force, core }) {
       console.log(`  ${label}  ${relative(DEST_ROOT, f.dest)}`);
     }
   }
+
+  const { created: dbCreated, path: dbPath } = await dbInit(DB_PATH);
+  console.log(`  ${dbCreated ? green('create') : dim('exists')}  ${dbPath}`);
+  if (dbCreated) written++;
 
   console.log(
     `\n${green(bold('Hedgehog installed.'))} ${dim(
@@ -306,8 +307,8 @@ async function update() {
   console.log(`  2. ${bold('git add -A && git commit -m "chore: update hedgehog"')}\n`);
   console.log(
     dim(
-      'CLAUDE.md, TODO.md, the core workspace, and skills/BMAD and\n' +
-        'skills/GSAP are untouched — those carry project-specific or\n' +
+      'CLAUDE.md, the build graph, the core workspace, and skills/BMAD\n' +
+        'and skills/GSAP are untouched — those carry project-specific or\n' +
         'write-once content.',
     ),
   );
@@ -601,6 +602,69 @@ async function whyCommand(args) {
   console.log(formatWhy(path, chain));
 }
 
+async function frictionCommand(args) {
+  const sub = args[0];
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (sub === 'add') {
+    const taskIdx = args.indexOf('--task');
+    const taskId = taskIdx !== -1 ? args[taskIdx + 1] : undefined;
+    const note = args.slice(1).filter((a, i) => a !== '--task' && args[i - 1] !== '--task').join(' ');
+    if (!note) {
+      console.error(`${red('Usage:')} hedgehog friction add "<note>" [--task <task-id>]\n`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const db = new DatabaseSync(DB_PATH);
+    let entry;
+    try {
+      db.exec('PRAGMA foreign_keys = ON;');
+      entry = addFriction(db, { note, taskId });
+    } catch (err) {
+      console.error(`${red('Failed to log friction:')} ${err.message}\n`);
+      process.exitCode = 1;
+      return;
+    } finally {
+      db.close();
+    }
+
+    console.log(`  ${green('logged')}  #${entry.id}${entry.taskId ? ` (${entry.taskId})` : ''}`);
+    return;
+  }
+
+  if (sub === 'list') {
+    const db = new DatabaseSync(DB_PATH);
+    let entries;
+    try {
+      db.exec('PRAGMA foreign_keys = ON;');
+      entries = listFriction(db);
+    } finally {
+      db.close();
+    }
+
+    if (entries.length === 0) {
+      console.log(`${dim('No friction logged.')}\n`);
+      return;
+    }
+    for (const entry of entries) {
+      console.log(`#${entry.id}  ${dim(entry.loggedAt)}${entry.taskId ? `  ${bold(entry.taskId)}` : ''}`);
+      console.log(`  ${entry.note}\n`);
+    }
+    return;
+  }
+
+  console.error(
+    `${red('Unknown friction subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog friction add "<note>" [--task <task-id>]\n   or: hedgehog friction list\n`,
+  );
+  process.exitCode = 1;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -663,6 +727,11 @@ async function main() {
 
   if (cmd === 'why') {
     await whyCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'friction') {
+    await frictionCommand(args.slice(1));
     return;
   }
 
