@@ -238,10 +238,10 @@ holds. Once confirmed and written, control returns to `planner`, which
 runs `hedgehog-planning-intake`'s Phase 1 mining against this core the
 same way it would against a shipped one, then hands off to `bootstrap`.
 
-This skill never touches the workspace itself — no `pnpm init`, no
-generator, no install. `hedgehog init` lands nothing core-specific until
-a core is chosen, so there's nothing on disk yet for this skill to
-conflict with; its job ends at the design artifacts. `bootstrap`'s
-`hedgehog-bootstrap-authored-core` is what later generates the real
-workspace for the stack chosen here — a separate step, run only once
-Phase 1 mining and Confirm & Lock have both landed.
+This skill's job ends at the design artifacts — `core.yaml` and
+`core-design.md` are text, written by editing files. `hedgehog init`
+lands the shared agents/skills/build-graph payload regardless of core, so
+the workspace this design describes is still `bootstrap`'s to generate:
+`hedgehog-bootstrap-authored-core` runs the stack's own generator and
+installs it, a separate step, once Phase 1 mining and Confirm & Lock have
+both landed.

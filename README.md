@@ -118,11 +118,10 @@ npx @skyf0xx/hedgehog init
 Then open Claude Code and describe what you want to build.
 
 Plain `init` (no core flag) installs the agents, skills, and build graph
-only — no workspace, no framework, nothing core-specific. Planning
-intake designs an opinionated build order and stack for what you
-actually describe, then bootstrap lands that workspace for the first
-time. Don't pick `--ts-full-stack-app` or `--landing-page` by elimination
-when neither actually fits.
+that every core shares. Planning intake designs an opinionated build
+order and stack for what you actually describe, then bootstrap generates
+that workspace. Don't pick `--ts-full-stack-app` or `--landing-page` by
+elimination when neither actually fits.
 
 To update:
 

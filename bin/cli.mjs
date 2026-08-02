@@ -3,7 +3,7 @@
 // into the current repo, so the discipline travels with the project.
 //
 // Usage:
-//   npx @skyf0xx/hedgehog init                        no workspace yet — planner picks the core
+//   npx @skyf0xx/hedgehog init                        install; planner picks the core at intake
 //   npx @skyf0xx/hedgehog init --ts-full-stack-app     scaffold the full-stack-app core now
 //   npx @skyf0xx/hedgehog init --landing-page          scaffold the landing-page core now
 //   npx @skyf0xx/hedgehog init --force                 overwrite files that already exist
@@ -77,12 +77,12 @@ async function availableCores() {
 // and a project can only switch cores before it's bootstrapped anyway.
 //
 // `core` is `null` on a deferred install (plain `init`, no explicit
-// flag): which core applies hasn't been decided yet, so nothing
-// core-specific — no golden-core workspace, no filled CLAUDE.md section —
-// gets written speculatively. `bootstrap` lands the real workspace, for
-// whichever core `planner` picks, the first time either way. An explicit
-// flag (`--ts-full-stack-app`, `--landing-page`) is a confirmed choice,
-// not a guess, so it scaffolds immediately as before.
+// flag): the payload is the shared agents/skills/build-graph only, with
+// which core applies left for `planner` to decide. `bootstrap` lands the
+// golden-core workspace and fills the CLAUDE.md section for whichever
+// core `planner` picks — the first time either way. An explicit flag
+// (`--ts-full-stack-app`, `--landing-page`) is a confirmed choice, so it
+// scaffolds that workspace immediately, at install time.
 function plan(core) {
   const base = [
     { type: 'dir', from: 'src/agents', to: '.claude/agents' },
@@ -191,7 +191,7 @@ CLAUDE.md template and an empty build graph (${bold('.hedgehog/hedgehog.db')})
 into the repo root, so the discipline is committed alongside your code.
 
 ${bold('Usage')}
-  npx @skyf0xx/hedgehog init                      no workspace yet — planner picks the core
+  npx @skyf0xx/hedgehog init                      install; planner picks the core at intake
   npx @skyf0xx/hedgehog init --ts-full-stack-app  scaffold the full-stack-app core now
   npx @skyf0xx/hedgehog init --landing-page       scaffold the landing-page core now
   npx @skyf0xx/hedgehog init --force              overwrite existing files
@@ -217,10 +217,10 @@ off to bootstrap.
 Building something else (a CLI, library, browser extension, data
 pipeline, desktop app, etc.)? Run plain 'init' with no core flag rather
 than picking --ts-full-stack-app or --landing-page by elimination — it
-installs the agents, skills, and build graph only, nothing core-specific.
-The planner agent designs a core at planning intake (hedgehog-core-design)
-and bootstrap generates that workspace once it's confirmed. Describe the
-actual project and let Phase 0 route it.
+installs the agents, skills, and build graph, the payload every core
+shares. The planner agent designs a core at planning intake
+(hedgehog-core-design) and bootstrap generates that workspace once it's
+confirmed. Describe the actual project and let Phase 0 route it.
 
 ${bold('update')} re-copies only .claude/agents and .claude/skills from the
 installed Hedgehog version, so an already-bootstrapped project can pick up
@@ -245,7 +245,7 @@ async function init({ force, core, explicitCore }) {
 
   // Resolve the full list of writes up front so we can detect conflicts
   // before touching anything. A deferred install (no explicit core) plans
-  // against `null` — no golden-core workspace, nothing core-specific.
+  // against `null` — the shared agents/skills/build-graph payload only.
   const groups = [];
   for (const entry of plan(explicitCore ? core : null)) {
     const files = await plannedFiles(entry);
@@ -321,10 +321,9 @@ async function init({ force, core, explicitCore }) {
   } else {
     console.log(
       dim(
-        'Core: not chosen yet. Nothing core-specific landed — no workspace,\n' +
-          'no framework, no lockfile. planner decides which core applies at\n' +
-          'planning intake, then bootstrap lands that core\'s workspace for\n' +
-          'the first time.',
+        'Core: not chosen yet — this installed the agents, skills, and\n' +
+          'build graph every core shares. planner decides which core applies\n' +
+          'at planning intake, then bootstrap generates that core\'s workspace.',
       ),
     );
   }
