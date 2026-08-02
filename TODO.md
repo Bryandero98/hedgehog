@@ -64,12 +64,12 @@ not restate their content.
 
 ## 5 — `hedgehog next`
 
-- [ ] Readiness query (spec: the `SELECT` under "Schema") + task-packet
+- [x] Readiness query (spec: the `SELECT` under "Schema") + task-packet
       assembly (spec: "The task packet").
-- [ ] Output format matches spec's `hedgehog next` example exactly
+- [x] Output format matches spec's `hedgehog next` example exactly
       (STATUS / WHY NOW / BLOCKED DOWNSTREAM / ALLOWED SCOPE /
       VERIFICATION).
-- [ ] Verify: on the graph from step 3, `hedgehog next` returns the
+- [x] Verify: on the graph from step 3, `hedgehog next` returns the
       first schema task and nothing else; after manually marking it
       `complete`, returns the contract task.
 

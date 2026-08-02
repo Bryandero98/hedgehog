@@ -1,0 +1,138 @@
+// `hedgehog next` — readiness query + task-packet assembly for one task.
+// See hedgehog-persistent-build-graph.md, the readiness `SELECT` under
+// "Schema", and "The task packet" / the `hedgehog next` output example.
+//
+// Readiness: a `planned` task with no dependency whose status isn't
+// `complete`, lowest `priority` then `id`. Once found, the packet is
+// assembled by querying tasks joined through intents/requirements/
+// task_requirements — never hand-written, never the whole plan.
+
+const READY_TASK_SQL = `
+  SELECT t.* FROM tasks t
+  WHERE t.status = 'planned'
+    AND NOT EXISTS (
+      SELECT 1 FROM dependencies d
+      JOIN tasks dep ON dep.id = d.depends_on_task_id
+      WHERE d.task_id = t.id AND dep.status <> 'complete'
+    )
+  ORDER BY t.priority, t.id
+  LIMIT 1;
+`;
+
+function findReadyTask(db) {
+  return db.prepare(READY_TASK_SQL).get();
+}
+
+function loadIntent(db, intentId) {
+  return db.prepare('SELECT * FROM intents WHERE id = ?').get(intentId);
+}
+
+function loadTaskRequirements(db, taskId) {
+  return db
+    .prepare(
+      `
+      SELECT r.* FROM requirements r
+      JOIN task_requirements tr ON tr.requirement_id = r.id
+      WHERE tr.task_id = ?
+    `,
+    )
+    .all(taskId);
+}
+
+function loadDirectDependents(db, taskId) {
+  return db
+    .prepare(
+      `
+      SELECT t.* FROM tasks t
+      JOIN dependencies d ON d.task_id = t.id
+      WHERE d.depends_on_task_id = ?
+      ORDER BY t.priority, t.id
+    `,
+    )
+    .all(taskId);
+}
+
+// The full transitive closure of tasks blocked on `taskId`, not just its
+// direct dependents (spec example: BLOCKED DOWNSTREAM lists the ready
+// task's entire remaining chain — contract, repository, service, screen —
+// not only the one task directly depending on it). Walked breadth-first,
+// de-duplicated, in dependency order.
+function loadBlockedDownstream(db, taskId) {
+  const seen = new Set([taskId]);
+  const result = [];
+  let frontier = [taskId];
+  while (frontier.length > 0) {
+    const next = [];
+    for (const id of frontier) {
+      for (const dep of loadDirectDependents(db, id)) {
+        if (seen.has(dep.id)) continue;
+        seen.add(dep.id);
+        result.push(dep);
+        next.push(dep.id);
+      }
+    }
+    frontier = next;
+  }
+  return result;
+}
+
+// Assembles the packet for `task` (already known ready) by querying its
+// intent, requirements, and blocked downstream chain. Returns null fields
+// never — every field here is NOT NULL on tasks, or defaults to an empty
+// list.
+function assemblePacket(db, task) {
+  const intent = loadIntent(db, task.intent_id);
+  const requirements = loadTaskRequirements(db, task.id);
+  const dependents = loadBlockedDownstream(db, task.id);
+
+  return {
+    task,
+    intent,
+    requirements,
+    dependents,
+  };
+}
+
+// Returns the assembled packet for the one ready task (spec: readiness
+// SELECT), or null if no task is ready.
+export function nextTask(db) {
+  const task = findReadyTask(db);
+  if (!task) return null;
+  return assemblePacket(db, task);
+}
+
+// Renders a packet into the exact STATUS / WHY NOW / BLOCKED DOWNSTREAM /
+// ALLOWED SCOPE / VERIFICATION format from the spec's `hedgehog next`
+// example.
+export function formatNext(packet) {
+  const { task, intent, dependents } = packet;
+  const scopeGlobs = JSON.parse(task.scope_globs);
+
+  const lines = [];
+  lines.push(`TASK  ${task.id}`);
+  lines.push(task.objective);
+  lines.push('');
+  lines.push('STATUS   READY');
+  lines.push('');
+  lines.push('WHY NOW');
+  lines.push(`  ✓ Intent "${intent.id}" ${intent.status}`);
+  lines.push(`  ✓ Domain module "${task.module}" resolved`);
+  lines.push('  ✓ No incomplete dependencies');
+  lines.push('');
+  lines.push('BLOCKED DOWNSTREAM');
+  if (dependents.length === 0) {
+    lines.push('  (none)');
+  } else {
+    for (const dep of dependents) {
+      lines.push(`  ✗ ${dep.id}   ${dep.layer}`);
+    }
+  }
+  lines.push('');
+  lines.push('ALLOWED SCOPE');
+  for (const glob of scopeGlobs) lines.push(`  ${glob}`);
+  lines.push('');
+  lines.push('VERIFICATION');
+  lines.push(`  ${task.verify_command}`);
+
+  return lines.join('\n');
+}

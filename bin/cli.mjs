@@ -18,6 +18,7 @@ import { dbInit, DB_PATH } from '../src/db/init.mjs';
 import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
 import { addIntent } from '../src/db/intent.mjs';
+import { nextTask, formatNext } from '../src/db/next.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
@@ -178,6 +179,7 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies
   npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
   npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
+  npx @skyf0xx/hedgehog next                      print the task packet for one ready task
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -472,6 +474,30 @@ async function intentCommand(args) {
   console.log(`  ${dim(`${intent.requirements.length} requirement(s), ${intent.depends_on.length} dependency(ies)`)}`);
 }
 
+async function nextCommand() {
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = new DatabaseSync(DB_PATH);
+  let packet;
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    packet = nextTask(db);
+  } finally {
+    db.close();
+  }
+
+  if (!packet) {
+    console.log(`${dim('No ready task.')} Nothing is planned with all dependencies complete.\n`);
+    return;
+  }
+
+  console.log(formatNext(packet));
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -514,6 +540,11 @@ async function main() {
 
   if (cmd === 'intent') {
     await intentCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'next') {
+    await nextCommand();
     return;
   }
 
