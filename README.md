@@ -108,6 +108,9 @@ npx @skyf0xx/hedgehog init --landing-page
 
 Then open Claude Code and describe what you want to build.
 
+Building something that's neither e.g. a CLI, a library, pipeline, etc.? Skip `init` and describe the project to Claude Code directly.
+Planning intake designs an opinionated build order and stack, then scaffolds the workspace for you.
+
 To update:
 
 ``` bash
