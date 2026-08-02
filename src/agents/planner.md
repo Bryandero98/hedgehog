@@ -34,9 +34,8 @@ artifact gets written.
 ## Phase 0 — which core applies
 
 Before invoking any planning-intake skill, on a project's first run only,
-decide which core the description calls for. This replaces asking
-whether Hedgehog applies at all — the real question is always *which*
-core, because "no core fits" is now a narrower case than it used to be:
+decide which core the description calls for. The real question is
+always *which* core — "no core fits" is a narrow case, handled below.
 
 - **`full-stack-app`** — the description names persistent domain data
   with its own lifecycle: something that gets created, changes state,
@@ -49,9 +48,8 @@ core, because "no core fits" is now a narrower case than it used to be:
   waitlist/portfolio page (or a small handful of such pages) with no
   persistent domain data of its own. A page that only collects an email
   into a third-party form service, or has no state at all, qualifies.
-  The bar is "no domain module," the same bar `full-stack-app` used to
-  use to bail out entirely — except now that bar routes to a real core
-  instead of stopping.
+  The bar is "no domain module," and it routes to a real core rather
+  than stopping.
 - **Neither shipped core fits, but something is being built** — the
   description names a real artifact a Builder step would produce, just
   not in either Golden Core's shape. This project gets an **authored

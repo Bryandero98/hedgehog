@@ -19,11 +19,11 @@ not restate their content.
 
 ## 1 — Schema + DB bootstrap
 
-- [x] Write `.hedgehog/hedgehog.db` schema as a migration/init script
-      (spec: "SQLite as build state" → Schema). All nine tables:
-      `intents`, `requirements`, `intent_dependencies`, `tasks`,
-      `task_requirements`, `dependencies`, `artifacts`, `verifications`,
-      `friction`. Use `node:sqlite`, no dependency.
+- [x] `.hedgehog/hedgehog.db` schema as a migration/init script (spec:
+      "SQLite as build state" → Schema). All nine tables: `intents`,
+      `requirements`, `intent_dependencies`, `tasks`, `task_requirements`,
+      `dependencies`, `artifacts`, `verifications`, `friction`. Uses
+      `node:sqlite`, no dependency.
 - [x] `hedgehog db init` — creates `.hedgehog/hedgehog.db` if absent,
       no-ops if present.
 - [x] Verify: fresh init produces a file passing `PRAGMA foreign_keys`
@@ -32,13 +32,12 @@ not restate their content.
 
 ## 2 — Core definition format
 
-- [x] Define the core-definition YAML shape (spec: "Core definitions").
-      One loader, used identically for shipped and authored cores.
-- [x] Write `src/golden-cores/full-stack-app/core.yaml` — schema →
-      contract → repository → service → controller → hook → screen,
-      each with `scope`, `verify`, `commit` (derive from
-      `src/skills/hedgehog-loop`'s existing step tables).
-- [x] Write `src/golden-cores/landing-page/core.yaml` — brief → feeling →
+- [x] Core-definition YAML shape (spec: "Core definitions"). One loader,
+      used identically for shipped and authored cores.
+- [x] `src/golden-cores/full-stack-app/core.yaml` — schema → contract →
+      repository → service → controller → hook → screen, each with
+      `scope`, `verify`, `commit`.
+- [x] `src/golden-cores/landing-page/core.yaml` — brief → feeling →
       tokens → sequence → artifact, linear chain, no module axis (spec:
       MVP scope item 5 — degenerate case of the layer graph).
 - [x] Verify: loader parses both files, rejects a layer missing `scope`
@@ -101,57 +100,50 @@ not restate their content.
 - [x] Phase 1 mining reads `04-prd.md` only, per the PRD→graph-row table
       (spec: "Mapping BMAD output to intents"). Brainstorming/brief/
       PR-FAQ/deep-recon stay archived, unread by mining.
-- [x] Mining writes intents via `hedgehog intent add`, not `TODO.md`.
-- [x] Phase 0 core selection gains the third outcome: no shipped core
-      fits → BMAD Phase 0 → `hedgehog-core-design` writes
-      `.hedgehog/core.yaml` (spec: "Authored cores").
+- [x] Mining writes intents via `hedgehog intent add`.
+- [x] Phase 0 core selection has three outcomes; the third — no shipped
+      core fits — runs BMAD Phase 0 then `hedgehog-core-design`, which
+      writes `.hedgehog/core.yaml` (spec: "Authored cores").
 - [x] Confirm & Lock stage shows the compiled graph (via `hedgehog
-      status` or equivalent), not a `TODO.md` preview.
+      status` or equivalent).
 - [x] Verify: hand-traced a sample `04-prd.md` (one Feature/FR/Glossary
-      relationship) against the rewritten mining procedure, then executed
-      the resulting `hedgehog intent add` invocations for real — 2
-      `intents` rows, 5 `requirements` rows (`acceptance`/`rule` kinds
-      matching the table), 1 `intent_dependencies` row, matching the
-      PRD→graph-row table exactly; `hedgehog plan`/`status`/`next`
-      correctly compiled and sequenced the result.
+      relationship) against the mining procedure, then executed the
+      resulting `hedgehog intent add` invocations for real — 2 `intents`
+      rows, 5 `requirements` rows (`acceptance`/`rule` kinds matching the
+      table), 1 `intent_dependencies` row, matching the PRD→graph-row
+      table exactly; `hedgehog plan`/`status`/`next` correctly compiled
+      and sequenced the result.
 
 ## 9 — `hedgehog-loop` / `hedgehog-landing-loop` rewrite
 
-- [x] Step tables become read-only reference to
-      `src/golden-cores/*/core.yaml` (already the source of truth as of
-      step 2) — skill file keeps phase rules, intra-step conventions,
-      Correction Protocol, friction log.
-- [x] Loop procedure changes from "read TODO.md, pick next unchecked" to
-      "`hedgehog next`, delegate the packet, `hedgehog verify`."
-- [x] Friction log: append to the `friction` table (via CLI) instead of
-      `.hedgehog/friction.md`. Added `src/db/friction.mjs` and
-      `hedgehog friction add`/`hedgehog friction list` (no CLI command for
-      this existed before this pass).
-- [x] `landing-page/core.yaml`'s `feeling`/`tokens`/`sequence` layers now
+- [x] Step tables are a read-only reference to `src/golden-cores/*/core.yaml`
+      — skill file keeps phase rules, intra-step conventions, Correction
+      Protocol, friction log.
+- [x] Loop procedure: `hedgehog next`, delegate the packet, `hedgehog
+      verify`.
+- [x] Friction log appends to the `friction` table via `src/db/friction.mjs`
+      and `hedgehog friction add`/`hedgehog friction list`.
+- [x] `landing-page/core.yaml`'s `feeling`/`tokens`/`sequence` layers
       write and check their own chain-record file (`.hedgehog/chain/01-
-      feeling.md`, `02-tokens.md`, `03-sequence.md`), same pattern
-      `brief`'s `test -s` already used, replacing the `verify: "true"`
-      placeholder.
-- [x] `hedgehog-landing-loop`'s planning-intake section now also writes
-      exactly one `landing` intent via `hedgehog intent add` and runs
-      `hedgehog plan` — nothing previously created an intent for this
-      core, so `hedgehog plan` had nothing to compile against
-      `landing-page/core.yaml` until this pass.
-- [x] The Add-ons decision (Auth/Queue/Mobile — has no home in the
-      `intents`/`tasks` schema; it's one-time, project-wide Bootstrap
-      infra, not a domain module or a compiled layer) now lives in
+      feeling.md`, `02-tokens.md`, `03-sequence.md`), the same pattern
+      `brief`'s `test -s` uses.
+- [x] `hedgehog-landing-loop`'s planning-intake section writes exactly
+      one `landing` intent via `hedgehog intent add` and runs `hedgehog
+      plan`, giving `landing-page/core.yaml` an intent to compile
+      against.
+- [x] The Add-ons decision (Auth/Queue/Mobile — one-time, project-wide
+      Bootstrap infra, not a domain module or a compiled layer, so it has
+      no home in the `intents`/`tasks` schema) lives in
       `.hedgehog/addons.yaml`, written by `planner` at planning intake.
-      Every file that read `TODO.md`'s `## Add-ons` block now reads that
-      file instead: `bootstrap.md`, `hedgehog-bootstrap` and its two
-      core-scaffold skills, `hedgehog-loop`, `backend-eng.md`,
-      `reviewer.md`. `bootstrap.md`'s Bootstrap-step selection (which
-      core piece or add-on is next) is now commit-log-based throughout,
-      since there's no checklist left to check boxes on.
-- [x] Verify: `loadCore` parses the updated `landing-page/core.yaml`
-      cleanly (ran directly — all five layers, scope/verify/commit fields
-      intact). `hedgehog friction add`/`list` round-tripped in a scratch
-      `.hedgehog/hedgehog.db` and via the CLI end to end. Grepped every
-      bootstrap-family file for `TODO.md` post-edit — none remain.
+      `bootstrap.md`, `hedgehog-bootstrap` and its two core-scaffold
+      skills, `hedgehog-loop`, `backend-eng.md`, and `reviewer.md` all
+      read that file. `bootstrap.md`'s Bootstrap-step selection (which
+      core piece or add-on is next) is commit-log-based throughout.
+- [x] Verify: `loadCore` parses `landing-page/core.yaml` cleanly — all
+      five layers, scope/verify/commit fields intact. `hedgehog friction
+      add`/`list` round-tripped in a scratch `.hedgehog/hedgehog.db` and
+      via the CLI end to end. No bootstrap-family file references
+      `TODO.md`.
 
 ## 10 — Agent updates
 
@@ -160,36 +152,26 @@ not restate their content.
       self-discipline; report evidence, never self-certify status.
 - [x] `tweaker.md` — friction review reads the `friction` table
       (`hedgehog friction list`); reviewed-marker is a sentinel friction
-      row instead of a Markdown comment.
-- [x] `reviewer.md` — no change in purpose; fixed the one live `TODO.md`
-      reference found (Queue add-on check → `.hedgehog/addons.yaml`) so
-      its own self-check now genuinely holds.
-- [x] Verify: grepped every agent file for `TODO.md` post-edit — none
-      remain.
+      row.
+- [x] `reviewer.md`'s self-check (Queue add-on check →
+      `.hedgehog/addons.yaml`) genuinely holds.
+- [x] Verify: no agent file references `TODO.md`.
 
 ## 11 — Template + installer cleanup
 
-- [x] Deleted `src/templates/TODO.md`, `TODO.core.full-stack-app.md`,
-      `TODO.core.landing-page.md`.
-- [x] `src/templates/CLAUDE.md` — replaced "Consuming TODO.md" section
-      with "Consuming the graph": `hedgehog next`, never re-derive state
-      from prose. Kept the context-management guidance, retargeted its
-      two `TODO.md` mentions.
+- [x] `src/templates/TODO.md`, `TODO.core.full-stack-app.md`,
+      `TODO.core.landing-page.md` are removed.
+- [x] `src/templates/CLAUDE.md`'s "Consuming the graph" section:
+      `hedgehog next`, never re-derive state from prose.
 - [x] `bin/cli.mjs` — the new subcommands (`intent`, `plan`, `next`,
       `verify`, `status`, `why`, `db init`, `friction`) are wired
-      alongside the existing installer commands. Removed the `plan()`
-      merge entry that concatenated the now-deleted `TODO.md` templates
-      (would have broken `hedgehog init` otherwise); added a `dbInit`
-      call to `init()` so a fresh install creates `.hedgehog/hedgehog.db`
-      (this call was missing before this pass — a fresh install never
-      created the build graph).
-- [x] `package.json` `files` — confirmed `src/golden-cores` and `src/db`
-      are both included (already listed; the new `core.yaml`/CLI-backing
-      files land in the published package).
+      alongside the installer commands. `init()` calls `dbInit` so a
+      fresh install creates `.hedgehog/hedgehog.db`.
+- [x] `package.json` `files` includes `src/golden-cores` and `src/db`, so
+      the `core.yaml`/CLI-backing files land in the published package.
 - [x] Verify: fresh `hedgehog init` into a scratch repo produces no
-      `TODO.md`, creates `.hedgehog/hedgehog.db`, and every help/log
-      string referencing the old templates was swept and updated
-      (confirmed no `TODO.md` string remains in `bin/cli.mjs`).
+      `TODO.md`, creates `.hedgehog/hedgehog.db`, and no help/log string
+      in `bin/cli.mjs` references the old templates.
 
 ## 12 — End-to-end proof
 
@@ -208,16 +190,15 @@ not restate their content.
 - [ ] Full install-path proof: `npx @skyf0xx/hedgehog init
       --ts-full-stack-app` into a scratch repo, driven through real
       planning intake (BMAD shelf → PRD mining) and a real toolchain
-      (`pnpm nx test`) rather than the graph mechanics in isolation.
-      This is the remaining gap — the loop above substituted trivially
-      passing verify commands to exercise the state machine, so the
-      shipped cores' actual `verify` commands are still unproven against
-      a generated workspace.
+      (`pnpm nx test`) rather than the graph mechanics in isolation. The
+      shipped cores' actual `verify` commands are unproven against a
+      generated workspace — the proof above substitutes trivially
+      passing verify commands to exercise the state machine.
 
 ## Explicitly not in this pass
 
 Per spec "MVP": no project-management UI, no multi-agent orchestration,
 no autonomous repo-wide planning, no indexing of existing/non-Hedgehog
-code into the graph. Per spec "Open questions": amending an already-
-`complete` intent is unresolved — don't build amendment handling now,
-flag it if it comes up.
+code into the graph. Amending an already-`complete` intent is
+unresolved (spec: "Open questions") — don't build amendment handling
+now, flag it if it comes up.

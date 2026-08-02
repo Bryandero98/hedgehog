@@ -62,9 +62,9 @@ short pass (confirm not already run, confirm Docker, land
 `src/golden-cores/full-stack-app/` if the installer hasn't already, `pnpm install` +
 `docker compose up -d`, verify typecheck/lint/test clean, one commit).
 This isn't "step 1 of several" the way add-ons are — it's copy-and-verify,
-not generate, so there's nothing to gate between core's four pieces the
-way there was when each was generated live. Don't skip ahead to add-ons
-until this pass completes and its commit lands.
+not generate, so there's nothing to gate between core's four pieces.
+Don't skip ahead to add-ons until this pass completes and its commit
+lands.
 
 ### Running your add-on step
 

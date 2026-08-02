@@ -197,8 +197,8 @@ npx nx g @nx/node:app apps/worker
 pnpm add bullmq ioredis
 ```
 
-Add a `redis` service to the root `docker-compose.yml`
-`hedgehog-bootstrap-full-stack-app-core` landed (Postgres-only until now) and
+Add a `redis` service to the root `docker-compose.yml` that
+`hedgehog-bootstrap-full-stack-app-core` landed (Postgres-only) and
 `REDIS_URL: z.string().url()` to `packages/config/env.schema.ts` (it
 doesn't exist in the core schema), plus a matching `REDIS_URL=` line in
 the root `.env.example` pointing at that same `docker-compose.yml`

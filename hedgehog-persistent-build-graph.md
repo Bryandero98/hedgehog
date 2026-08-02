@@ -578,21 +578,20 @@ and per rule," not free-form judgment.
 
 ---
 
-## What changes in this repo
+## Where each piece lives
 
-| Area | Change |
+| Area | Role |
 | --- | --- |
-| `bin/cli.mjs` | Extend from installer to installer + engine: `intent`, `plan`, `next`, `verify`, `status`, `why`. Uses `node:sqlite`. |
-| `src/templates/TODO.md`, `TODO.core.*.md` | **Deleted.** The graph replaces them. |
-| `src/templates/CLAUDE.md` | "Consuming TODO.md" → "Consuming the graph": read via `hedgehog next`, never re-derive state. Context guidance stays. |
-| `src/skills/hedgehog-loop` | The step tables become the shipped `full-stack-app` core definition (data). The skill keeps phase rules, intra-step conventions, and the Correction Protocol — the judgment the engine can't encode. |
-| `src/agents/planner.md` | Phase 0 core selection gains a third outcome: no shipped core fits → run BMAD Phase 0, then `hedgehog-core-design` authors `.hedgehog/core.yaml`. Mines the PRD into intent records via `hedgehog intent add` instead of writing a `TODO.md` checklist. |
-| `src/skills/hedgehog-planning-intake` | Phase 1 mining reads `04-prd.md` only (§3 Glossary, §4 Features/FRs) — not the full `.hedgehog/BMAD/` archive. Brainstorming/brief/PR-FAQ/deep-recon stay archived, never read again. Mining table changes from scope-boundary/domain-modules prose to the PRD→graph-row mapping above. |
+| `bin/cli.mjs` | Installer + engine: `intent`, `plan`, `next`, `verify`, `status`, `why`. Uses `node:sqlite`. |
+| `src/templates/CLAUDE.md` | "Consuming the graph": read via `hedgehog next`, never re-derive state from prose. |
+| `src/skills/hedgehog-loop` | Step tables are a read-only reference to the shipped `full-stack-app` core definition (data). The skill holds phase rules, intra-step conventions, and the Correction Protocol — the judgment the engine can't encode. |
+| `src/agents/planner.md` | Phase 0 core selection has three outcomes; the third — no shipped core fits — runs BMAD Phase 0, then `hedgehog-core-design` authors `.hedgehog/core.yaml`. Mines the PRD into intent records via `hedgehog intent add`. |
+| `src/skills/hedgehog-planning-intake` | Phase 1 mining reads `04-prd.md` only (§3 Glossary, §4 Features/FRs). Brainstorming/brief/PR-FAQ/deep-recon stay archived. Mining table maps PRD sections to graph rows. |
 | `src/agents/backend-eng.md`, `front-end-eng.md` | Receive a task packet, not a step name. Honor `scope_globs`. Report evidence; never self-certify. |
-| `src/agents/reviewer.md` | Unchanged in purpose — still the judgment layer at phase transitions and Correction Protocol. |
-| `src/agents/tweaker.md` | Friction log moves from `.hedgehog/friction.md` to the `friction` table. |
-| Golden Cores | Both become shipped core definitions consumed by the compiler, not the definition of Hedgehog itself. |
-| `src/skills/hedgehog-landing-loop` | The five-phase chain becomes the shipped `landing-page` core definition (a linear chain, no module axis). The skill keeps the Chain Method's judgment content — brief mining, feeling/token derivation, critic pass. |
+| `src/agents/reviewer.md` | The judgment layer at phase transitions and Correction Protocol. |
+| `src/agents/tweaker.md` | Friction log lives in the `friction` table. |
+| Golden Cores | Shipped core definitions consumed by the compiler. |
+| `src/skills/hedgehog-landing-loop` | The five-phase chain is the shipped `landing-page` core definition (a linear chain, no module axis). The skill holds the Chain Method's judgment content — brief mining, feeling/token derivation, critic pass. |
 
 ```text
 Hedgehog Execution Engine
@@ -610,15 +609,12 @@ Hedgehog Execution Engine
 
 ---
 
-## MVP
+## Scope
 
-The first proof:
-
-> Given a compact intent, Hedgehog produces a correctly ordered sequence
-> of small AI tasks, persists progress, and structurally prevents the AI
-> from skipping architectural layers or self-certifying unverified work.
-
-Scope:
+The engine's proof: given a compact intent, Hedgehog produces a
+correctly ordered sequence of small AI tasks, persists progress, and
+structurally prevents the AI from skipping architectural layers or
+self-certifying unverified work. That covers:
 
 1. `.hedgehog/hedgehog.db` with the schema above, committed.
 2. Intent records via `hedgehog intent add`.
@@ -639,27 +635,13 @@ Scope:
 8. Dependent unlocking.
 9. Task→file provenance.
 
-Not in the MVP: a project-management UI, multi-agent orchestration,
-autonomous repo-wide planning, code generation per layer, indexing
-existing (non-Hedgehog-built) code into the graph — Hedgehog targets new
-projects, the same assumption BMAD makes.
-
-## Open questions
-
 Hedgehog targets new, AI-only-built projects — no human hand-edits, no
-existing codebase to index (the same assumption BMAD makes). That
-removes reconciliation with manual changes and adoption-time indexing as
-concerns. Scope enforcement, BMAD-to-intent mapping, and completed-intent
-retention are resolved above. What's left:
+existing codebase to index, the same assumption BMAD makes. Out of
+scope: a project-management UI, multi-agent orchestration, autonomous
+repo-wide planning, code generation per layer, and indexing existing
+(non-Hedgehog-built) code into the graph.
 
-- How is an already-`complete` intent **amended** when a requirement
-  changes after the fact — reopen it (`complete` → `active`, task
-  statuses reset for affected layers only) or always model it as a new,
-  dependent intent? Reopening risks re-running verification against
-  since-changed downstream code; a new intent keeps history clean but
-  fragments a single feature across multiple intent rows.
-
-  Until this is settled, the engine has no amendment path: `hedgehog
-  plan` only compiles `proposed`/`planned` intents, so a `complete` one
-  is inert rather than reopenable, and nothing silently resets verified
-  work. A changed requirement is modelled as a new intent today.
+An already-`complete` intent has no amendment path. `hedgehog plan`
+only compiles `proposed`/`planned` intents, so a `complete` intent is
+inert rather than reopenable, and nothing silently resets verified work.
+A changed requirement is modeled as a new, dependent intent.
