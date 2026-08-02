@@ -20,6 +20,8 @@ import { planTasks } from '../src/db/plan.mjs';
 import { addIntent } from '../src/db/intent.mjs';
 import { nextTask, formatNext } from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
+import { graphStatus, formatStatus } from '../src/db/status.mjs';
+import { whyPath, formatWhy } from '../src/db/why.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
@@ -182,6 +184,8 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
   npx @skyf0xx/hedgehog next                      print the task packet for one ready task
   npx @skyf0xx/hedgehog verify <task-id>          run scope + verify checks, commit on pass
+  npx @skyf0xx/hedgehog status                    graph overview: counts by status, ready list
+  npx @skyf0xx/hedgehog why <path>                provenance chain for a file
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
@@ -552,6 +556,51 @@ async function verifyCommand(args) {
   }
 }
 
+async function statusCommand() {
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = new DatabaseSync(DB_PATH);
+  let result;
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    result = graphStatus(db);
+  } finally {
+    db.close();
+  }
+
+  console.log(formatStatus(result));
+}
+
+async function whyCommand(args) {
+  const path = args[0];
+  if (!path) {
+    console.error(`${red('Usage:')} hedgehog why <path>\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = new DatabaseSync(DB_PATH);
+  let chain;
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    chain = whyPath(db, path);
+  } finally {
+    db.close();
+  }
+
+  console.log(formatWhy(path, chain));
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h') || args.length === 0) {
@@ -604,6 +653,16 @@ async function main() {
 
   if (cmd === 'verify') {
     await verifyCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'status') {
+    await statusCommand();
+    return;
+  }
+
+  if (cmd === 'why') {
+    await whyCommand(args.slice(1));
     return;
   }
 

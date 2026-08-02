@@ -2,14 +2,21 @@
 // See hedgehog-persistent-build-graph.md, the readiness `SELECT` under
 // "Schema", and "The task packet" / the `hedgehog next` output example.
 //
-// Readiness: a `planned` task with no dependency whose status isn't
-// `complete`, lowest `priority` then `id`. Once found, the packet is
-// assembled by querying tasks joined through intents/requirements/
-// task_requirements — never hand-written, never the whole plan.
+// Readiness: a task with no dependency whose status isn't `complete`,
+// lowest `priority` then `id`. Pickable status is `planned` OR `ready` —
+// `plan.mjs` inserts new tasks as `planned`, but `verify.mjs`'s
+// unlockReadyDependents sets a dependent's status to `ready` directly
+// once its dependencies complete (see verify.mjs), without ever passing
+// back through `planned`. A task already marked `ready` still has to
+// satisfy the same no-incomplete-dependency condition here — the OR
+// widens which statuses are eligible, it doesn't relax the dependency
+// check itself. Once found, the packet is assembled by querying tasks
+// joined through intents/requirements/task_requirements — never
+// hand-written, never the whole plan.
 
 const READY_TASK_SQL = `
   SELECT t.* FROM tasks t
-  WHERE t.status = 'planned'
+  WHERE t.status IN ('planned', 'ready')
     AND NOT EXISTS (
       SELECT 1 FROM dependencies d
       JOIN tasks dep ON dep.id = d.depends_on_task_id

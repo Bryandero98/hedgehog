@@ -90,10 +90,10 @@ not restate their content.
 
 ## 7 — `hedgehog status` / `hedgehog why`
 
-- [ ] `status` — graph overview (counts by status, ready list).
-- [ ] `why <path>` — walks `artifacts` → `tasks` → `task_requirements` →
+- [x] `status` — graph overview (counts by status, ready list).
+- [x] `why <path>` — walks `artifacts` → `tasks` → `task_requirements` →
       `requirements` → `intents` (spec: "Traceability").
-- [ ] Verify: `why` on a file from step 6 prints the full chain back to
+- [x] Verify: `why` on a file from step 6 prints the full chain back to
       the originating intent.
 
 ## 8 — `planner` / `hedgehog-planning-intake` rewrite
