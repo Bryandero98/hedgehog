@@ -10,6 +10,13 @@ Delegate each step to a fresh-context agent with: the step's own
 description below, plus a pointer to the relevant spec section. Don't
 paste the whole spec into every step's context.
 
+Once a step's own boxes (including its Verify line) are checked, before
+starting the next step: commit the step's changes (one commit, files
+scoped to that step only — don't sweep in unrelated untracked files),
+then write a fresh-context prompt for the next step and hand it back.
+The prompt should point at this file and the relevant spec section(s),
+not restate their content.
+
 ## 1 — Schema + DB bootstrap
 
 - [x] Write `.hedgehog/hedgehog.db` schema as a migration/init script
