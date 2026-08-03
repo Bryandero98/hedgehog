@@ -61,7 +61,12 @@ the design work onto the person who came here to avoid doing it.
 Pick one default per system shape, the same way the shipped cores commit
 to one choice per row rather than a menu (`hedgehog-bootstrap`'s stack
 table). Substitute off a default only for a concrete, named constraint
-read from `.hedgehog/BMAD/` — never a general preference for variety:
+read from `.hedgehog/BMAD/` — never a general preference for variety.
+Prefer an opinionated framework over a bare library wherever the shape
+has one (a web/CLI/RPC framework that fixes where things live, the way
+NestJS does for `full-stack-app`) — an opinionated default is a guardrail
+this discipline doesn't have to write down, and is worth more than the
+popular thin alternative:
 
 | System shape | Default stack | Substitute when |
 |---|---|---|
@@ -72,7 +77,7 @@ read from `.hedgehog/BMAD/` — never a general preference for variety:
 | Desktop app | TypeScript + Electron, Vitest + Playwright, pnpm | native platform integration is a stated hard requirement (macOS/Windows-only, deep OS API use) → Swift/AppKit or C#/WinUI, per platform, named explicitly |
 | Compiler / language tool | Rust, `cargo test`, Cargo | the brief is explicitly about fast iteration over raw performance, or targets a JS/TS-only toolchain (a Babel/ESLint plugin) → TypeScript, Vitest, pnpm |
 | Bot / agent | TypeScript, Vitest, pnpm | the brief calls for heavy ML/data-science library use → Python, pytest, uv |
-| Game | TypeScript + a canvas/WebGL engine already named in the brief (e.g. PixiJS, Three.js), Vitest, pnpm | a native/console target is explicit → the engine's native language (C#/Unity, C++), named per that engine |
+| Game | TypeScript + PixiJS (2D) or Three.js (3D), Vitest, pnpm — read the dimensionality off the brief; an engine the brief names outright wins over both | a native/console target is explicit → the engine the brief names, per that engine's own language (see the caveat below) |
 | Infra / deploy tool | Go, `go test`, Go modules | the tool is a thin wrapper generating config/manifests with no systems-level need → TypeScript, Vitest, pnpm |
 
 A shape not on this table is rare enough that no default has been
@@ -82,20 +87,72 @@ target, the language the brief's own examples or comparables are
 written in) and name the result as a judgment call, not a table lookup,
 in `core-design.md`'s rationale.
 
+Where a substitution lands on a stack whose primary artifacts are binary
+(engine scenes and prefabs, visual-editor projects, compiled design
+files), say so at Confirm & Lock. Scope globs and `verify` commands still
+hold on that stack's text sources, but a layer whose real output is a
+binary file can't be diffed or meaningfully gated, so the enforcement is
+partial in a way the text-source defaults aren't. That's a reason to
+prefer a text-source stack where the brief leaves it open, and a fact the
+user should have before confirming where it doesn't.
+
 Record the choice as one line — language, package manager, the named
-framework(s), test runner — before moving to Step 3; every layer's
-`scope` and `verify` in Step 3 draws from it.
+framework(s), test runner — before moving to Step 3. Alongside it, record
+a one-line decision for each of these concerns, whichever apply to the
+shape (a browser extension has no DI story; a data pipeline has no
+routing layer) — each is a place an authored core silently forks into
+per-project convention if left unstated, the way `full-stack-app` never
+has to think about because NestJS already decided:
+
+- **Composition** — how one part of the system gets a dependency it
+  doesn't construct itself (a DI container, explicit constructor passing,
+  a module registry).
+- **Error model** — how a failure crosses a layer boundary (typed
+  exceptions, a `Result`/`Either` return, error codes).
+- **Config and secrets** — where runtime configuration is read from and
+  validated (env vars through a typed schema, a config file, flags).
+- **Entrypoint layout** — what file the runtime starts from and how it
+  wires the layers together.
+
+Every layer's `scope` and `verify` in Step 3 draws from this record.
 
 ## Step 3 — derive the layers
 
 Read `.hedgehog/BMAD/` for what the system actually does, then decide the
 layers it builds in. A layer earns its place by owning a distinct
 artifact that can be verified on its own. Order by dependency first (a
-layer that another layer imports comes first) and by risk second (where
-two layers are independent, build the one that would invalidate the other
-if it went wrong first).
+layer that another layer imports comes first), by contract second (a
+layer that pins an external interface — a schema, a wire format, a public
+API surface — comes before the layers that build against it, the way
+`full-stack-app` puts `schema` before `contract` before everything else),
+and by risk third (where two layers are still tied, build the one that
+would invalidate the other if it went wrong first).
 
-Three rules with teeth:
+Start from the blueprint for the chosen system shape — a starting
+sequence, not a fixed one. Each blueprint names where it's safe to add,
+merge, or drop a layer for the project at hand, and the one boundary that
+has to hold whatever else changes; treat those adaptation points as
+expected, not as exceptions. Record which blueprint was used and what
+changed from it in `core-design.md`'s rationale (Step 6).
+
+| System shape | Blueprint |
+|---|---|
+| CLI | [blueprints/cli.md](blueprints/cli.md) |
+| Library / SDK | [blueprints/library-sdk.md](blueprints/library-sdk.md) |
+| Data pipeline | [blueprints/data-pipeline.md](blueprints/data-pipeline.md) |
+| Browser extension | [blueprints/browser-extension.md](blueprints/browser-extension.md) |
+| Desktop app | [blueprints/desktop-app.md](blueprints/desktop-app.md) |
+| Compiler / language tool | [blueprints/compiler-language-tool.md](blueprints/compiler-language-tool.md) |
+| Bot / agent | [blueprints/bot-agent.md](blueprints/bot-agent.md) |
+| Game | [blueprints/game.md](blueprints/game.md) |
+| Infra / deploy tool | [blueprints/infra-deploy-tool.md](blueprints/infra-deploy-tool.md) |
+
+A shape off this table gets no starting sequence — derive layers directly
+from this step's rules and the BMAD brief, and name that in
+`core-design.md` as a judgment call, the same as an off-table stack.
+
+Three rules with teeth, on every blueprint and every derived sequence
+alike:
 
 - **A layer with no executable verification is not a layer.** Fold it
   into its neighbour or drop it. `verify: manually inspect` is not a
@@ -178,6 +235,12 @@ if missed:
   belongs in `.hedgehog/core-design.md`.
 - **`depends_on` names one layer**, and the chain must be acyclic. The
   compiler walks it directly into `dependencies` rows.
+- **`verify` must prove the layer's own claim, not just exit clean.** A
+  command that runs but asserts nothing (`tsc --noEmit` alone on a layer
+  whose job is behavior, a `test -s` on a file nothing checks the content
+  of) passes on an empty implementation. Pair typecheck/build commands
+  with a test command that exercises the layer's actual output whenever
+  the layer produces behavior, not just types.
 
 Verify the file loads before showing it back, by calling the loader
 directly:
@@ -196,12 +259,14 @@ forward.
 
 The rationale the engine doesn't read but the project needs: the system
 shape and why, the stack and why (the default it came from, or the named
-constraint that justified a substitution), the layers with a line each on
-what they own and why they sit where they do, the module-axis decision,
-and anything left unresolved. Written once, archival, never edited after
-— the same stance `.hedgehog/BMAD/` takes. Later changes to the
-architecture are Correction Protocol entries in the commit log, not edits
-here.
+constraint that justified a substitution), the composition/error/config/
+entrypoint decisions from Step 2, the layer blueprint used and what
+changed from it (or, off-table, that layers were derived directly and
+why), the layers with a line each on what they own and why they sit where
+they do, the module-axis decision, and anything left unresolved. Written
+once, archival, never edited after — the same stance `.hedgehog/BMAD/`
+takes. Later changes to the architecture are Correction Protocol entries
+in the commit log, not edits here.
 
 ## Confirm & Lock
 
