@@ -75,6 +75,31 @@
     border-radius: 6px;
     font-size: 12px;
   }
+  #detail-panel .muted { color: #8b949e; font-size: 13px; }
+  #detail-panel ul.requirements {
+    margin: 4px 0 0;
+    padding-left: 0;
+    list-style: none;
+  }
+  #detail-panel ul.requirements li {
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid #21262d;
+  }
+  #detail-panel ul.requirements li:last-child { border-bottom: none; }
+  .req-kind {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin-right: 4px;
+  }
+  .req-kind-rule { background: #58a6ff33; color: #79c0ff; }
+  .req-kind-constraint { background: #d2992233; color: #e3b341; }
+  .req-kind-acceptance { background: #3fb95033; color: #56d364; }
   #legend {
     position: fixed;
     bottom: 16px;
@@ -173,6 +198,7 @@
 
   function DetailPanel({ task }) {
     if (!task) return h('div', { id: 'detail-panel' });
+    const requirements = task.requirements || [];
     return h(
       'div',
       { id: 'detail-panel', className: 'open' },
@@ -181,6 +207,26 @@
       h('div', null, task.intentGoal),
       h('div', { className: 'field-label' }, 'Objective'),
       h('div', null, task.objective),
+      // Every requirement kind together, same as hedgehog next's
+      // RELEVANT RULES — a task is bound by its rules, constraints, and
+      // acceptance criteria equally, so they read as one list rather
+      // than three separate sections.
+      h('div', { className: 'field-label' }, 'Requirements'),
+      requirements.length === 0
+        ? h('div', { className: 'muted' }, 'None recorded')
+        : h(
+            'ul',
+            { className: 'requirements' },
+            requirements.map((r, i) =>
+              h(
+                'li',
+                { key: i },
+                h('span', { className: `req-kind req-kind-${r.kind}` }, r.kind),
+                ' ',
+                r.statement,
+              ),
+            ),
+          ),
       h('div', { className: 'field-label' }, 'Verify command'),
       h('pre', null, task.verifyCommand),
       h('div', { className: 'field-label' }, 'Commit message'),
