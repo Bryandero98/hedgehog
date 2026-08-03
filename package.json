@@ -1,7 +1,7 @@
 {
   "name": "@skyf0xx/hedgehog",
   "version": "3.0.5",
-  "description": "Install the Hedgehog build discipline (agents + skills) into a repo.",
+  "description": "Install the Hedgehog build discipline (agents + skills) into a repo, for Claude Code, Cursor, or Gemini CLI.",
   "type": "module",
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
     "bin",
     "src/agents",
     "src/db",
+    "src/hosts",
     "src/skills",
     "src/templates",
     "src/golden-cores",
@@ -32,6 +33,9 @@
   "keywords": [
     "claude",
     "claude-code",
+    "cursor",
+    "gemini-cli",
+    "agents-md",
     "agents",
     "skills",
     "scaffold",

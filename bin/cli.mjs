@@ -6,8 +6,10 @@
 //   npx @skyf0xx/hedgehog init                        install; planner picks the core at intake
 //   npx @skyf0xx/hedgehog init --ts-full-stack-app     scaffold the full-stack-app core now
 //   npx @skyf0xx/hedgehog init --landing-page          scaffold the landing-page core now
+//   npx @skyf0xx/hedgehog init --cursor                install for Cursor (default: Claude Code)
+//   npx @skyf0xx/hedgehog init --all-hosts             install for every supported coding agent
 //   npx @skyf0xx/hedgehog init --force                 overwrite files that already exist
-//   npx @skyf0xx/hedgehog update                       refresh .claude/agents + .claude/skills
+//   npx @skyf0xx/hedgehog update                       refresh the installed agents + skills
 //   npx @skyf0xx/hedgehog --help
 
 import { cp, mkdir, access, readdir, stat, rm, readFile, writeFile } from 'node:fs/promises';
@@ -25,6 +27,8 @@ import { verifyTask } from '../src/db/verify.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
+import { HOSTS, HOST_FLAGS, DEFAULT_HOST, availableHosts } from '../src/hosts/index.mjs';
+import { recordHosts, installedHosts } from '../src/hosts/installed.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
 
@@ -84,26 +88,49 @@ async function availableCores() {
 // core `planner` picks — the first time either way. An explicit flag
 // (`--ts-full-stack-app`, `--landing-page`) is a confirmed choice, so it
 // scaffolds that workspace immediately, at install time.
-function plan(core) {
-  const base = [
-    { type: 'dir', from: 'src/agents', to: '.claude/agents' },
-    { type: 'dir', from: 'src/skills', to: '.claude/skills' },
-    // The vendored BMAD-METHOD planning shelf that hedgehog-planning-intake
-    // runs — referenced by repo-root-relative path (skills/BMAD/...), so it
-    // lands there rather than under .claude/.
-    { type: 'dir', from: 'skills/BMAD', to: 'skills/BMAD' },
-    // The vendored GSAP animation skill shelf that front-end-eng loads for
-    // motion work — same repo-root-relative referencing as skills/BMAD.
-    { type: 'dir', from: 'skills/GSAP', to: 'skills/GSAP' },
+// `hostOnly` plans just the parts that differ per host — used when a
+// second host is added to a project whose shared payload (the vendored
+// shelves, the core workspace) is already on disk.
+function plan(core, host = DEFAULT_HOST, { hostOnly = false } = {}) {
+  const h = HOSTS[host];
+  const perHost = [
+    { type: 'dir', from: 'src/agents', to: h.agentsDir, emit: h.emitAgent },
+    { type: 'dir', from: 'src/skills', to: h.skillsDir },
+    // Whatever else this host needs to find the payload — its own rules
+    // file, extension manifest, or routing doc. Empty for a host that
+    // auto-loads its bootstrap file and registers agents from disk.
+    ...(h.extraEntries ?? []),
   ];
+
+  // Host-independent: one copy per project however many hosts read it.
+  const shared = hostOnly
+    ? []
+    : [
+        // The vendored BMAD-METHOD planning shelf that
+        // hedgehog-planning-intake runs — referenced by repo-root-relative
+        // path (skills/BMAD/...), so it lands there rather than under a
+        // host's own directory.
+        { type: 'dir', from: 'skills/BMAD', to: 'skills/BMAD' },
+        // The vendored GSAP animation skill shelf that front-end-eng loads
+        // for motion work — same repo-root-relative referencing.
+        { type: 'dir', from: 'skills/GSAP', to: 'skills/GSAP' },
+      ];
+
+  const base = [...perHost, ...shared];
 
   if (core === null) {
     return [
       ...base,
       // The shell with its {{CORE_SECTION}} placeholder left unfilled —
       // whichever bootstrap-core skill runs first fills it in for the
-      // core planner actually picked.
-      { type: 'file', from: 'src/templates/CLAUDE.md', to: 'CLAUDE.md' },
+      // core planner actually picked. {{HOST_DISPATCH}} is filled now:
+      // which host this is doesn't depend on the core.
+      {
+        type: 'merge',
+        shell: 'src/templates/CLAUDE.md',
+        dispatch: `src/hosts/${host}/DISPATCH.md`,
+        to: h.bootstrapFile,
+      },
     ];
   }
 
@@ -113,30 +140,37 @@ function plan(core) {
       type: 'merge',
       shell: 'src/templates/CLAUDE.md',
       include: `src/templates/CLAUDE.core.${core}.md`,
-      to: 'CLAUDE.md',
+      dispatch: `src/hosts/${host}/DISPATCH.md`,
+      to: h.bootstrapFile,
     },
     // The pre-built, pre-verified workspace for the chosen core —
     // everything a fresh project of that shape needs at repo root
     // (lands the root package.json too, so there's no separate
     // placeholder for it). The relevant bootstrap-core skill verifies
     // this on first run rather than generating it live.
-    { type: 'dir', from: `src/golden-cores/${core}`, to: '.' },
+    ...(hostOnly ? [] : [{ type: 'dir', from: `src/golden-cores/${core}`, to: '.' }]),
   ];
 }
 
 // The subset of plan() that's the discipline's payload rather than
 // project-specific or write-once content: `update` re-copies exactly
-// this, always overwriting, since a consuming project's own
-// .claude/agents and .claude/skills are supposed to match upstream
-// verbatim. CLAUDE.md carries project-filled content, the build graph
-// and core workspace are verified once by their own init/bootstrap-core
-// steps, and skills/BMAD and skills/GSAP are re-vendored only
-// deliberately (a manual re-vendor, per each shelf's ATTRIBUTION.md) —
-// none of those belong in an update.
-const UPDATE_PLAN = [
-  { type: 'dir', from: 'src/agents', to: '.claude/agents' },
-  { type: 'dir', from: 'src/skills', to: '.claude/skills' },
-];
+// this, always overwriting, since a consuming project's installed agents
+// and skills are supposed to match upstream verbatim. The bootstrap file
+// carries project-filled content, the build graph and core workspace are
+// verified once by their own init/bootstrap-core steps, and skills/BMAD
+// and skills/GSAP are re-vendored only deliberately (a manual re-vendor,
+// per each shelf's ATTRIBUTION.md) — none of those belong in an update.
+function updatePlan(host = DEFAULT_HOST) {
+  const h = HOSTS[host];
+  return [
+    { type: 'dir', from: 'src/agents', to: h.agentsDir, emit: h.emitAgent },
+    { type: 'dir', from: 'src/skills', to: h.skillsDir },
+    // Derived from the agents and skills above — an agent added, renamed,
+    // or redescribed upstream has to be reflected in the index that
+    // points at it, so it is regenerated alongside them.
+    ...(h.extraEntries ?? []).filter((e) => e.type === 'generated'),
+  ];
+}
 
 const exists = (p) =>
   access(p, constants.F_OK).then(
@@ -150,9 +184,29 @@ const exists = (p) =>
 async function writePlannedFile(f) {
   await mkdir(dirname(f.dest), { recursive: true });
   if (f.merge) {
-    const shell = await readFile(join(PKG_ROOT, f.merge.shell), 'utf8');
-    const section = await readFile(join(PKG_ROOT, f.merge.include), 'utf8');
-    await writeFile(f.dest, shell.replaceAll('{{CORE_SECTION}}', section.trimEnd()));
+    let out = await readFile(join(PKG_ROOT, f.merge.shell), 'utf8');
+    // A deferred install has no core yet, so {{CORE_SECTION}} stays put
+    // for whichever bootstrap-core skill runs first to fill in. The host
+    // is always known at install time, so {{HOST_DISPATCH}} never is.
+    if (f.merge.include) {
+      const section = await readFile(join(PKG_ROOT, f.merge.include), 'utf8');
+      out = out.replaceAll('{{CORE_SECTION}}', section.trimEnd());
+    }
+    const dispatch = await readFile(join(PKG_ROOT, f.merge.dispatch), 'utf8');
+    await writeFile(f.dest, out.replaceAll('{{HOST_DISPATCH}}', dispatch.trimEnd()));
+    return;
+  }
+  // Rendered from the payload rather than copied from it — the routing
+  // doc's tables are built from the agents' and skills' own frontmatter.
+  if (f.generate) {
+    await writeFile(f.dest, await f.generate({ pkgRoot: PKG_ROOT, projectRoot: DEST_ROOT }));
+    return;
+  }
+  // A host whose format differs from the canonical one rewrites the file
+  // on the way in. Hosts that read the canonical format have no emitter,
+  // so their payload is copied verbatim.
+  if (f.emit) {
+    await writeFile(f.dest, f.emit(await readFile(f.src, 'utf8'), { src: f.src }));
     return;
   }
   await cp(f.src, f.dest);
@@ -163,9 +217,12 @@ async function plannedFiles(entry) {
   if (entry.type === 'merge') {
     return [{ dest: join(DEST_ROOT, entry.to), merge: entry }];
   }
+  if (entry.type === 'generated') {
+    return [{ dest: join(DEST_ROOT, entry.to), generate: entry.generate }];
+  }
   const src = join(PKG_ROOT, entry.from);
   if (entry.type === 'file') {
-    return [{ src, dest: join(DEST_ROOT, entry.to) }];
+    return [{ src, dest: join(DEST_ROOT, entry.to), emit: entry.emit }];
   }
   const out = [];
   async function walk(rel) {
@@ -175,7 +232,7 @@ async function plannedFiles(entry) {
       for (const name of await readdir(abs)) await walk(join(rel, name));
     } else {
       const renamed = DOTFILE_RENAMES[rel] ?? rel;
-      out.push({ src: abs, dest: join(DEST_ROOT, entry.to, renamed) });
+      out.push({ src: abs, dest: join(DEST_ROOT, entry.to, renamed), emit: entry.emit });
     }
   }
   await walk('.');
@@ -187,16 +244,20 @@ async function help() {
   console.log(`
 ${bold('Hedgehog installer')}
 
-Copies the Hedgehog agents and skills into ${bold('.claude/')}, drops the
-CLAUDE.md template and an empty build graph (${bold('.hedgehog/hedgehog.db')})
-into the repo root, so the discipline is committed alongside your code.
+Copies the Hedgehog agents and skills into your coding agent's own
+directory, drops that agent's instructions file, an AGENTS.md index, and an
+empty build graph (${bold('.hedgehog/hedgehog.db')}) into the repo root, so
+the discipline is committed alongside your code.
 
 ${bold('Usage')}
   npx @skyf0xx/hedgehog init                      install; planner picks the core at intake
   npx @skyf0xx/hedgehog init --ts-full-stack-app  scaffold the full-stack-app core now
   npx @skyf0xx/hedgehog init --landing-page       scaffold the landing-page core now
+  npx @skyf0xx/hedgehog init --cursor             install for Cursor (default: Claude Code)
+  npx @skyf0xx/hedgehog init --host=claude,gemini install for several coding agents at once
+  npx @skyf0xx/hedgehog init --all-hosts          install for every supported coding agent
   npx @skyf0xx/hedgehog init --force              overwrite existing files
-  npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
+  npx @skyf0xx/hedgehog update                    refresh the installed agents + skills
   npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
   npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies,
                                                    then open the build graph if anything compiled
@@ -213,10 +274,11 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog --help
 
 Available cores: ${cores.join(', ')}
+Available hosts: ${availableHosts().join(', ')} (default: ${DEFAULT_HOST})
 
-After it runs, commit the payload, open Claude Code, and describe what
-you want to build — the planner agent runs planning intake, then hands
-off to bootstrap.
+After it runs, commit the payload, open your coding agent, and describe
+what you want to build — the planner agent runs planning intake, then
+hands off to bootstrap.
 
 Building something else (a CLI, library, browser extension, data
 pipeline, desktop app, etc.)? Run plain 'init' with no core flag rather
@@ -226,16 +288,17 @@ shares. The planner agent designs a core at planning intake
 (hedgehog-core-design) and bootstrap generates that workspace once it's
 confirmed. Describe the actual project and let Phase 0 route it.
 
-${bold('update')} re-copies only .claude/agents and .claude/skills from the
-installed Hedgehog version, so an already-bootstrapped project can pick up
-agent/skill changes from a newer release. It always overwrites those two
-directories and never touches CLAUDE.md, the build graph, the core
-workspace, or skills/BMAD and skills/GSAP — those are project-specific or
-updated deliberately, not by this command.
+${bold('update')} re-copies the agents and skills (and the AGENTS.md index
+derived from them) from the installed Hedgehog version, so an
+already-bootstrapped project can pick up changes from a newer release. It
+refreshes every host the project was installed for, always overwriting
+those directories. The instructions file, the build graph, the core
+workspace, and skills/BMAD and skills/GSAP stay as they are — those are
+project-specific or updated deliberately, not by this command.
 `);
 }
 
-async function init({ force, core, explicitCore }) {
+async function init({ force, core, explicitCore, host = DEFAULT_HOST, hostOnly = false }) {
   if (explicitCore) {
     const cores = await availableCores();
     if (!cores.includes(core)) {
@@ -251,13 +314,18 @@ async function init({ force, core, explicitCore }) {
   // before touching anything. A deferred install (no explicit core) plans
   // against `null` — the shared agents/skills/build-graph payload only.
   const groups = [];
-  for (const entry of plan(explicitCore ? core : null)) {
+  for (const entry of plan(explicitCore ? core : null, host, { hostOnly })) {
     const files = await plannedFiles(entry);
     groups.push({ entry, files });
   }
 
+  // A generated file is derived from the payload rather than authored in
+  // the project, so rewriting it loses nothing and never counts as a
+  // conflict — that's what lets a second host be added to a project the
+  // first one already set up.
   const conflicts = [];
-  for (const { files } of groups) {
+  for (const { entry, files } of groups) {
+    if (entry.type === 'generated') continue;
     for (const f of files) {
       if (await exists(f.dest)) conflicts.push(f.dest);
     }
@@ -274,6 +342,10 @@ async function init({ force, core, explicitCore }) {
     process.exitCode = 1;
     return;
   }
+
+  // Recorded before anything is written: the routing doc is generated
+  // from this list, so it has to already name the host being installed.
+  await recordHosts(DEST_ROOT, [host]);
 
   let written = 0;
   let overwritten = 0;
@@ -301,10 +373,10 @@ async function init({ force, core, explicitCore }) {
   if (explicitCore) {
     console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
     console.log(`  2. ${bold('pnpm install')}`);
-    console.log(`  3. Open Claude Code and describe what you want to build.`);
+    console.log(`  3. Open ${HOSTS[host].label} and describe what you want to build.`);
   } else {
     console.log(`  1. ${bold('git add -A && git commit -m "chore: install Hedgehog"')}`);
-    console.log(`  2. Open Claude Code and describe what you want to build.`);
+    console.log(`  2. Open ${HOSTS[host].label} and describe what you want to build.`);
   }
   console.log(
     dim(
@@ -333,36 +405,55 @@ async function init({ force, core, explicitCore }) {
   }
 }
 
-async function update() {
-  // Full replace, not a merge: clear each destination dir first so a
-  // rename or removal upstream (e.g. an agent renamed between releases)
-  // doesn't leave a stale file sitting alongside the new one.
-  for (const entry of UPDATE_PLAN) {
-    await rm(join(DEST_ROOT, entry.to), { recursive: true, force: true });
-  }
+async function update({ hosts }) {
+  const targets = hosts?.length ? hosts : await installedHosts(DEST_ROOT);
 
   let written = 0;
-  for (const entry of UPDATE_PLAN) {
-    const files = await plannedFiles(entry);
-    for (const f of files) {
-      await mkdir(dirname(f.dest), { recursive: true });
-      await cp(f.src, f.dest);
-      written++;
-      console.log(`  ${green('update')}  ${relative(DEST_ROOT, f.dest)}`);
+  for (const host of targets) {
+    const entries = updatePlan(host);
+
+    // Full replace, not a merge: clear each payload directory first so a
+    // rename or removal upstream (e.g. an agent renamed between releases)
+    // doesn't leave a stale file sitting alongside the new one. Generated
+    // files are single files rewritten in place, so they're left alone.
+    for (const entry of entries) {
+      if (entry.type === 'dir') {
+        await rm(join(DEST_ROOT, entry.to), { recursive: true, force: true });
+      }
+    }
+
+    for (const entry of entries) {
+      for (const f of await plannedFiles(entry)) {
+        await writePlannedFile(f);
+        written++;
+        console.log(`  ${green('update')}  ${relative(DEST_ROOT, f.dest)}`);
+      }
     }
   }
 
+  const label = targets.map((h) => HOSTS[h].label).join(', ');
   console.log(
-    `\n${green(bold('Hedgehog agents/skills updated.'))} ${dim(`${written} files written`)}\n`,
+    `\n${green(bold('Hedgehog agents/skills updated.'))} ${dim(
+      `${written} files written for ${label}`,
+    )}\n`,
   );
   console.log('Next steps:');
-  console.log(`  1. ${bold('git diff .claude/')} to review what changed`);
+  const reviewDirs = [
+    ...new Set(
+      targets.map((h) => {
+        const d = dirname(HOSTS[h].agentsDir);
+        return d === '.' ? HOSTS[h].agentsDir : `${d}/`;
+      }),
+    ),
+  ];
+  console.log(`  1. ${bold(`git diff ${reviewDirs.join(' ')}`)} to review what changed`);
   console.log(`  2. ${bold('git add -A && git commit -m "chore: update hedgehog"')}\n`);
+  const bootstraps = [...new Set(targets.map((h) => HOSTS[h].bootstrapFile))].join(', ');
   console.log(
     dim(
-      'CLAUDE.md, the build graph, the core workspace, and skills/BMAD\n' +
-        'and skills/GSAP are untouched — those carry project-specific or\n' +
-        'write-once content.',
+      `${bootstraps}, the build graph, the core workspace, and\n` +
+        'skills/BMAD and skills/GSAP are untouched — those carry\n' +
+        'project-specific or write-once content.',
     ),
   );
 }
@@ -912,13 +1003,46 @@ async function main() {
   }
   const core = coreFlag ? CORE_FLAGS[coreFlag] : DEFAULT_CORE;
 
+  // Which coding agent this repo is being set up for. `--host=<name>` and
+  // the per-host shorthand flags are equivalent; absent either, the
+  // default host applies.
+  const allHosts = args.includes('--all-hosts');
+  const hostFlags = args.filter((a) => a in HOST_FLAGS).map((a) => HOST_FLAGS[a]);
+  const hostEq = args
+    .filter((a) => a.startsWith('--host='))
+    .flatMap((a) => a.slice('--host='.length).split(','))
+    .map((h) => h.trim())
+    .filter(Boolean);
+  const named = [...new Set([...hostFlags, ...hostEq])];
+  const unknown = named.filter((h) => !(h in HOSTS));
+  if (unknown.length) {
+    console.error(
+      `${red('Unknown host:')} ${unknown.join(', ')}\n\n` +
+        `Available hosts: ${availableHosts().join(', ')}\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const hosts = allHosts ? availableHosts() : named;
+
   if (cmd === 'init') {
-    await init({ force, core, explicitCore: Boolean(coreFlag) });
+    // The shared payload — vendored shelves, core workspace — lands with
+    // the first host; the rest add only what differs per host.
+    const targets = hosts.length ? hosts : [DEFAULT_HOST];
+    for (const [i, host] of targets.entries()) {
+      await init({
+        force,
+        core,
+        explicitCore: Boolean(coreFlag),
+        host,
+        hostOnly: i > 0,
+      });
+    }
     return;
   }
 
   if (cmd === 'update') {
-    await update();
+    await update({ hosts });
     return;
   }
 

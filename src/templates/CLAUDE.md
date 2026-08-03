@@ -105,10 +105,10 @@ context small:
 
 - **Clear context at natural boundaries** — a module's Phase A, a
   landing page section, whatever this core's own unit boundary is — once
-  that unit is done and committed. `/clear` and start fresh, then run
-  `hedgehog status`/`hedgehog next` and continue. Nothing is lost,
-  because the build graph, commits, and code hold all the state. Prefer
-  this over letting one session accumulate the entire project.
+  that unit is done and committed. Clear the conversation and start
+  fresh, then run `hedgehog status`/`hedgehog next` and continue. Nothing
+  is lost, because the build graph, commits, and code hold all the state.
+  Prefer this over letting one session accumulate the entire project.
 - **A cleared or new session recovers by running `hedgehog status` and
   reading the commit log**, never by needing the prior conversation.
 - **Delegate heavy work to agents.** Planning intake, scaffolding, and
@@ -119,3 +119,5 @@ context small:
   file's core section, not something to reconstruct. If you need a
   project specific, read it from the code. That's the self-documenting
   design working as intended.
+
+{{HOST_DISPATCH}}
