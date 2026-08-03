@@ -88,15 +88,14 @@ Artifact
 
 ### Anything else
 
-A CLI, a library, a browser extension, a data pipeline, a compiler — a
-project fitting neither shape gets its own build order, designed from
-your planning documents at intake rather than chosen from a menu. Run
-`init` with no core flag: planning intake names the system shape, picks
+A CLI, a library, a browser extension, a data pipeline, etc. fitting neither shape gets its own build order, designed at intake rather than chosen from a menu.
+
+Run `init` with no core flag: planning intake names the system shape, picks
 the stack, derives the layers, and locks them to `.hedgehog/core.yaml`,
 then generates that workspace and builds it one verified layer at a time.
 
-The layers are bespoke, the enforcement is the same — ordered steps,
-scoped file access, a verification command per layer, one commit each.
+The enforcement remains the same: ordered steps,
+scoped file access and a verification command per layer.
 
 ![Why Hedgehog works: a different way to build with AI, comparing traditional AI workflow to Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
 
