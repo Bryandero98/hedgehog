@@ -139,16 +139,7 @@ npx @skyf0xx/hedgehog graph
 ```
 
 Starts a small local server and opens a live, read-only diagram of every
-task and its dependencies — one node per task, coloured by lifecycle
-status, laid out top-to-bottom by dependency order. Click a task to see
-its objective, verify command, and commit message; click empty canvas to
-close it. The page polls for changes, so it keeps updating on its own as
-`hedgehog verify` moves tasks through their lifecycle — no re-running the
-command or reloading the page. Running `graph` again while a server is
-already up reuses it instead of starting a second one. Pass `--no-open`
-to start (or reuse) the server and print its URL instead of launching a
-browser. `hedgehog plan` opens the same live view automatically whenever
-it compiles new tasks.
+task, status and its dependencies.
 
 ## Why Hedgehog
 
