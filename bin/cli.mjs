@@ -15,6 +15,7 @@ import { constants } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
+import { spawn } from 'node:child_process';
 import { dbInit, DB_PATH } from '../src/db/init.mjs';
 import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
@@ -197,12 +198,15 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog init --force              overwrite existing files
   npx @skyf0xx/hedgehog update                    refresh .claude/agents + .claude/skills
   npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
-  npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies
+  npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies,
+                                                   then open the build graph if anything compiled
   npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
   npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
   npx @skyf0xx/hedgehog next                      print the task packet for one ready task
   npx @skyf0xx/hedgehog verify <task-id>          run scope + verify checks, commit on pass
   npx @skyf0xx/hedgehog status                    graph overview: counts by status, ready list
+  npx @skyf0xx/hedgehog graph                     start (or reuse) the live graph server and open it
+  npx @skyf0xx/hedgehog graph --no-open           start (or reuse) the server; print the URL instead
   npx @skyf0xx/hedgehog why <path>                provenance chain for a file
   npx @skyf0xx/hedgehog friction add "<note>"     log a friction note [--task <task-id>]
   npx @skyf0xx/hedgehog friction list             list logged friction, oldest first
@@ -424,6 +428,18 @@ async function planCommand() {
   console.log(
     `\n${green(bold('Plan complete.'))} ${dim(`${result.compiled.length} intent(s) compiled, ${result.skipped.length} skipped`)}\n`,
   );
+
+  // Only worth opening when this run actually changed the graph's shape
+  // — a plan run that compiled nothing (every intent already had tasks)
+  // would just re-open what's already open. planTasks's own db handle is
+  // closed by this point: the graph server opens its own connection in a
+  // separate process, and holding two write-capable handles on the same
+  // sqlite file across that handoff invites lock contention for no
+  // benefit.
+  if (result.compiled.length > 0) {
+    const { port } = await startOrReuseGraphServer();
+    openInBrowser(`http://localhost:${port}`);
+  }
 }
 
 // Parses `hedgehog intent add` args into the same record shape
@@ -648,6 +664,133 @@ async function statusCommand() {
   console.log(formatStatus(result));
 }
 
+const GRAPH_PIDFILE_PATH = '.hedgehog/graph-server.json';
+const GRAPH_SERVER_MODULE = join(PKG_ROOT, 'src/db/graph-server.mjs');
+const GRAPH_TEMPLATE_PATH = join(PKG_ROOT, 'src/templates/graph.html');
+
+// Opens a URL/file with the OS default handler — the same mechanism
+// `open` (macOS), `xdg-open` (Linux), and `start` (Windows) provide,
+// chosen per-platform so this stays a zero-dependency CLI rather than
+// reaching for an npm package to do what the OS already does.
+function openInBrowser(url) {
+  const platform = process.platform;
+  const cmd =
+    platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
+  const args = platform === 'win32' ? ['', url] : [url];
+  spawn(cmd, args, { detached: true, stdio: 'ignore', shell: platform === 'win32' }).unref();
+}
+
+// True if `pid` names a live process. Sending signal 0 performs the
+// existence/permission check without actually signalling anything — the
+// standard POSIX idiom `kill -0` follows, and Node exposes it the same
+// way via process.kill.
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Returns the port of a running graph server for this project, starting
+// one if none is live. Both `plan` (auto-open after scoping) and `graph`
+// (explicit request) call this rather than each managing their own
+// server, so a project only ever has one live server no matter which
+// command a person or agent happens to run — re-running `plan` after
+// `graph` is already open reuses the same tab's server instead of
+// spawning a second one bound to a different port.
+async function startOrReuseGraphServer() {
+  const pidfilePath = join(DEST_ROOT, GRAPH_PIDFILE_PATH);
+
+  if (await exists(pidfilePath)) {
+    try {
+      const { pid, port } = JSON.parse(await readFile(pidfilePath, 'utf8'));
+      if (isProcessAlive(pid)) return { port, reused: true };
+    } catch {
+      // Corrupt or half-written pidfile from a killed server — fall
+      // through and start a fresh one rather than failing the command.
+    }
+    await rm(pidfilePath, { force: true });
+  }
+
+  const child = spawn(
+    process.execPath,
+    [GRAPH_SERVER_MODULE, join(DEST_ROOT, DB_PATH), GRAPH_TEMPLATE_PATH, pidfilePath],
+    { detached: true, stdio: ['ignore', 'pipe', 'ignore'] },
+  );
+  child.unref();
+
+  // Waits for graph-server.mjs's own "LISTENING <port>" line rather than
+  // polling the pidfile, so the caller can't race a pidfile that exists
+  // but was written a moment before the port was actually bound.
+  //
+  // child.unref() alone only unrefs the child process handle — the
+  // stdout pipe is a separate stream the parent still holds open, and
+  // leaving a 'data' listener on it keeps the event loop alive even
+  // after this promise resolves (the earlier version of this function
+  // hung the parent CLI process for exactly that reason). Explicitly
+  // removing every listener and unref()-ing the stream once the port is
+  // known lets the parent exit as soon as its own work is done, leaving
+  // the detached child running independently.
+  const port = await new Promise((resolvePort, rejectPort) => {
+    let buf = '';
+    function cleanup() {
+      child.stdout.off('data', onData);
+      child.off('error', onError);
+      child.off('exit', onExit);
+      child.stdout.unref();
+    }
+    function onData(chunk) {
+      buf += chunk;
+      const match = buf.match(/LISTENING (\d+)/);
+      if (match) {
+        cleanup();
+        resolvePort(Number(match[1]));
+      }
+    }
+    function onError(err) {
+      cleanup();
+      rejectPort(err);
+    }
+    function onExit(code) {
+      if (code !== 0) {
+        cleanup();
+        rejectPort(new Error(`graph server exited early (code ${code})`));
+      }
+    }
+    child.stdout.on('data', onData);
+    child.once('error', onError);
+    child.once('exit', onExit);
+  });
+
+  return { port, reused: false };
+}
+
+async function graphCommand(args) {
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const { port, reused } = await startOrReuseGraphServer();
+  const url = `http://localhost:${port}`;
+  console.log(
+    `  ${reused ? dim('reusing') : green('started')}  graph server ${dim(`(${url})`)}`,
+  );
+
+  // --no-open covers headless/SSH sessions where there's no local
+  // browser to hand a URL to — the server itself is still started (or
+  // reused) either way, since a remote person may open the URL manually
+  // via port-forwarding.
+  if (args.includes('--no-open')) {
+    console.log(`\nOpen ${bold(url)} in a browser to view it.`);
+  } else {
+    openInBrowser(url);
+  }
+}
+
 async function whyCommand(args) {
   const path = args[0];
   if (!path) {
@@ -806,6 +949,11 @@ async function main() {
 
   if (cmd === 'status') {
     await statusCommand();
+    return;
+  }
+
+  if (cmd === 'graph') {
+    await graphCommand(args.slice(1));
     return;
   }
 

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Hedgehog build graph</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/reactflow@11/dist/umd/index.js"></script>
+<script crossorigin src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/reactflow@11/dist/style.css" />
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+  }
+  .rf-task-node {
+    padding: 12px 14px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--node-border);
+    border-top: 5px solid var(--node-border);
+    background: var(--node-bg);
+    font-size: 13px;
+    min-width: 160px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: box-shadow 0.1s ease-out, transform 0.1s ease-out;
+  }
+  .rf-task-node:hover {
+    box-shadow: 0 0 0 1px var(--node-border), 0 4px 10px rgba(0, 0, 0, 0.5);
+    transform: translateY(-1px);
+  }
+  .rf-task-node .id { font-weight: 700; color: #f0f6fc; }
+  .rf-task-node .status {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--node-status-fg);
+    background: var(--node-status-bg);
+  }
+  #detail-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 360px;
+    height: 100%;
+    background: #161b22;
+    border-left: 1px solid #30363d;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.15s ease-out;
+  }
+  #detail-panel.open { transform: translateX(0); }
+  #detail-panel h2 { margin-top: 0; font-size: 16px; }
+  #detail-panel .field-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8b949e;
+    margin-top: 16px;
+  }
+  #detail-panel pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #0d1117;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  #legend {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+  #legend .row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  #legend .swatch { width: 4px; height: 14px; border-radius: 2px; }
+  #loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #8b949e;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  const { useState, useEffect, useMemo, useRef, createElement: h } = React;
+  const {
+    default: ReactFlowCanvas,
+    Background,
+    Controls,
+    MarkerType,
+    Handle,
+    Position,
+  } = window.ReactFlow;
+
+  // Mirrors status.mjs's TASK_STATUSES lifecycle order and colour intent:
+  // grey (not started) -> blue (in progress) -> amber (needs attention) ->
+  // green (done) -> red (blocked). Each status gets a distinct hue rather
+  // than reusing green for both `ready` and `verified` (the two are
+  // different points in the lifecycle and looked identical before).
+  const STATUS_STYLE = {
+    proposed:    { bg: '#282e37', border: '#6e7681', badgeBg: '#6e768133', badgeFg: '#c9d1d9' },
+    planned:     { bg: '#122a4d', border: '#58a6ff', badgeBg: '#58a6ff33', badgeFg: '#79c0ff' },
+    ready:       { bg: '#1c3a29', border: '#3fb950', badgeBg: '#3fb95033', badgeFg: '#56d364' },
+    implemented: { bg: '#3d2f0a', border: '#d29922', badgeBg: '#d2992233', badgeFg: '#e3b341' },
+    verified:    { bg: '#123a3c', border: '#39c5cf', badgeBg: '#39c5cf33', badgeFg: '#56d4dd' },
+    complete:    { bg: '#0f2818', border: '#238636', badgeBg: '#23863633', badgeFg: '#3fb950' },
+    failed:      { bg: '#3d1418', border: '#f85149', badgeBg: '#f8514933', badgeFg: '#ff7b72' },
+  };
+
+  function layout(nodes, edges) {
+    const g = new dagre.graphlib.Graph();
+    g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 70 });
+    g.setDefaultEdgeLabel(() => ({}));
+    const width = 180;
+    const height = 56;
+    for (const n of nodes) g.setNode(n.id, { width, height });
+    for (const e of edges) g.setEdge(e.source, e.target);
+    dagre.layout(g);
+    return nodes.map((n) => {
+      const pos = g.node(n.id);
+      return { ...n, position: { x: pos.x - width / 2, y: pos.y - height / 2 } };
+    });
+  }
+
+  function TaskNode({ data }) {
+    const style = STATUS_STYLE[data.task.status] || STATUS_STYLE.proposed;
+    return h(
+      'div',
+      {
+        className: 'rf-task-node',
+        style: {
+          '--node-bg': style.bg,
+          '--node-border': style.border,
+          '--node-status-bg': style.badgeBg,
+          '--node-status-fg': style.badgeFg,
+        },
+        // Selecting a node opens the detail panel; React Flow's own pane
+        // click (see App's onPaneClick) closes it again on lose-of-focus,
+        // so this only ever needs to open.
+        onClick: (e) => {
+          e.stopPropagation();
+          data.onSelect(data.task.id);
+        },
+      },
+      h(Handle, { type: 'target', position: Position.Top }),
+      h('div', { className: 'id' }, data.task.id),
+      h('div', null, data.task.layer),
+      h('div', { className: 'status' }, data.task.status),
+      h(Handle, { type: 'source', position: Position.Bottom }),
+    );
+  }
+
+  const nodeTypes = { task: TaskNode };
+
+  function DetailPanel({ task }) {
+    if (!task) return h('div', { id: 'detail-panel' });
+    return h(
+      'div',
+      { id: 'detail-panel', className: 'open' },
+      h('h2', null, task.id),
+      h('div', { className: 'field-label' }, 'Intent'),
+      h('div', null, task.intentGoal),
+      h('div', { className: 'field-label' }, 'Objective'),
+      h('div', null, task.objective),
+      h('div', { className: 'field-label' }, 'Verify command'),
+      h('pre', null, task.verifyCommand),
+      h('div', { className: 'field-label' }, 'Commit message'),
+      h('pre', null, task.commitMessage),
+    );
+  }
+
+  function Legend() {
+    return h(
+      'div',
+      { id: 'legend' },
+      Object.entries(STATUS_STYLE).map(([status, style]) =>
+        h(
+          'div',
+          { className: 'row', key: status },
+          h('span', {
+            className: 'swatch',
+            style: { background: style.border, boxShadow: `0 0 6px ${style.border}` },
+          }),
+          h('span', null, status),
+        ),
+      ),
+    );
+  }
+
+  const POLL_INTERVAL_MS = 2000;
+
+  function App() {
+    const [raw, setRaw] = useState(null);
+    // Holds the selected task's id, not the task object itself, so the
+    // open detail panel always reflects the latest poll (e.g. a status
+    // flip from `ready` to `complete` while the panel is open) instead
+    // of freezing on whatever the task looked like at click time.
+    const [selectedId, setSelectedId] = useState(null);
+    // Tracks the last-rendered graph's JSON so a poll that returns
+    // identical data (the common case — nothing changed since last
+    // tick) skips relayout entirely instead of jittering node positions
+    // or resetting the user's pan/zoom on every 2s tick.
+    const lastJsonRef = useRef(null);
+    const firstLoadRef = useRef(true);
+
+    useEffect(() => {
+      let cancelled = false;
+      async function poll() {
+        try {
+          const res = await fetch('/graph.json', { cache: 'no-store' });
+          const data = await res.json();
+          if (cancelled) return;
+          const json = JSON.stringify(data);
+          if (json !== lastJsonRef.current) {
+            lastJsonRef.current = json;
+            setRaw(data);
+          }
+        } catch {
+          // Server briefly unreachable (e.g. mid-restart) — next tick retries.
+        }
+      }
+      poll();
+      const id = setInterval(poll, POLL_INTERVAL_MS);
+      return () => {
+        cancelled = true;
+        clearInterval(id);
+      };
+    }, []);
+
+    const nodes = useMemo(() => {
+      if (!raw) return [];
+      const positioned = layout(raw.nodes, raw.edges);
+      return positioned.map((n) => ({
+        id: n.id,
+        type: 'task',
+        position: n.position,
+        data: { task: n, onSelect: setSelectedId },
+      }));
+    }, [raw]);
+
+    const edges = useMemo(() => {
+      if (!raw) return [];
+      return raw.edges.map((e) => ({
+        ...e,
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: { stroke: '#484f58' },
+      }));
+    }, [raw]);
+
+    // fitView only on the graph's first paint — a later poll that adds
+    // or moves nodes re-lays-out in place without recentering the view
+    // the user has already panned or zoomed.
+    const shouldFitView = firstLoadRef.current && nodes.length > 0;
+    if (shouldFitView) firstLoadRef.current = false;
+
+    if (!raw) {
+      return h('div', { id: 'loading' }, 'Loading build graph…');
+    }
+
+    // Derived fresh from the latest poll every render, rather than the
+    // task object captured at click time, so the open panel tracks a
+    // status change (e.g. ready -> complete) live instead of freezing.
+    // A task removed since selection (id no longer present) closes the
+    // panel implicitly, since selectedTask is then undefined/falsy.
+    const selectedTask = selectedId
+      ? raw.nodes.find((n) => n.id === selectedId)
+      : null;
+
+    return h(
+      React.Fragment,
+      null,
+      h(
+        ReactFlowCanvas,
+        {
+          nodes,
+          edges,
+          nodeTypes,
+          fitView: shouldFitView,
+          // Clicking empty canvas is the graph losing focus, same as
+          // clicking away from any open panel — close the detail panel.
+          // Node clicks stop propagation (see TaskNode) so this never
+          // fires for a click that's opening a different task instead.
+          onPaneClick: () => setSelectedId(null),
+        },
+        h(Background, { color: '#21262d' }),
+        h(Controls, null),
+      ),
+      h(Legend),
+      h(DetailPanel, { task: selectedTask }),
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+// The `hedgehog graph` live server: a standalone, detached process (see
+// bin/cli.mjs's startOrReuseGraphServer) that serves the graph viewer
+// page and a fresh /graph.json on every request, so an open browser tab
+// polling /graph.json (src/templates/graph.html) sees task status
+// changes as `hedgehog verify` makes them, without anyone re-running a
+// CLI command or reloading the page.
+//
+// Runs as its own process rather than inline in a CLI command because
+// `hedgehog plan` and `hedgehog graph` both need to exit promptly (the
+// former is typically invoked by an agent, not a human waiting at a
+// terminal) while the graph a human opened stays live. One process
+// serves whichever project invoked it; a second invocation against the
+// same project reuses it (see startOrReuseGraphServer's pidfile check)
+// rather than starting a second server on the same database.
+
+import { createServer } from 'node:http';
+import { readFile, writeFile, rm } from 'node:fs/promises';
+import { DatabaseSync } from 'node:sqlite';
+import { buildGraph } from './graph.mjs';
+
+// Args: <db-path> <template-path> <pidfile-path>. Plain positional argv
+// rather than a flags parser — this process is only ever spawned by
+// bin/cli.mjs, never invoked directly by a person, so there's no usage
+// text or flag surface to design for.
+const [, , dbPath, templatePath, pidfilePath] = process.argv;
+
+if (!dbPath || !templatePath || !pidfilePath) {
+  console.error('graph-server.mjs requires <db-path> <template-path> <pidfile-path>');
+  process.exit(1);
+}
+
+const template = await readFile(templatePath, 'utf8');
+
+function loadGraphJson() {
+  // Opened and closed per request rather than held open: DatabaseSync is
+  // synchronous and local, so the cost is negligible, and it avoids ever
+  // serving a stale read against a handle opened before the last
+  // `hedgehog verify` committed its transaction.
+  const db = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    return buildGraph(db);
+  } finally {
+    db.close();
+  }
+}
+
+const server = createServer((req, res) => {
+  if (req.url === '/graph.json') {
+    let body;
+    try {
+      body = JSON.stringify(loadGraphJson());
+    } catch (err) {
+      res.writeHead(500, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(body);
+    return;
+  }
+
+  if (req.url === '/' || req.url === '/index.html') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(template);
+    return;
+  }
+
+  res.writeHead(404);
+  res.end('Not found');
+});
+
+// Port 0: ask the OS for any free port, so multiple hedgehog projects on
+// one machine never collide. The chosen port is written to the pidfile
+// once bound, which is the only way a caller (or a later invocation
+// checking whether to reuse this server) learns what it is.
+server.listen(0, '127.0.0.1', async () => {
+  const { port } = server.address();
+  await writeFile(pidfilePath, JSON.stringify({ pid: process.pid, port }));
+  // Signals bin/cli.mjs's spawn-and-wait handshake that the server is
+  // ready to accept requests, not just that the process has started.
+  console.log(`LISTENING ${port}`);
+});
+
+async function shutdown() {
+  server.close();
+  await rm(pidfilePath, { force: true });
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

@@ -6,6 +6,7 @@ out-tsc
 .env.local
 *.log
 .DS_Store
+.hedgehog/graph-server.json
 
 .nx/cache
 .nx/workspace-data
