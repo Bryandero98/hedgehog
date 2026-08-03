@@ -117,7 +117,10 @@ adjective is meant to fade rather than hold constant throughout the page.
    confirmed subject statement.
 5. Run step 4c (Perfumer) against the completed sort from step 3.
 6. Self-test (below) before presenting the combined artifact.
-7. Commit the combined artifact as `feat(landing): strategy`.
+7. Present the combined artifact. You have no Bash tool — you don't
+   commit your own output; the orchestrating session runs `hedgehog
+   verify` once this artifact is locked, which writes the
+   `feat(landing): strategy` commit.
 
 ## Self-test
 

@@ -118,7 +118,10 @@ rather than in separate passes.
 6. Confirm the peak moment and ending treatment land where
    `landing-strategist` specified, or flag the conflict.
 7. Self-test (below).
-8. Commit as `feat(landing): sequence`.
+8. Present the artifact. You have no Bash tool — you don't commit your
+   own output; the orchestrating session runs `hedgehog verify` once
+   this artifact is locked, which writes the `feat(landing): sequence`
+   commit.
 
 ## Self-test
 

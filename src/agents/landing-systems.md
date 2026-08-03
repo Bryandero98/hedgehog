@@ -239,7 +239,10 @@ and generic clip-art geometry.
 4. Run step 6 against the completed token system. Write the signature
    element into `src/shapes/`.
 5. Self-test (below).
-6. Commit the combined artifact as `feat(landing): systems`.
+6. Present the combined artifact. You have no Bash tool — you don't
+   commit your own output; the orchestrating session runs `hedgehog
+   verify` once this artifact is locked, which writes the
+   `feat(landing): systems` commit.
 
 ## Self-test
 

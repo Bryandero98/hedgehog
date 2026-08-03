@@ -62,7 +62,9 @@ against its own archetype skill.
    Confirm & Lock protects against at step 1.
 5. Write the locked headline and its 2 backups to
    `.hedgehog/chain/09-headline.md`.
-6. Commit as `feat(landing): headline`.
+6. You have no Bash tool — you don't commit your own output; the
+   orchestrating session runs `hedgehog verify` once the headline is
+   locked, which writes the `feat(landing): headline` commit.
 
 ## Self-test
 

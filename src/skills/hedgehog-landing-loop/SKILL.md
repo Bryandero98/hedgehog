@@ -153,7 +153,15 @@ paragraph algorithm, and their self-tests.
 3. Each agent **runs its own self-test** (see that agent's own file for
    what it checks) before presenting its artifact — necessary, not
    sufficient. This is a sanity check the agent does for itself; it does
-   not move the task and the agent does not commit its own work.
+   not move the task and the agent does not commit its own work. This
+   holds regardless of whether the phase ran in the orchestrating
+   session directly or was delegated to a subagent instance:
+   `landing-strategist`, `landing-systems`, `landing-sequencer`, and
+   `landing-headline-writer` carry no Bash tool at all (by design — see
+   `capabilities.mjs`), so none of them can run `git commit` even if
+   delegated. The commit is always the orchestrating session's act, done
+   via `hedgehog verify` in the next step — never something a phase
+   agent does for itself, delegated or not.
 4. Once every phase inside the packet's layer has been presented and
    locked by the user, **run `hedgehog verify <task-id>`.** It checks the
    touched files against the packet's ALLOWED SCOPE, runs the layer's
