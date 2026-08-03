@@ -88,8 +88,8 @@ natively-installed Postgres. See **Local infra: Docker, always** below.
 
 `hedgehog init --ts-full-stack-app` copies `src/golden-cores/full-stack-app/`
 to the repo root at install time, the same way it copies `src/agents` to
-`.claude/agents` — check whether the core files are already present
-(same check as step 1) before copying again. On a project that ran
+this host's own agents directory — check whether the core files are
+already present (same check as step 1) before copying again. On a project that ran
 plain `init` (no core flag) and only reaches `full-stack-app` because
 `planner` picked it at Phase 0, this hasn't happened yet: copy
 `src/golden-cores/full-stack-app/`'s contents to the repo root now. Also

@@ -101,7 +101,7 @@ scoped file access and a verification command per layer.
 
 ## Install
 
-From an empty project folder, ask Claude to run:
+From an empty project folder, run:
 
 ``` bash
 # Full-stack app
@@ -114,7 +114,29 @@ npx @skyf0xx/hedgehog init --landing-page
 npx @skyf0xx/hedgehog init
 ```
 
-Then open Claude Code and describe what you want to build.
+Then open your coding agent and describe what you want to build.
+
+### Coding agents
+
+Hedgehog installs for **Claude Code** by default. Add a host flag to
+install for another one, or several at once:
+
+``` bash
+npx @skyf0xx/hedgehog init --cursor              # Cursor
+npx @skyf0xx/hedgehog init --gemini              # Gemini CLI
+npx @skyf0xx/hedgehog init --host=claude,cursor  # both
+npx @skyf0xx/hedgehog init --all-hosts           # every supported agent
+```
+
+Each one gets the discipline in its own native shape — agents and skills
+in the directory it reads, and the instructions file it loads at session
+start (`CLAUDE.md`, `HEDGEHOG.md`, or `GEMINI.md`).
+
+Every install also writes **`AGENTS.md`** at the repo root: an index of
+every agent and skill, when each applies, and the build loop. Coding
+agents that read `AGENTS.md` — Codex, Copilot CLI, OpenCode, and others —
+work from that index, following the same ordered steps and the same
+`hedgehog verify` gate.
 
 Plain `init` (no core flag) installs the agents, skills, and build graph
 that every core shares. Planning intake designs an opinionated build
@@ -128,9 +150,11 @@ To update:
 npx @skyf0xx/hedgehog update
 ```
 
-This refreshes `.claude/agents/` and `.claude/skills/` only. It never
-touches `CLAUDE.md`, the build graph, the core workspace, or
-`skills/BMAD`, since those carry project-specific or write-once content.
+This refreshes the installed agents and skills — for every coding agent
+the project was set up for — along with the `AGENTS.md` index derived
+from them. It never touches the instructions file, the build graph, the
+core workspace, or `skills/BMAD`, since those carry project-specific or
+write-once content.
 
 To see the build graph:
 

@@ -2,6 +2,22 @@
 
 Hedgehog is a package of agents and skills, built on an opinionated stack per core so the build order in the [README](README.md) is mechanical and enforced by the tooling itself.
 
+## Hosts
+
+`src/agents/` and `src/skills/` are the single source of truth for the discipline's content. A **host** is one coding agent Hedgehog installs into, described by an entry in `src/hosts/index.mjs`: where the payload lands, which instructions file that agent loads, and — where its format differs from the canonical one — how to emit it.
+
+| Host | Agents | Skills | Instructions file |
+| --- | --- | --- | --- |
+| Claude Code | `.claude/agents/` | `.claude/skills/` | `CLAUDE.md` |
+| Cursor | `.cursor/agents/` | `.cursor/skills/` | `HEDGEHOG.md` (+ `.cursor/rules/hedgehog.mdc`) |
+| Gemini CLI | `.gemini/agents/` | `.gemini/skills/` | `GEMINI.md` (+ `gemini-extension.json`) |
+
+Claude Code reads the canonical files as authored, so its payload is copied verbatim. Hosts that dispatch an untyped subagent carry the role in the prompt instead: `src/hosts/emit.mjs` strips the Claude Code subagent schema (`model`, `color`, `tools`) and restates the tool grant as a line the agent reads, mapped from the capability table in `src/hosts/capabilities.mjs`.
+
+Every install also generates `AGENTS.md` at the repo root from the agents' and skills' own `description` frontmatter — an index of what each role is for and when it applies. Coding agents that read `AGENTS.md` work from that index.
+
+Tool grants are defense in depth. The enforcement is `hedgehog verify`, which checks the touched files against the task packet's ALLOWED SCOPE and gates the commit — so the ordered steps, scoped file access, and per-layer verification hold on every host regardless of what it granted.
+
 ## `full-stack-app` core
 
 | Layer | Choice | Why |

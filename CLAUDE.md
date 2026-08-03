@@ -72,7 +72,16 @@ discipline's stance and rationale.
   shell's `{{CORE_SECTION}}` — at install time when `init` is given an
   explicit core flag, or by the matching bootstrap-core skill when `init`
   ran with no flag and the shell landed with that placeholder still
-  unfilled.
+  unfilled. `{{HOST_DISPATCH}}` is filled at install time from the chosen
+  host's `DISPATCH.md`.
+- `src/hosts/` — one entry per coding agent Hedgehog installs into
+  (Claude Code, Cursor, Gemini CLI): where the payload lands, which
+  instructions file that agent loads, and how to emit the agent files
+  when its format differs from the canonical one. `capabilities.mjs`
+  owns the agent → tool-grant fact for hosts that can't register a
+  per-agent grant; `routing.mjs` generates the root `AGENTS.md` index
+  from the agents' and skills' own frontmatter. See
+  [ARCHITECTURE.md](ARCHITECTURE.md) for the host table.
 
 ## Working in this repo
 
