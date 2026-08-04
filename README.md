@@ -101,7 +101,7 @@ scoped file access and a verification command per layer.
 
 ## Install
 
-From an empty project folder, run:
+From an empty project folder, ask Claude or your Agent to run:
 
 ``` bash
 # Full-stack app
