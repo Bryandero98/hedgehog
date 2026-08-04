@@ -152,35 +152,25 @@ paragraph algorithm, and their self-tests.
    task.
 
    **Relaying a live user-confirmation checkpoint to a delegated
-   subagent.** Phase 1 (Strategist, inside the `feeling` layer) carries a
-   hard-stop checkpoint per Phase Transition Checks below: the
-   subject/audience/job statement must be confirmed by the user before
-   Step 2 starts. A delegated subagent instance has no channel for the
-   user to address it directly, so the orchestrating session relays the
-   confirmation instead — that relay is sufficient as long as it states
-   its own provenance plainly and quotes the user's actual words rather
-   than paraphrasing or asserting the outcome: *"Relaying the user's own
-   confirmation, verbatim — user said: '\<exact words\>'. This is their
-   direct turn, not my summary of it."* A relay that only asserts "the
-   user approved" without the quoted words is not sufficient and the
-   phase should ask again rather than proceed. This shifts the trust
-   anchor to the orchestrating session's honesty about provenance, which
-   the rest of this discipline already assumes (the orchestrator is
-   trusted to relay artifacts, task packets, and friction log entries
-   faithfully) — it does not require a cryptographic or environment-level
-   proof.
+   subagent.** Phase 1 (Strategist) carries a hard-stop checkpoint per
+   Phase Transition Checks below, and a delegated subagent instance has no
+   channel for the user to address it directly. The orchestrating session
+   relays the confirmation instead, and the relay is sufficient only if it
+   quotes the user's actual words with its provenance stated plainly
+   (*"Relaying the user's own confirmation, verbatim — user said:
+   '\<exact words\>'"*) rather than asserting the outcome ("the user
+   approved"). This trusts the orchestrator's honesty about provenance,
+   the same trust the rest of this discipline already places in it for
+   relaying artifacts and task packets.
 3. Each agent **runs its own self-test** (see that agent's own file for
    what it checks) before presenting its artifact — necessary, not
    sufficient. This is a sanity check the agent does for itself; it does
-   not move the task and the agent does not commit its own work. This
-   holds regardless of whether the phase ran in the orchestrating
-   session directly or was delegated to a subagent instance:
-   `landing-strategist`, `landing-systems`, `landing-sequencer`, and
-   `landing-headline-writer` carry no Bash tool at all (by design — see
-   `capabilities.mjs`), so none of them can run `git commit` even if
-   delegated. The commit is always the orchestrating session's act, done
-   via `hedgehog verify` in the next step — never something a phase
-   agent does for itself, delegated or not.
+   not move the task and the agent does not commit its own work, whether
+   run directly or delegated to a subagent instance. `landing-strategist`,
+   `landing-systems`, `landing-sequencer`, and `landing-headline-writer`
+   carry no Bash tool at all (`capabilities.mjs`), so the commit is always
+   the orchestrating session's act via `hedgehog verify`, never the phase
+   agent's own.
 4. Once every phase inside the packet's layer has been presented and
    locked by the user, **run `hedgehog verify <task-id>`.** It checks the
    touched files against the packet's ALLOWED SCOPE, runs the layer's

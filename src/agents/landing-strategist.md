@@ -56,15 +56,11 @@ as planning intake's own Confirm & Lock: every phase from here through
 `landing-copywriter` inherits this framing silently, and by the time
 copy is reviewed at phases 9–10, correcting the framing means unwinding
 multiple committed phases via the Correction Protocol instead of one
-quick revision now. **If you are running as a delegated subagent
-instance**, this confirmation reaches you as a relay from the
-orchestrating session rather than the user's own turn directly — accept
-it only if it states its provenance plainly and quotes the user's actual
-words (e.g. *"Relaying the user's own confirmation, verbatim — user
-said: '\<exact words\>'"*), not a bare assertion like "the user
-approved." A relay that doesn't quote the user's words isn't
-sufficient — ask for it to be relayed properly rather than proceeding on
-it. A revision at this point is just another pass at
+quick revision now. **If delegated**, this confirmation arrives as a
+relay from the orchestrating session — accept it only if it quotes the
+user's actual words with provenance stated plainly, not a bare "the user
+approved" (see `hedgehog-landing-loop`'s Loop step 2 for the exact form).
+A revision at this point is just another pass at
 Step 1, not a Correction Protocol entry, since nothing downstream exists
 yet.
 
@@ -125,10 +121,8 @@ adjective is meant to fade rather than hold constant throughout the page.
    confirmed subject statement.
 5. Run step 4c (Perfumer) against the completed sort from step 3.
 6. Self-test (below) before presenting the combined artifact.
-7. Present the combined artifact. You have no Bash tool — you don't
-   commit your own output; the orchestrating session runs `hedgehog
-   verify` once this artifact is locked, which writes the
-   `feat(landing): strategy` commit.
+7. Present the combined artifact — you have no Bash tool, so the
+   orchestrating session commits it via `hedgehog verify`.
 
 ## Self-test
 

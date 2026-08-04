@@ -17,12 +17,10 @@ popup      — the extension UI, consumes background/content only through messag
 - Drop `popup` entirely for an extension with no browser action UI.
 - Merge `content` into `background` when the extension never injects into
   page context (a pure background-worker extension).
-- On a module axis, `background` is often not one-per-module — a single
-  service worker (`entrypoints/background.ts`) coordinating state across
-  every module's tabs (e.g. a `tabs.onCreated` listener no one module
-  should own) is exactly the cross-cutting infrastructure Step 4 asks
-  about. Give it its own fixed-scope layer there rather than letting the
-  first module that needs it absorb it into a per-module layer.
+- On a module axis, `background` is often shared rather than
+  one-per-module (a single service worker coordinating state across every
+  module's tabs) — the cross-cutting infrastructure Step 4 asks about.
+  Give it its own fixed-scope layer there.
 
 ## Boundary that must hold
 
@@ -52,12 +50,10 @@ is built against it — not after the first collision is hit:
   (`entrypoints/{module}/index.test.ts`), never as a flat
   `entrypoints/{module}.test.ts` next to a flat entrypoint file — the flat
   form is exactly the collision WXT's build reports.
-- **A module with two distinct entrypoint surfaces** (e.g. a popup and a
-  `content` surface for the same module) gets two distinct folder names
-  that don't share a prefix before the first `.` — `entrypoints/{module}-popup/`
-  and `entrypoints/{module}-content/`, never `entrypoints/{module}.content/`
-  alongside anything else starting `entrypoints/{module}.` — not one
-  folder with two dotted variants.
+- **A module with two entrypoint surfaces** (e.g. popup and content) gets
+  two folder names that don't share a prefix before the first `.` —
+  `entrypoints/{module}-popup/` and `entrypoints/{module}-content/`, never
+  a dotted variant like `entrypoints/{module}.content/`.
 
 Add a cheap, generic guard to the entrypoint layer's `verify` command
 regardless of the convention chosen: after `pnpm wxt build`, check the

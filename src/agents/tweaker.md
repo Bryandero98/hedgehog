@@ -214,14 +214,10 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   having happened in this conversation. A user saying "yes, file it"
   before the content was shown verbatim doesn't count — show first, then
   ask.
-- **An approval relayed by an orchestrating session** (when you're
-  running as a delegated subagent instance rather than the session the
-  user is typing into directly) is sufficient only if it states its
-  provenance plainly and quotes the user's actual words — e.g. "Relaying
-  the user's own approval, verbatim — user said: '\<exact words\>'" — not
-  a bare assertion like "the user approved" or "the user approved via
-  UI." A relay that doesn't quote the user's words isn't sufficient; ask
-  for it to be relayed properly before creating the issue.
+- **If delegated**, an approval relayed by the orchestrating session is
+  sufficient only if it quotes the user's actual words with provenance
+  stated plainly — e.g. "user said: '\<exact words\>'" — not a bare "the
+  user approved" or "approved via UI."
 - File one issue per distinct real pattern or feedback item, not one per
   log entry or remark, and not capped at a single issue per source — a
   log (or a round of feedback) with several unrelated genuine points gets

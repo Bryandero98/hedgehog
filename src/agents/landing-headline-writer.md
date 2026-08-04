@@ -61,10 +61,8 @@ against its own archetype skill.
    without confirmation risks the same expensive unwind the strategist's
    Confirm & Lock protects against at step 1.
 5. Write the locked headline and its 2 backups to
-   `.hedgehog/chain/09-headline.md`.
-6. You have no Bash tool — you don't commit your own output; the
-   orchestrating session runs `hedgehog verify` once the headline is
-   locked, which writes the `feat(landing): headline` commit.
+   `.hedgehog/chain/09-headline.md` — you have no Bash tool, so the
+   orchestrating session commits it via `hedgehog verify`.
 
 ## Self-test
 
