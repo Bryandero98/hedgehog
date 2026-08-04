@@ -17,6 +17,12 @@ popup      — the extension UI, consumes background/content only through messag
 - Drop `popup` entirely for an extension with no browser action UI.
 - Merge `content` into `background` when the extension never injects into
   page context (a pure background-worker extension).
+- On a module axis, `background` is often not one-per-module — a single
+  service worker (`entrypoints/background.ts`) coordinating state across
+  every module's tabs (e.g. a `tabs.onCreated` listener no one module
+  should own) is exactly the cross-cutting infrastructure Step 4 asks
+  about. Give it its own fixed-scope layer there rather than letting the
+  first module that needs it absorb it into a per-module layer.
 
 ## Boundary that must hold
 

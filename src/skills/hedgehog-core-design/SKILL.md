@@ -169,6 +169,10 @@ Four to seven layers is the usual range. Fewer than three means the
 project probably wanted a shipped core or no core at all; more than eight
 means several layers are one layer with internal steps.
 
+On a module axis (decided next, in Step 4), also check for cross-cutting
+infrastructure no single module should own — see Step 4 for what that
+means and how to give it a layer of its own here.
+
 ## Step 4 — decide the module axis
 
 Answer explicitly, because it changes the shape of the whole graph:
@@ -192,6 +196,31 @@ scopes omit `{module}` gives every intent identical scope globs, so
 intent A's task may write intent B's files and the scope enforcement that
 justifies authoring a core at all disappears. Check every glob before
 writing the file.
+
+**Ask explicitly whether the stack implies cross-cutting infrastructure
+no single module should own** — a shared background script coordinating
+state across every module's tabs (a browser extension), a shared event
+bus, global app state, a shared connection pool. On a module axis, every
+layer in Step 3 instantiates once per intent; cross-cutting
+infrastructure is exactly the thing that doesn't fit that shape, because
+no one module's intent is the right owner for code every other module
+also depends on. Left undesigned, this surfaces mid-build with nowhere
+to go: either deferred with no owner (it gets logged as friction and
+blocks whichever module needed it), or bolted onto whichever module's
+layer happens to need it first, quietly widening that layer's scope past
+what it was designed to own, and requiring a retroactive rewrite of
+`core.yaml`/`core-design.md` once the mistake is noticed.
+
+If the answer is yes, add it to Step 3's layer sequence as its own layer
+before writing the file at Step 5 — a layer whose `scope` is a fixed path
+with no `{module}` placeholder, the same way `full-stack-app`'s own
+`schema` and `contract` layers run once against a fixed scope even though
+the core as a whole is module-axis. Name it for what it owns (e.g.
+`background-infra` for a browser extension's shared service worker), give
+it its own `verify` command, and record in `core-design.md` which future
+module needs may depend on it and why no single module was made to own
+it. This is a design decision made once, before the file is written, not
+something to leave for the first module that trips over the gap.
 
 ## Step 5 — write `.hedgehog/core.yaml`
 
