@@ -24,3 +24,37 @@ popup      — the extension UI, consumes background/content only through messag
 cross-context call goes through `messaging`, because a WebExtension's
 contexts are separate JS runtimes and a direct import silently fails at
 runtime rather than at build time.
+
+## WXT entrypoint naming (must decide up front, not discover mid-build)
+
+WXT derives an entrypoint's manifest name by splitting its `entrypoints/`
+folder or file name at the **first** `.`. Two entrypoints that derive the
+same name collide, and WXT's duplicate-name filter runs too late to
+surface it as a build error — the losing entrypoint is silently dropped
+from the built manifest (`.output/*/manifest.json`), not reported. A
+flat-file collision (`entrypoints/background.ts` vs. a would-be colocated
+`entrypoints/background.test.ts`) is worse: it breaks `pnpm wxt build`
+outright with "Multiple entrypoints with the same name detected."
+
+Decide the naming convention in this step, per module, before any layer
+is built against it — not after the first collision is hit:
+
+- **Every entrypoint with more than one surface lives in its own folder**,
+  `entrypoints/{module}/index.ts`, never a flat `entrypoints/{module}.ts`
+  — a folder has no `.`-split ambiguity to collide on.
+- **Colocated tests go inside that same folder** as a sibling
+  (`entrypoints/{module}/index.test.ts`), never as a flat
+  `entrypoints/{module}.test.ts` next to a flat entrypoint file — the flat
+  form is exactly the collision WXT's build reports.
+- **A module with two distinct entrypoint surfaces** (e.g. a popup and a
+  `content` surface for the same module) gets two distinct folder names
+  that don't share a prefix before the first `.` — `entrypoints/{module}-popup/`
+  and `entrypoints/{module}-content/`, never `entrypoints/{module}.content/`
+  alongside anything else starting `entrypoints/{module}.` — not one
+  folder with two dotted variants.
+
+Add a cheap, generic guard to the entrypoint layer's `verify` command
+regardless of the convention chosen: after `pnpm wxt build`, check the
+built manifest's entrypoint count against the expected count (e.g. `node
+-e "..."` reading `.output/*/manifest.json`) so a silent drop fails
+`verify` instead of surfacing later as a missing feature.
