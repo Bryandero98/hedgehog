@@ -150,6 +150,25 @@ paragraph algorithm, and their self-tests.
    section, in `landing-sequencer`'s order, every section reviewed and
    locked before the next starts, all still inside the one `sequence`
    task.
+
+   **Relaying a live user-confirmation checkpoint to a delegated
+   subagent.** Phase 1 (Strategist, inside the `feeling` layer) carries a
+   hard-stop checkpoint per Phase Transition Checks below: the
+   subject/audience/job statement must be confirmed by the user before
+   Step 2 starts. A delegated subagent instance has no channel for the
+   user to address it directly, so the orchestrating session relays the
+   confirmation instead — that relay is sufficient as long as it states
+   its own provenance plainly and quotes the user's actual words rather
+   than paraphrasing or asserting the outcome: *"Relaying the user's own
+   confirmation, verbatim — user said: '\<exact words\>'. This is their
+   direct turn, not my summary of it."* A relay that only asserts "the
+   user approved" without the quoted words is not sufficient and the
+   phase should ask again rather than proceed. This shifts the trust
+   anchor to the orchestrating session's honesty about provenance, which
+   the rest of this discipline already assumes (the orchestrator is
+   trusted to relay artifacts, task packets, and friction log entries
+   faithfully) — it does not require a cryptographic or environment-level
+   proof.
 3. Each agent **runs its own self-test** (see that agent's own file for
    what it checks) before presenting its artifact — necessary, not
    sufficient. This is a sanity check the agent does for itself; it does
@@ -224,7 +243,10 @@ the whole chain to correct the core framing (nothing downstream exists
 yet); every phase after it inherits that framing silently, and by the
 time copy is reviewed at phases 9–10, a wrong framing means unwinding
 several committed phases via the Correction Protocol instead of one free
-revision here.
+revision here. If step 1 was run by a delegated `landing-strategist`
+subagent instance, the confirmation reaches it as a relay from the
+orchestrating session — see The Loop above for the provenance statement
+that relay must carry.
 
 Before `landing-copywriter` starts (phase 10), confirm
 `landing-headline-writer`'s headline has been presented to and locked by

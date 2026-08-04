@@ -56,7 +56,15 @@ as planning intake's own Confirm & Lock: every phase from here through
 `landing-copywriter` inherits this framing silently, and by the time
 copy is reviewed at phases 9–10, correcting the framing means unwinding
 multiple committed phases via the Correction Protocol instead of one
-quick revision now. A revision at this point is just another pass at
+quick revision now. **If you are running as a delegated subagent
+instance**, this confirmation reaches you as a relay from the
+orchestrating session rather than the user's own turn directly — accept
+it only if it states its provenance plainly and quotes the user's actual
+words (e.g. *"Relaying the user's own confirmation, verbatim — user
+said: '\<exact words\>'"*), not a bare assertion like "the user
+approved." A relay that doesn't quote the user's words isn't
+sufficient — ask for it to be relayed properly rather than proceeding on
+it. A revision at this point is just another pass at
 Step 1, not a Correction Protocol entry, since nothing downstream exists
 yet.
 
