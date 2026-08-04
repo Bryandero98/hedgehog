@@ -167,7 +167,9 @@ alike:
 
 Four to seven layers is the usual range. Fewer than three means the
 project probably wanted a shipped core or no core at all; more than eight
-means several layers are one layer with internal steps.
+means several layers are one layer with internal steps. This list isn't
+final until Step 4 — a module axis can still add a cross-cutting layer to
+it.
 
 ## Step 4 — decide the module axis
 

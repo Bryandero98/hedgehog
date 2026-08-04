@@ -33,12 +33,12 @@ runtime rather than at build time.
 
 WXT derives an entrypoint's manifest name by splitting its `entrypoints/`
 folder or file name at the **first** `.`. Two entrypoints that derive the
-same name collide, and WXT's duplicate-name filter runs too late to
-surface it as a build error — the losing entrypoint is silently dropped
-from the built manifest (`.output/*/manifest.json`), not reported. A
-flat-file collision (`entrypoints/background.ts` vs. a would-be colocated
-`entrypoints/background.test.ts`) is worse: it breaks `pnpm wxt build`
-outright with "Multiple entrypoints with the same name detected."
+same name collide — observed failure modes include a build-time error
+("Multiple entrypoints with the same name detected") and, in at least one
+case, a colliding entrypoint silently missing from the built manifest
+(`.output/*/manifest.json`) with no error at all. Don't assume which one
+fires for a given WXT version or collision shape; treat any collision as
+unsafe rather than relying on the build to always catch it.
 
 Decide the naming convention in this step, per module, before any layer
 is built against it — not after the first collision is hit:
@@ -48,8 +48,8 @@ is built against it — not after the first collision is hit:
   — a folder has no `.`-split ambiguity to collide on.
 - **Colocated tests go inside that same folder** as a sibling
   (`entrypoints/{module}/index.test.ts`), never as a flat
-  `entrypoints/{module}.test.ts` next to a flat entrypoint file — the flat
-  form is exactly the collision WXT's build reports.
+  `entrypoints/{module}.test.ts` next to a flat entrypoint file — that's
+  the same name-collision shape described above.
 - **A module with two entrypoint surfaces** (e.g. popup and content) gets
   two folder names that don't share a prefix before the first `.` —
   `entrypoints/{module}-popup/` and `entrypoints/{module}-content/`, never
