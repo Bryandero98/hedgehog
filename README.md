@@ -48,6 +48,18 @@ The build order is encoded into the project. The AI does not have to remember wh
 
 ![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.png)
 
+## Your build order is a graph
+
+**Every task** Hedgehog generates **is a node** with explicit dependencies in sqlite.
+
+Unlike stories and epics, **the graph locks build order** into an **information-dense, context-light** path the agents can use.
+
+```bash
+npx @skyf0xx/hedgehog graph
+```
+
+![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.png)
+
 ## What Hedgehog builds
 
 ### Full-stack applications
@@ -155,15 +167,6 @@ the project was set up for — along with the `AGENTS.md` index derived
 from them. It never touches the instructions file, the build graph, the
 core workspace, or `skills/BMAD`, since those carry project-specific or
 write-once content.
-
-To see the build graph:
-
-``` bash
-npx @skyf0xx/hedgehog graph
-```
-
-Starts a small local server and opens a live, read-only diagram of every
-task, status and its dependencies.
 
 ## Why Hedgehog
 
