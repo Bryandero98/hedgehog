@@ -15,9 +15,16 @@ schedule  — the orchestration wiring: what runs when, retries, backfill entry 
 
 ## Adaptation points
 
-- Merge `schedule` into `load` when the pipeline is invoked externally
-  (cron calling a script, an orchestrator defined outside this repo) —
-  there's no orchestration surface here to build.
+- On the Dagster stack, `schedule` is Dagster's own schedule/sensor
+  definitions plus the retry policy on each op — real orchestration
+  surface that belongs in this repo and earns its own layer.
+- On the stdlib/argparse stack, or when a pipeline is invoked externally
+  regardless of stack (cron calling a script, an orchestrator defined
+  outside this repo), there is no in-repo orchestrator to retry or
+  backfill through: merge `schedule` into `load` and scope it to
+  whatever the script itself can do (an idempotent upsert key, a
+  `--since`/`--backfill` flag `load` reads), and record retries/
+  scheduling as owned by the caller rather than as a gap in this layer.
 - Split `extract` per source (`extract/{module}`) when the pipeline pulls
   from several genuinely different systems with independent failure modes
   and auth; keep one `extract` layer for a single source.
