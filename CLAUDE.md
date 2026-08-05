@@ -16,7 +16,8 @@ discipline's stance and rationale.
   (phase and layer transition checks, Correction Protocol review), plus
   the `landing-page` core's own chain agents
   (`landing-strategist`, `landing-systems`, `landing-sequencer`,
-  `landing-copywriter`, `landing-critic`, `landing-builder`). `tweaker`
+  `landing-headline-writer`, `landing-copywriter`, `landing-critic`,
+  `landing-builder`). `tweaker`
   (post-build tweak requests and friction-log-driven Hedgehog issue
   suggestions) is shared by every core.
 - `src/skills/` — the packaged procedures a consuming project copies into
@@ -41,6 +42,10 @@ discipline's stance and rationale.
   - `hedgehog-bootstrap-authored-core` — generates the workspace for the
     stack `hedgehog-core-design` chose, one pass, closing Bootstrap on an
     authored core.
+  - `hedgehog-bootstrap-landing-page-core` — lands the pre-verified
+    Astro + Tailwind v4 workspace for the `landing-page` core, one pass,
+    with no add-on step after it. Invoked automatically by `planner`
+    after Confirm & Lock.
   - `hedgehog-loop` — the operating loop for every unit of work on
     `full-stack-app` once bootstrap has run: the domain module step
     sequence, phase rules, and Correction Protocol.
