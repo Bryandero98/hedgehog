@@ -25,16 +25,21 @@
     min-width: 160px;
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    transition: box-shadow 0.1s ease-out, transform 0.1s ease-out;
+    transition: box-shadow 0.1s ease-out, transform 0.1s ease-out, opacity 0.12s ease-out;
   }
   .rf-task-node:hover {
     box-shadow: 0 0 0 1px var(--node-border), 0 4px 10px rgba(0, 0, 0, 0.5);
     transform: translateY(-1px);
   }
+  /* Applied whenever a dependency-chain highlight is active and this node
+     is not part of it — dims it out of the way instead of removing it, so
+     layout never jumps mid-inspection. */
+  .rf-task-node.is-faded { opacity: 0.22; }
+  .rf-task-node.is-chain { box-shadow: 0 0 0 2px #f0f6fc, 0 4px 14px rgba(0, 0, 0, 0.6); }
   .rf-task-node .id { font-weight: 700; color: #f0f6fc; }
+  .rf-task-node .status-row { display: flex; align-items: center; gap: 5px; margin-top: 4px; }
   .rf-task-node .status {
     display: inline-block;
-    margin-top: 4px;
     padding: 1px 7px;
     border-radius: 999px;
     font-size: 10px;
@@ -44,6 +49,61 @@
     color: var(--node-status-fg);
     background: var(--node-status-bg);
   }
+  /* The "in progress" proxy badge — see STATUS_STYLE comment for why this
+     is a hint on `implemented`, not a real status. */
+  .rf-task-node .progress-hint {
+    font-size: 9px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Swimlanes ─────────────────────────────────────────────────────────
+     Lane headers/backgrounds render as real ReactFlow nodes (see
+     LaneHeaderNode / LaneBgNode below), not fixed-position overlay
+     chrome — a Panel-based overlay only anchors to the viewport corner
+     once and doesn't track pan/zoom, so a second/third lane's header
+     would drift out of alignment with its lane the moment the graph
+     scrolls. Rendering them as nodes gets pan/zoom for free. ── */
+  .lane-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .lane-header:hover { border-color: #484f58; }
+  .lane-header .chevron {
+    display: inline-block;
+    width: 10px;
+    color: #8b949e;
+    transition: transform 0.12s ease-out;
+  }
+  .lane-header.is-collapsed .chevron { transform: rotate(-90deg); }
+  .lane-header .name { font-weight: 600; color: #f0f6fc; }
+  .lane-header .counts { display: flex; gap: 5px; }
+  .lane-header .count-pill {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 999px;
+  }
+  .lane-header .count-pill.attn { background: #f8514933; color: #ff7b72; }
+  .lane-header .count-pill.ready { background: #3fb95033; color: #56d364; }
+  .lane-header .count-pill.total { background: #6e768133; color: #c9d1d9; }
+  .lane-bg {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.014);
+    border: 1px solid #21262d;
+    pointer-events: none;
+  }
+
   #detail-panel {
     position: fixed;
     top: 0;
@@ -57,6 +117,7 @@
     overflow-y: auto;
     transform: translateX(100%);
     transition: transform 0.15s ease-out;
+    z-index: 20;
   }
   #detail-panel.open { transform: translateX(0); }
   #detail-panel h2 { margin-top: 0; font-size: 16px; }
@@ -76,6 +137,18 @@
     font-size: 12px;
   }
   #detail-panel .muted { color: #8b949e; font-size: 13px; }
+  #detail-panel button.chain-btn {
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #e6edf3;
+    cursor: pointer;
+  }
+  #detail-panel button.chain-btn:hover { border-color: #58a6ff; color: #79c0ff; }
+  #detail-panel button.chain-btn.active { border-color: #58a6ff; background: #122a4d; color: #79c0ff; }
   #detail-panel ul.requirements {
     margin: 4px 0 0;
     padding-left: 0;
@@ -100,6 +173,17 @@
   .req-kind-rule { background: #58a6ff33; color: #79c0ff; }
   .req-kind-constraint { background: #d2992233; color: #e3b341; }
   .req-kind-acceptance { background: #3fb95033; color: #56d364; }
+
+  /* ── Legend: reference material, not a permanent fixture. Starts open on
+     a fresh visit, collapses to a small swatch dot after first paint (or
+     immediately on repeat visits — see localStorage in Legend()), expands
+     again on hover/click. Graph stays primary; legend never fights it for
+     space once its job (teaching the color code) is done. Owns
+     bottom-left uncontested — ReactFlow's zoom Controls are moved to
+     bottom-right (see App) instead of sharing this corner, since the
+     legend's expanded height varies with content and a fixed offset
+     between two independently-sized fixed-position elements is exactly
+     the kind of thing that silently starts overlapping again later. ── */
   #legend {
     position: fixed;
     bottom: 16px;
@@ -107,19 +191,56 @@
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 8px;
-    padding: 10px 14px;
     font-size: 12px;
+    z-index: 10;
+    transition: padding 0.12s ease-out;
   }
-  #legend .row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-  #legend .swatch { width: 4px; height: 14px; border-radius: 2px; }
+  #legend.expanded { padding: 10px 14px; }
+  #legend.collapsed {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  #legend.collapsed:hover { border-color: #484f58; }
+  #legend .dot-stack { display: flex; }
+  #legend .dot-stack span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: -3px;
+    border: 1.5px solid #161b22;
+  }
+  #legend .row { display: flex; align-items: center; gap: 8px; margin: 3px 0; cursor: default; }
+  #legend .row.header {
+    justify-content: space-between;
+    cursor: pointer;
+    margin-bottom: 6px;
+    color: #8b949e;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  #legend .swatch { width: 4px; height: 14px; border-radius: 2px; flex: none; }
+
+  /* ── Footer: deliberately the lowest-priority fixed element on screen.
+     Quiet by default. Lives top-right rather than sharing bottom-right
+     with ReactFlow's Controls/MiniMap — graph-navigation chrome
+     (zoom, minimap) is one family and stays together in one corner;
+     these off-task links are a different family entirely and get their
+     own uncontested corner instead of stacking rules to avoid overlap. ── */
   #footer {
     position: fixed;
-    bottom: 16px;
+    top: 16px;
     right: 16px;
     display: flex;
     gap: 14px;
     font-size: 12px;
     color: #8b949e;
+    z-index: 5;
   }
   #footer a {
     color: #8b949e;
@@ -130,6 +251,7 @@
   }
   #footer a:hover { color: #e6edf3; }
   #footer svg { width: 13px; height: 13px; fill: currentColor; flex: none; }
+
   #loading {
     display: flex;
     align-items: center;
@@ -149,47 +271,214 @@
     default: ReactFlowCanvas,
     Background,
     Controls,
+    MiniMap,
     MarkerType,
     Handle,
     Position,
   } = window.ReactFlow;
+
+  // Above this many nodes, a single dagre chain stops being scannable and
+  // the large-graph affordances (minimap, auto-collapsed lanes) switch on.
+  // Below it, the viewer renders exactly as a small-graph tool always
+  // has — no extra chrome competing for a 6-node screen.
+  const LARGE_GRAPH_THRESHOLD = 30;
 
   // Mirrors status.mjs's TASK_STATUSES lifecycle order and colour intent:
   // grey (not started) -> blue (in progress) -> amber (needs attention) ->
   // green (done) -> red (blocked). Each status gets a distinct hue rather
   // than reusing green for both `ready` and `verified` (the two are
   // different points in the lifecycle and looked identical before).
+  //
+  // `implemented` also carries a `progressHint`: the engine has no real
+  // in_progress state (tasks has no started_at/updated_at — only
+  // created_at, and the closest recency signal anywhere in the schema,
+  // verifications.ran_at, isn't even in /graph.json today). `implemented`
+  // — code written, verification not yet run — is the closest honest
+  // proxy a client can infer from this payload alone, so it's labelled as
+  // a hint rather than invented as a fake status. A real "started N
+  // minutes ago" signal is a separate, deliberately unbuilt follow-up: it
+  // needs tasks.started_at (or surfacing verifications.ran_at through
+  // graph.mjs) — a schema/query change, not a viewer-only UX pass.
   const STATUS_STYLE = {
     proposed:    { bg: '#282e37', border: '#6e7681', badgeBg: '#6e768133', badgeFg: '#c9d1d9' },
     planned:     { bg: '#122a4d', border: '#58a6ff', badgeBg: '#58a6ff33', badgeFg: '#79c0ff' },
     ready:       { bg: '#1c3a29', border: '#3fb950', badgeBg: '#3fb95033', badgeFg: '#56d364' },
-    implemented: { bg: '#3d2f0a', border: '#d29922', badgeBg: '#d2992233', badgeFg: '#e3b341' },
+    implemented: { bg: '#3d2f0a', border: '#d29922', badgeBg: '#d2992233', badgeFg: '#e3b341', progressHint: 'in progress — awaiting verify' },
     verified:    { bg: '#123a3c', border: '#39c5cf', badgeBg: '#39c5cf33', badgeFg: '#56d4dd' },
     complete:    { bg: '#0f2818', border: '#238636', badgeBg: '#23863633', badgeFg: '#3fb950' },
     failed:      { bg: '#3d1418', border: '#f85149', badgeBg: '#f8514933', badgeFg: '#ff7b72' },
   };
+  const STATUS_ORDER = Object.keys(STATUS_STYLE);
 
-  function layout(nodes, edges) {
+  const NODE_W = 180;
+  const NODE_H = 58;
+  const LANE_HEADER_H = 38;
+  const LANE_PAD_TOP = 50;
+  const LANE_PAD_X = 24;
+  const LANE_PAD_BOTTOM = 24;
+  const LANE_GAP = 28;
+  const LANE_COLLAPSED_H = 40;
+  // Lane header/background nodes get a fixed pixel width regardless of
+  // zoom (ReactFlow nodes normally scale with the canvas) — a label
+  // shrinking along with the graph would become unreadable exactly when
+  // it's most needed, on a zoomed-out large graph.
+  const LANE_HEADER_W = 260;
+
+  function dagreLayout(nodes, edges) {
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 70 });
     g.setDefaultEdgeLabel(() => ({}));
-    const width = 180;
-    const height = 56;
-    for (const n of nodes) g.setNode(n.id, { width, height });
-    for (const e of edges) g.setEdge(e.source, e.target);
+    for (const n of nodes) g.setNode(n.id, { width: NODE_W, height: NODE_H });
+    const ids = new Set(nodes.map((n) => n.id));
+    for (const e of edges) {
+      if (ids.has(e.source) && ids.has(e.target)) g.setEdge(e.source, e.target);
+    }
     dagre.layout(g);
-    return nodes.map((n) => {
+    let maxX = 0;
+    let maxY = 0;
+    const positions = new Map();
+    for (const n of nodes) {
       const pos = g.node(n.id);
-      return { ...n, position: { x: pos.x - width / 2, y: pos.y - height / 2 } };
-    });
+      const x = pos.x - NODE_W / 2;
+      const y = pos.y - NODE_H / 2;
+      positions.set(n.id, { x, y });
+      maxX = Math.max(maxX, x + NODE_W);
+      maxY = Math.max(maxY, y + NODE_H);
+    }
+    return { positions, width: maxX, height: maxY };
+  }
+
+  // Target row width for the lane grid below: wide enough to hold a
+  // couple of full seven-layer lanes side by side on an ordinary monitor,
+  // narrow enough that it wraps well before the screen's outer edge.
+  // Stacking every module's lane in one long vertical column (the first
+  // version of this layout) wasted the screen's actual aspect ratio — 14
+  // modules read as one narrow, endlessly-scrolling strip, the same shape
+  // problem swimlanes were meant to fix in the first place.
+  const LANE_ROW_WIDTH_BUDGET = 1000;
+
+  // Groups tasks into one swimlane per module, each laid out independently
+  // (same per-module top-to-bottom shape the old single-graph layout
+  // produced), then flows lanes left-to-right into rows — wrapping to a
+  // new row once LANE_ROW_WIDTH_BUDGET is exceeded — rather than stacking
+  // every lane in one tall column. A single-module graph produces one
+  // lane, one row — visually identical to the old flat layout, so small
+  // graphs cost nothing extra. Cross-module edges (from
+  // intent_dependencies) still draw; they just span lanes/rows.
+  function layoutLanes(nodes, edges, collapsedModules) {
+    const moduleOrder = [];
+    const byModule = new Map();
+    for (const n of nodes) {
+      if (!byModule.has(n.module)) {
+        byModule.set(n.module, []);
+        moduleOrder.push(n.module);
+      }
+      byModule.get(n.module).push(n);
+    }
+    moduleOrder.sort((a, b) => a.localeCompare(b));
+
+    const positioned = [];
+    const laneSpecs = [];
+
+    for (const moduleName of moduleOrder) {
+      const moduleNodes = byModule.get(moduleName);
+      const isCollapsed = collapsedModules.has(moduleName);
+      const statusCounts = {};
+      for (const n of moduleNodes) statusCounts[n.status] = (statusCounts[n.status] || 0) + 1;
+
+      if (isCollapsed) {
+        laneSpecs.push({
+          module: moduleName,
+          collapsed: true,
+          height: LANE_COLLAPSED_H,
+          width: LANE_HEADER_W,
+          statusCounts,
+          total: moduleNodes.length,
+        });
+        continue;
+      }
+
+      const { positions, width, height } = dagreLayout(moduleNodes, edges);
+      laneSpecs.push({
+        module: moduleName,
+        collapsed: false,
+        height: LANE_PAD_TOP + height + LANE_PAD_BOTTOM,
+        width: Math.max(width + LANE_PAD_X * 2, LANE_HEADER_W),
+        statusCounts,
+        total: moduleNodes.length,
+        moduleNodes,
+        positions,
+      });
+    }
+
+    // Row-flow: place lanes left-to-right, wrapping to a new row once the
+    // running row width would exceed the budget. Each row's height is set
+    // by its tallest lane so the next row never overlaps it.
+    const lanes = [];
+    let xCursor = 0;
+    let yCursor = 0;
+    let rowHeight = 0;
+    for (const spec of laneSpecs) {
+      if (xCursor > 0 && xCursor + spec.width > LANE_ROW_WIDTH_BUDGET) {
+        xCursor = 0;
+        yCursor += rowHeight + LANE_GAP;
+        rowHeight = 0;
+      }
+
+      if (!spec.collapsed) {
+        for (const n of spec.moduleNodes) {
+          const p = spec.positions.get(n.id);
+          positioned.push({ ...n, position: { x: p.x + LANE_PAD_X + xCursor, y: p.y + LANE_PAD_TOP + yCursor } });
+        }
+      }
+
+      lanes.push({
+        module: spec.module,
+        collapsed: spec.collapsed,
+        x: xCursor,
+        y: yCursor,
+        width: spec.width,
+        height: spec.height,
+        statusCounts: spec.statusCounts,
+        total: spec.total,
+      });
+
+      xCursor += spec.width + LANE_GAP;
+      rowHeight = Math.max(rowHeight, spec.height);
+    }
+
+    return { positioned, lanes };
+  }
+
+  // Builds the set of task ids upstream of `taskId` (its full transitive
+  // dependency chain) by walking `dependencies` edges backward. Used to
+  // highlight what's actually blocking a failed/stuck task instead of
+  // leaving the user to trace thin grey arrows by eye across a large,
+  // possibly folded graph.
+  function upstreamChain(taskId, edgesBySource) {
+    const chain = new Set([taskId]);
+    const stack = [taskId];
+    while (stack.length) {
+      const current = stack.pop();
+      for (const e of edgesBySource.get(current) ?? []) {
+        if (!chain.has(e.source)) {
+          chain.add(e.source);
+          stack.push(e.source);
+        }
+      }
+    }
+    return chain;
   }
 
   function TaskNode({ data }) {
     const style = STATUS_STYLE[data.task.status] || STATUS_STYLE.proposed;
+    const classNames = ['rf-task-node'];
+    if (data.faded) classNames.push('is-faded');
+    if (data.inChain) classNames.push('is-chain');
     return h(
       'div',
       {
-        className: 'rf-task-node',
+        className: classNames.join(' '),
         style: {
           '--node-bg': style.bg,
           '--node-border': style.border,
@@ -207,14 +496,56 @@
       h(Handle, { type: 'target', position: Position.Top }),
       h('div', { className: 'id' }, data.task.id),
       h('div', null, data.task.layer),
-      h('div', { className: 'status' }, data.task.status),
+      h(
+        'div',
+        { className: 'status-row' },
+        h('span', { className: 'status' }, data.task.status),
+        style.progressHint ? h('span', { className: 'progress-hint' }, style.progressHint) : null,
+      ),
       h(Handle, { type: 'source', position: Position.Bottom }),
     );
   }
 
-  const nodeTypes = { task: TaskNode };
+  // Rendered as a plain ReactFlow node (see App's laneNodes) rather than
+  // fixed overlay chrome, so it pans/zooms in lockstep with the lane it
+  // labels instead of drifting once the graph scrolls.
+  function LaneHeaderNode({ data }) {
+    return h(
+      'div',
+      {
+        className: `lane-header${data.collapsed ? ' is-collapsed' : ''}`,
+        onClick: (e) => {
+          e.stopPropagation();
+          data.onToggle(data.module);
+        },
+      },
+      h('span', { className: 'chevron' }, '▾'),
+      h('span', { className: 'name' }, data.module),
+      h(
+        'span',
+        { className: 'counts' },
+        data.statusCounts.failed
+          ? h('span', { className: 'count-pill attn' }, `${data.statusCounts.failed} failed`)
+          : null,
+        data.statusCounts.ready
+          ? h('span', { className: 'count-pill ready' }, `${data.statusCounts.ready} ready`)
+          : null,
+        h('span', { className: 'count-pill total' }, `${data.total} tasks`),
+      ),
+    );
+  }
 
-  function DetailPanel({ task }) {
+  // The faint lane background/border behind a lane's task nodes. A plain
+  // node (not SVG/canvas chrome) for the same pan/zoom-tracking reason as
+  // LaneHeaderNode; sized via data.width/height rather than CSS so it
+  // matches that lane's actual dagre-computed footprint.
+  function LaneBgNode({ data }) {
+    return h('div', { className: 'lane-bg', style: { width: data.width, height: data.height } });
+  }
+
+  const nodeTypes = { task: TaskNode, laneHeader: LaneHeaderNode, laneBg: LaneBgNode };
+
+  function DetailPanel({ task, chainActive, onToggleChain }) {
     if (!task) return h('div', { id: 'detail-panel' });
     const requirements = task.requirements || [];
     return h(
@@ -225,6 +556,16 @@
       h('div', null, task.intentGoal),
       h('div', { className: 'field-label' }, 'Objective'),
       h('div', null, task.objective),
+      (task.status === 'failed' || task.status === 'planned')
+        ? h(
+            'button',
+            {
+              className: `chain-btn${chainActive ? ' active' : ''}`,
+              onClick: () => onToggleChain(task.id),
+            },
+            chainActive ? 'Hide dependency chain' : 'Highlight dependency chain',
+          )
+        : null,
       // Every requirement kind together, same as hedgehog next's
       // RELEVANT RULES — a task is bound by its rules, constraints, and
       // acceptance criteria equally, so they read as one list rather
@@ -252,17 +593,50 @@
     );
   }
 
+  const LEGEND_SEEN_KEY = 'hedgehog-graph-legend-seen';
+
+  // Reference material, not a control someone needs pinned open every
+  // session: expanded on a visitor's very first paint (so the color code
+  // is taught at least once), collapsed to a small dot-stack afterward —
+  // remembered in localStorage so a returning user isn't re-taught it on
+  // every reload. Click/hover re-expands at any time.
   function Legend() {
+    const [expanded, setExpanded] = useState(() => !localStorage.getItem(LEGEND_SEEN_KEY));
+
+    useEffect(() => {
+      if (!expanded) localStorage.setItem(LEGEND_SEEN_KEY, '1');
+    }, [expanded]);
+
+    if (!expanded) {
+      return h(
+        'div',
+        { id: 'legend', className: 'collapsed', onClick: () => setExpanded(true), title: 'Show status legend' },
+        h(
+          'div',
+          { className: 'dot-stack' },
+          STATUS_ORDER.slice(0, 4).map((status) =>
+            h('span', { key: status, style: { background: STATUS_STYLE[status].border } }),
+          ),
+        ),
+      );
+    }
+
     return h(
       'div',
-      { id: 'legend' },
-      Object.entries(STATUS_STYLE).map(([status, style]) =>
+      { id: 'legend', className: 'expanded' },
+      h(
+        'div',
+        { className: 'row header', onClick: () => setExpanded(false) },
+        h('span', null, 'Status'),
+        h('span', null, '–'),
+      ),
+      STATUS_ORDER.map((status) =>
         h(
           'div',
           { className: 'row', key: status },
           h('span', {
             className: 'swatch',
-            style: { background: style.border, boxShadow: `0 0 6px ${style.border}` },
+            style: { background: STATUS_STYLE[status].border, boxShadow: `0 0 6px ${STATUS_STYLE[status].border}` },
           }),
           h('span', null, status),
         ),
@@ -287,9 +661,9 @@
     }),
   );
 
-  // Quiet, dismissible-by-ignoring links in the corner opposite the
-  // legend — a build's own state should never compete with these for
-  // attention, so no color, no motion, just a hover state.
+  // Quiet, dismissible-by-ignoring links, top-right — a build's own state
+  // should never compete with these for attention, so no color, no
+  // motion, just a hover state.
   function Footer() {
     return h(
       'div',
@@ -309,6 +683,45 @@
     );
   }
 
+  // Builds the lane-header and lane-background ReactFlow nodes for one
+  // layout pass. Given a low zIndex and draggable: false / selectable:
+  // false so they sit behind and don't interfere with task nodes, but are
+  // otherwise ordinary nodes — which is what makes them track pan/zoom
+  // correctly (see the .lane-header CSS comment for why that matters).
+  function buildLaneNodes(lanes, onToggle) {
+    const out = [];
+    for (const lane of lanes) {
+      if (!lane.collapsed) {
+        out.push({
+          id: `lane-bg-${lane.module}`,
+          type: 'laneBg',
+          position: { x: lane.x, y: lane.y + LANE_HEADER_H },
+          data: { width: lane.width, height: lane.height - LANE_HEADER_H },
+          draggable: false,
+          selectable: false,
+          zIndex: -1,
+        });
+      }
+      out.push({
+        id: `lane-header-${lane.module}`,
+        type: 'laneHeader',
+        position: { x: lane.x, y: lane.y },
+        data: {
+          module: lane.module,
+          collapsed: lane.collapsed,
+          statusCounts: lane.statusCounts,
+          total: lane.total,
+          onToggle,
+        },
+        draggable: false,
+        selectable: false,
+        style: { width: LANE_HEADER_W },
+        zIndex: 5,
+      });
+    }
+    return out;
+  }
+
   const POLL_INTERVAL_MS = 2000;
 
   function App() {
@@ -318,12 +731,17 @@
     // flip from `ready` to `complete` while the panel is open) instead
     // of freezing on whatever the task looked like at click time.
     const [selectedId, setSelectedId] = useState(null);
+    const [chainRootId, setChainRootId] = useState(null);
+    const [collapsedModules, setCollapsedModules] = useState(() => new Set());
+    const [autoCollapseApplied, setAutoCollapseApplied] = useState(false);
     // Tracks the last-rendered graph's JSON so a poll that returns
     // identical data (the common case — nothing changed since last
     // tick) skips relayout entirely instead of jittering node positions
     // or resetting the user's pan/zoom on every 2s tick.
     const lastJsonRef = useRef(null);
     const firstLoadRef = useRef(true);
+    const flowInstanceRef = useRef(null);
+    const initialViewSetRef = useRef(false);
 
     useEffect(() => {
       let cancelled = false;
@@ -349,31 +767,154 @@
       };
     }, []);
 
-    const nodes = useMemo(() => {
-      if (!raw) return [];
-      const positioned = layout(raw.nodes, raw.edges);
-      return positioned.map((n) => ({
-        id: n.id,
-        type: 'task',
-        position: n.position,
-        data: { task: n, onSelect: setSelectedId },
-      }));
+    const isLargeGraph = !!raw && raw.nodes.length > LARGE_GRAPH_THRESHOLD;
+
+    // The modules worth a first look — anything with a failed task
+    // (blocking) or a ready task (actionable). Drives both which lanes
+    // start collapsed and, on first paint, which lanes fitView zooms to
+    // (see attentionModulesRef below) — a large graph should open on what
+    // needs attention, not zoomed out far enough to fit every idle lane.
+    const attentionModules = useMemo(() => {
+      if (!raw) return new Set();
+      const byModule = new Map();
+      for (const n of raw.nodes) {
+        if (!byModule.has(n.module)) byModule.set(n.module, []);
+        byModule.get(n.module).push(n.status);
+      }
+      const next = new Set();
+      for (const [moduleName, statuses] of byModule) {
+        if (statuses.some((s) => s === 'failed' || s === 'ready')) next.add(moduleName);
+      }
+      return next;
     }, [raw]);
+
+    // Auto-collapse every lane except the ones in attentionModules, once,
+    // the first time a graph crosses the large-graph threshold. A user's
+    // own later clicks always win after that: this never re-collapses a
+    // lane the user chose to open.
+    useEffect(() => {
+      if (!raw || !isLargeGraph || autoCollapseApplied) return;
+      const next = new Set();
+      for (const n of raw.nodes) {
+        if (!attentionModules.has(n.module)) next.add(n.module);
+      }
+      setCollapsedModules(next);
+      setAutoCollapseApplied(true);
+    }, [raw, isLargeGraph, autoCollapseApplied, attentionModules]);
+
+    const edgesBySource = useMemo(() => {
+      const map = new Map();
+      if (!raw) return map;
+      for (const e of raw.edges) {
+        if (!map.has(e.target)) map.set(e.target, []);
+        map.get(e.target).push(e);
+      }
+      return map;
+    }, [raw]);
+
+    const chainSet = useMemo(() => {
+      if (!chainRootId) return null;
+      return upstreamChain(chainRootId, edgesBySource);
+    }, [chainRootId, edgesBySource]);
+
+    // A chain highlight force-expands the lanes it passes through —
+    // otherwise highlighting a chain on a mostly-collapsed large graph
+    // would point at lanes with nothing visible on screen.
+    const effectiveCollapsed = useMemo(() => {
+      if (!chainSet) return collapsedModules;
+      const forceOpenModules = new Set();
+      if (raw) {
+        for (const n of raw.nodes) {
+          if (chainSet.has(n.id)) forceOpenModules.add(n.module);
+        }
+      }
+      const next = new Set(collapsedModules);
+      for (const m of forceOpenModules) next.delete(m);
+      return next;
+    }, [collapsedModules, chainSet, raw]);
+
+    const { positioned, lanes } = useMemo(() => {
+      if (!raw) return { positioned: [], lanes: [] };
+      return layoutLanes(raw.nodes, raw.edges, effectiveCollapsed);
+    }, [raw, effectiveCollapsed]);
+
+    function toggleLane(moduleName) {
+      setCollapsedModules((prev) => {
+        const next = new Set(prev);
+        if (next.has(moduleName)) next.delete(moduleName);
+        else next.add(moduleName);
+        return next;
+      });
+    }
+
+    function toggleChain(taskId) {
+      setChainRootId((prev) => (prev === taskId ? null : taskId));
+    }
+
+    const taskNodes = useMemo(() => {
+      return positioned.map((n) => {
+        const faded = !!(chainSet && !chainSet.has(n.id));
+        const inChain = !!(chainSet && chainSet.has(n.id) && n.id !== chainRootId);
+        return {
+          id: n.id,
+          type: 'task',
+          position: n.position,
+          data: { task: n, onSelect: setSelectedId, faded, inChain },
+        };
+      });
+    }, [positioned, chainSet, chainRootId]);
+
+    const laneNodes = useMemo(() => buildLaneNodes(lanes, toggleLane), [lanes]);
+
+    const nodes = useMemo(() => [...laneNodes, ...taskNodes], [laneNodes, taskNodes]);
+
+    const positionedIds = useMemo(() => new Set(positioned.map((n) => n.id)), [positioned]);
 
     const edges = useMemo(() => {
       if (!raw) return [];
-      return raw.edges.map((e) => ({
-        ...e,
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#484f58' },
-      }));
-    }, [raw]);
+      return raw.edges
+        .filter((e) => positionedIds.has(e.source) && positionedIds.has(e.target))
+        .map((e) => {
+          const onChain = !!(chainSet && chainSet.has(e.source) && chainSet.has(e.target));
+          const faded = !!chainSet && !onChain;
+          return {
+            ...e,
+            markerEnd: { type: MarkerType.ArrowClosed, color: onChain ? '#f0f6fc' : '#484f58' },
+            style: { stroke: onChain ? '#f0f6fc' : '#484f58', opacity: faded ? 0.15 : 1, strokeWidth: onChain ? 2.5 : 1 },
+            zIndex: onChain ? 1 : 0,
+          };
+        });
+    }, [raw, positionedIds, chainSet]);
 
-    // fitView only on the graph's first paint — a later poll that adds
-    // or moves nodes re-lays-out in place without recentering the view
-    // the user has already panned or zoomed.
-    const shouldFitView = firstLoadRef.current && nodes.length > 0;
-    if (shouldFitView) firstLoadRef.current = false;
+    // fitView only on the graph's first paint, and only for small graphs —
+    // a later poll that adds or moves nodes re-lays-out in place without
+    // recentering the view the user has already panned or zoomed. On a
+    // large graph, fitView is skipped entirely in favor of the viewport
+    // effect below: fitting the whole graph (every collapsed idle lane
+    // included) zooms out far enough that the actionable lanes become
+    // illegibly small, and fitting to just the attention lanes' bounding
+    // box centers on it rather than anchoring to its top-left — same
+    // problem, content still opens scrolled past what's actually needed.
+    const shouldFitView = firstLoadRef.current && nodes.length > 0 && !isLargeGraph;
+    if (nodes.length > 0) firstLoadRef.current = false;
+
+    // On a large graph's first paint, jump straight to the top-left
+    // corner of the first lane worth attention (or the first lane at all,
+    // if none need attention) at a fixed, legible zoom — rather than
+    // fitting/centering on a bounding box, which (see above) can leave
+    // the viewport scrolled past the top of the content it fit to. Gated
+    // on autoCollapseApplied (not just isLargeGraph) so this runs once
+    // `lanes` reflects the post-collapse layout, not the pre-collapse one
+    // — setting the viewport before collapse applies would target
+    // coordinates that shift out from under it a moment later.
+    useEffect(() => {
+      if (!isLargeGraph || !autoCollapseApplied || initialViewSetRef.current) return;
+      const instance = flowInstanceRef.current;
+      if (!instance || lanes.length === 0) return;
+      const targetLane = lanes.find((l) => attentionModules.has(l.module)) ?? lanes[0];
+      instance.setViewport({ x: -targetLane.x + 40, y: -targetLane.y + 40, zoom: 1 });
+      initialViewSetRef.current = true;
+    }, [isLargeGraph, autoCollapseApplied, lanes, attentionModules]);
 
     if (!raw) {
       return h('div', { id: 'loading' }, 'Loading build graph…');
@@ -398,18 +939,36 @@
           edges,
           nodeTypes,
           fitView: shouldFitView,
+          minZoom: 0.05,
+          onInit: (instance) => { flowInstanceRef.current = instance; },
           // Clicking empty canvas is the graph losing focus, same as
           // clicking away from any open panel — close the detail panel.
-          // Node clicks stop propagation (see TaskNode) so this never
-          // fires for a click that's opening a different task instead.
+          // Node clicks stop propagation (see TaskNode and LaneHeaderNode)
+          // so this never fires for a click that's opening a task or
+          // toggling a lane instead.
           onPaneClick: () => setSelectedId(null),
         },
         h(Background, { color: '#21262d' }),
-        h(Controls, null),
+        // Both graph-navigation chrome, deliberately grouped in the same
+        // corner: MiniMap sits directly above Controls (its own `style`
+        // margin makes room) rather than each claiming `bottom-right`
+        // independently, which would silently overlap — ReactFlow renders
+        // same-position panel children stacked in DOM order, not
+        // auto-spaced apart.
+        isLargeGraph
+          ? h(MiniMap, {
+              pannable: true,
+              zoomable: true,
+              nodeColor: (n) => (n.type === 'task' ? (STATUS_STYLE[n.data.task.status] || STATUS_STYLE.proposed).border : 'transparent'),
+              maskColor: 'rgba(13, 17, 23, 0.75)',
+              style: { background: '#161b22', border: '1px solid #30363d', marginBottom: 44 },
+            })
+          : null,
+        h(Controls, { position: 'bottom-right' }),
       ),
       h(Legend),
       h(Footer),
-      h(DetailPanel, { task: selectedTask }),
+      h(DetailPanel, { task: selectedTask, chainActive: !!chainRootId && chainRootId === selectedId, onToggleChain: toggleChain }),
     );
   }
 
