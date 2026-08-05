@@ -55,7 +55,7 @@ The build order is encoded into the project. The AI does not have to remember wh
 Unlike stories and epics, **the graph locks build order** into an **signal-dense, context-light** path the agents can use.
 
 ```bash
-npx @skyf0xx/hedgehog graph
+npx @skyf0xx/hedgehog graph # show graph
 ```
 
 ![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.png)
