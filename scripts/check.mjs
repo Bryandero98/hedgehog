@@ -146,7 +146,9 @@ for (const core of ['full-stack-app', 'landing-page']) {
 //    and the db/hosts modules the CLI needs at runtime. ────────────────
 try {
   const raw = execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: ROOT, encoding: 'utf8' });
-  const [{ files: packed }] = JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+  // npm <12 prints a JSON array; npm >=12 prints an object keyed by package name.
+  const { files: packed } = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
   const packedSet = new Set(packed.map((f) => f.path));
   const required = [
     'bin/cli.mjs',
