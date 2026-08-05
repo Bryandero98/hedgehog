@@ -15,9 +15,16 @@ cli      — argv, output rendering, and the confirmation gate in front of apply
 
 ## Adaptation points
 
-- Merge `plan` into `apply` only for a tool that is genuinely fire-and-forget
-  (a one-shot bootstrap script) — and note that this gives up the dry-run
-  surface, which is the main reason to reach for this shape.
+- On the TypeScript substitute (a thin wrapper generating config/manifests
+  with no systems-level need), `provider` isn't a live target system —
+  there's no observed state to read, so `plan` and `apply` collapse into
+  one `render` layer producing the config/manifest text, and `provider`
+  drops entirely. The dry-run safety property below doesn't apply: the
+  tool's output *is* the printable, diffable artifact, so there's nothing
+  further to preview.
+- Merge `plan` into `apply` only for a Go-stack tool that is genuinely
+  fire-and-forget (a one-shot bootstrap script) — and note that this gives
+  up the dry-run surface, which is the main reason to reach for this shape.
 - Split `provider` per target (`provider/{module}`) when the tool spans
   several systems with independent auth and failure modes; keep one layer
   for a single target.
@@ -31,4 +38,6 @@ what a plan named. A tool that mutates during planning can't offer a
 trustworthy dry run, and dry run is the safety property this shape exists
 to provide — an infra tool without it is a script that edits production
 with no preview. `plan` must be printable and diffable on its own, with
-no credentials required beyond reading observed state.
+no credentials required beyond reading observed state. This boundary is
+moot on the TS/`render`-collapsed substitute above, where there's no live
+target to mutate in the first place.
