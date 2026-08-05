@@ -8,7 +8,7 @@
 // Run with `pnpm check`. Exits non-zero on any failure — wired into
 // publish.yml as a gate before `npm publish`.
 
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -109,6 +109,32 @@ for (const core of ['full-stack-app', 'landing-page']) {
     if (loaded.id !== core) fail(`${path}: id "${loaded.id}" != directory name "${core}"`);
   } catch (err) {
     fail(`${path}: failed to load — ${err.message}`);
+  }
+}
+
+// ── 5b. graph.html's JS/CSS deps are vendored locally, not fetched from
+//    a CDN — `hedgehog graph` must work with no internet connection. ───
+{
+  const graphHtmlPath = join(ROOT, 'src/templates/graph.html');
+  const graphHtml = await readFile(graphHtmlPath, 'utf8');
+  if (/https?:\/\//.test(graphHtml)) {
+    fail(`${graphHtmlPath}: references an external URL — vendor the asset under src/templates/vendor/ instead`);
+  }
+  const vendorDir = join(ROOT, 'src/templates/vendor');
+  const requiredVendorFiles = [
+    'react.production.min.js',
+    'react-dom.production.min.js',
+    'reactflow.umd.js',
+    'reactflow.css',
+    'dagre.min.js',
+  ];
+  for (const name of requiredVendorFiles) {
+    try {
+      const { size } = await stat(join(vendorDir, name));
+      if (size < 1000) fail(`src/templates/vendor/${name}: suspiciously small (${size} bytes) — likely a failed download`);
+    } catch {
+      fail(`src/templates/vendor/${name}: missing`);
+    }
   }
 }
 
