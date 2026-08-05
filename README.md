@@ -52,7 +52,7 @@ The build order is encoded into the project. The AI does not have to remember wh
 
 **Every task** Hedgehog generates **is a node** with explicit dependencies in sqlite.
 
-Unlike stories and epics, **the graph locks build order** into an **information-dense, context-light** path the agents can use.
+Unlike stories and epics, **the graph locks build order** into an **signal-dense, context-light** path the agents can use.
 
 ```bash
 npx @skyf0xx/hedgehog graph
