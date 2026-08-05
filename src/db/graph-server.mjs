@@ -15,6 +15,7 @@
 
 import { createServer } from 'node:http';
 import { readFile, writeFile, rm } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { buildGraph } from './graph.mjs';
 
@@ -31,6 +32,15 @@ if (!dbPath || !templatePath || !pidfilePath) {
 
 const template = await readFile(templatePath, 'utf8');
 
+// graph.html loads React/ReactFlow/dagre from here rather than a CDN, so
+// `hedgehog graph` works with no internet connection — vendored files
+// live alongside the template at src/templates/vendor/.
+const VENDOR_DIR = join(dirname(templatePath), 'vendor');
+const VENDOR_CONTENT_TYPES = {
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+};
+
 function loadGraphJson() {
   // Opened and closed per request rather than held open: DatabaseSync is
   // synchronous and local, so the cost is negligible, and it avoids ever
@@ -44,7 +54,33 @@ function loadGraphJson() {
   }
 }
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
+  if (req.url.startsWith('/vendor/')) {
+    // Reject traversal/query strings before touching the filesystem —
+    // the vendor set is fixed and flat, so anything else is not a file
+    // this route is meant to serve.
+    const name = req.url.slice('/vendor/'.length);
+    const dotIndex = name.lastIndexOf('.');
+    const ext = dotIndex === -1 ? '' : name.slice(dotIndex);
+    if (!name || name.includes('/') || name.includes('..') || !(ext in VENDOR_CONTENT_TYPES)) {
+      res.writeHead(404);
+      res.end('Not found');
+      return;
+    }
+    try {
+      const body = await readFile(join(VENDOR_DIR, name));
+      res.writeHead(200, {
+        'content-type': VENDOR_CONTENT_TYPES[ext],
+        'cache-control': 'no-store',
+      });
+      res.end(body);
+    } catch {
+      res.writeHead(404);
+      res.end('Not found');
+    }
+    return;
+  }
+
   if (req.url === '/graph.json') {
     let body;
     try {
