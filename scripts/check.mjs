@@ -113,12 +113,16 @@ for (const core of ['full-stack-app', 'landing-page']) {
 }
 
 // ── 5b. graph.html's JS/CSS deps are vendored locally, not fetched from
-//    a CDN — `hedgehog graph` must work with no internet connection. ───
+//    a CDN — `hedgehog graph` must work with no internet connection.
+//    Only checks <script src> and <link href> — the asset-loading
+//    surface — so an ordinary external link (e.g. a GitHub URL in page
+//    copy) doesn't false-positive. ──────────────────────────────────────
 {
   const graphHtmlPath = join(ROOT, 'src/templates/graph.html');
   const graphHtml = await readFile(graphHtmlPath, 'utf8');
-  if (/https?:\/\//.test(graphHtml)) {
-    fail(`${graphHtmlPath}: references an external URL — vendor the asset under src/templates/vendor/ instead`);
+  const ASSET_TAG = /<(?:script[^>]*\ssrc|link[^>]*\shref)=["'](https?:\/\/[^"']+)["']/g;
+  for (const m of graphHtml.matchAll(ASSET_TAG)) {
+    fail(`${graphHtmlPath}: loads an asset from "${m[1]}" — vendor it under src/templates/vendor/ instead`);
   }
   const vendorDir = join(ROOT, 'src/templates/vendor');
   const requiredVendorFiles = [
