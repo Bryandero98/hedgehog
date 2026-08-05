@@ -14,6 +14,7 @@
     "hedgehog": "bin/cli.mjs"
   },
   "scripts": {
+    "check": "node scripts/check.mjs",
     "release": "npm version patch -m \"chore: bump version to %s\""
   },
   "files": [
