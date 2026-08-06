@@ -39,10 +39,17 @@ turns out wrong is a `planner` decision through the Correction Protocol.
 ### The agents — delegate the judgment calls
 
 - **`planner`** — planning intake (which core applies, then the vendored
-  BMAD-METHOD shelf run in full and mined into intents) at project start,
-  and scoping when new work enters play. Owns `.hedgehog/BMAD/`,
-  `.hedgehog/core.yaml`, and `.hedgehog/core-design.md`. On first run,
-  hands off to the `bootstrap` agent once Confirm & Lock holds.
+  BMAD-METHOD shelf run in full and mined into intents) at project start.
+  Owns `.hedgehog/BMAD/`, `.hedgehog/core.yaml`, and
+  `.hedgehog/core-design.md`. On first run, hands off to the `bootstrap`
+  agent once Confirm & Lock holds. Runs again whenever new work enters
+  play — including after the build is complete — taking
+  `hedgehog-planning-intake`'s **Re-entry pass**: the BMAD shelf,
+  `hedgehog-core-design`, and `bootstrap` are all skipped, new scope is
+  mined into additional intents, and `hedgehog plan` compiles them
+  through the existing layer sequence without touching anything already
+  built. Changing the layer sequence itself is a Correction Protocol
+  case, not a re-entry pass.
 - **`bootstrap`** — runs `hedgehog-bootstrap-authored-core`'s steps.
   Triggered automatically by `planner` after its first run.
 - **`layer-eng`** — builds one layer per `hedgehog next` packet, working

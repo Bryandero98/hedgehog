@@ -31,10 +31,14 @@ steps from memory:
 - **`planner`** — planning intake (which core applies, then
   `hedgehog-planning-intake`'s BMAD-METHOD brainstorming/brief/PRD/UX-spec
   shelf, mined into intent records, the Add-ons decision, and domain
-  vocabulary) at project start, and module scoping when new scope enters
-  play. Writes intents via `hedgehog intent add`, `.hedgehog/addons.yaml`,
-  and `.hedgehog/BMAD/`. On first run, hands off to the `bootstrap` agent
-  once Confirm & Lock holds.
+  vocabulary) at project start. Writes intents via `hedgehog intent add`,
+  `.hedgehog/addons.yaml`, and `.hedgehog/BMAD/`. On first run, hands off
+  to the `bootstrap` agent once Confirm & Lock holds. Runs again whenever
+  new scope enters play — including after the build is complete — taking
+  `hedgehog-planning-intake`'s **Re-entry pass**: the BMAD shelf and
+  `bootstrap` are both skipped, new modules are mined into additional
+  intents, and `hedgehog plan` appends their tasks without touching
+  anything already built.
 - **`bootstrap`** — runs `hedgehog-bootstrap`'s core steps (always) plus
   whichever add-on steps planning intake turned on. Triggered
   automatically by `planner` after its first run; skip if `nx.json`

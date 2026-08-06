@@ -132,6 +132,11 @@ When a downstream layer reveals an upstream layer was wrong:
 4. The commit messages are the explanation.
 5. Resume the loop.
 
+The orchestrating session runs this protocol. A layer-owning agent that
+hits the problem reports it rather than correcting across layers: the
+commits at step 3 are the session's act, the same way `hedgehog verify`
+always is.
+
 Use `conventional-commits` when a correction touches several layers in
 one working-tree pass and needs splitting back into per-layer commits.
 
@@ -141,6 +146,25 @@ wrong place, a missing layer, a scope glob that never fits — that's a
 `.hedgehog/core-design.md` are locked, and changing them re-shapes every
 task the graph compiles. Stop, say what the design got wrong, and hand to
 `planner`.
+
+### Post-build entry
+
+The protocol also runs after a build has reached its Stop Condition, when
+a `tweaker` session finds that something structural is wrong rather than
+something small (`tweaker` routes it here). Steps 2, 3, and 4 are
+unchanged. The two ends differ:
+
+- There is nothing to **stop** — no task is in flight. Start by naming
+  which committed layer was wrong and what revealed it.
+- There is no loop to **resume**: every task is already `complete`, so
+  `hedgehog next` has nothing to emit. Return to the `tweaker` session
+  instead.
+
+Every task the correction touches is already `complete` and stays that
+way — a correction is fixed forward in new commits, never by reopening a
+finished task. Verify each patched layer with its own `verify` command
+from `.hedgehog/core.yaml`. Log the correction with `hedgehog friction
+add` so the next friction review sees what the build got wrong.
 
 ## Layer Transition Checks
 
@@ -179,6 +203,21 @@ wait.
 
 On the former (a real build completion, not an ambiguity stop), offer a
 fresh-context handoff before doing anything else: tell the user the build
-is complete, that clearing context now costs nothing (the build graph and
-the commit log hold everything), and that a `tweaker` session picks up
-post-build tweaks and friction review from a clean context.
+is complete, and that clearing context now costs nothing (the build graph
+and the commit log hold everything). Nothing gets deleted at completion —
+`.hedgehog/hedgehog.db` stays committed as the permanent record, and it's
+what makes the next session cheap.
+
+Name **both** ways forward, because which one applies depends on what the
+user wants next:
+
+- **Adjustments to what's built** — a `tweaker` session, which picks up
+  post-build tweaks and friction review from a clean context.
+- **New scope** — a new intent on the module axis, anything beyond
+  adjusting what exists — goes to `planner`, which runs
+  `hedgehog-planning-intake`'s Re-entry pass: it adds intents for the new
+  work without re-running planning from scratch, compiling them through
+  the layer sequence `.hedgehog/core.yaml` already defines, and without
+  disturbing anything already built. A completed build is extendable, not
+  sealed. Changing the **layer sequence itself** is the separate case
+  above — a Correction Protocol entry, not a re-entry pass.

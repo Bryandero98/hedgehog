@@ -86,17 +86,36 @@ consumes. Nothing checks a box — there is no checklist, only queryable
 state.
 
 **When the build is done:** once `hedgehog status` shows every task
-`complete`, the build session is complete. Offer the user a
-fresh-context handoff to the `tweaker` agent — it starts clean, once
-reviews the friction log (`hedgehog friction list`) for possible
-discipline-improvement issues and separately asks the user directly for
-feedback on the build, filing each real pattern or piece of feedback as
-its own GitHub issue against the Hedgehog repo itself, never this
-project's repo (friction as `bug`/`help wanted`, feedback as
-`suggestion`, each only after showing the exact content and getting
-explicit approval), then takes any tweak requests one at a time. Nothing
-to delete once that handoff is offered — the build graph and the commit
-log are the permanent record, not a checklist to clean up.
+`complete`, the build session is complete. Nothing gets deleted or
+cleaned up — the build graph and the commit log are the permanent record,
+and `.hedgehog/hedgehog.db` stays committed exactly as it is. That's what
+makes every later session cheap.
+
+A completed build is **extendable, not sealed**. Offer the user a
+fresh-context handoff, and name both ways forward:
+
+- **Adjustments to what's built** → the `tweaker` agent. It starts clean,
+  once reviews the friction log (`hedgehog friction list`) for possible
+  discipline-improvement issues and separately asks the user directly for
+  feedback on the build, filing each real pattern or piece of feedback as
+  its own GitHub issue against the Hedgehog repo itself, never this
+  project's repo (friction as `bug`/`help wanted`, feedback as
+  `suggestion`, each only after showing the exact content and getting
+  explicit approval), then takes any tweak requests one at a time.
+- **New scope** — a new module or feature, anything beyond adjusting what
+  exists → on a core with a module axis, the `planner` agent, which runs
+  `hedgehog-planning-intake`'s **Re-entry pass**. It reads the existing
+  planning archive as context and elicits only what's new, then adds
+  intents and runs `hedgehog plan`. This is append-only: `plan` skips
+  intents already compiled, so every `complete` task keeps its status and
+  its commits, and `hedgehog next` resumes at the first task of the new
+  work. Planning is not re-run from scratch, and the workspace is not
+  re-scaffolded. (This core's own section above states where new scope
+  goes if this core has no module axis to add an intent to.)
+
+If a request turns out to be structural rather than either of those —
+something already built is wrong at its source — that's the Correction
+Protocol's post-build entry, in this core's own loop skill.
 
 ## Managing context
 

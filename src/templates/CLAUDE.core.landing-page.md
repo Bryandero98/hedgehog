@@ -53,7 +53,16 @@ pinned icon source. Neither restates the other's decision.
   the `landing` intent (`hedgehog intent add`, one call — this core has
   no module axis), `.hedgehog/BMAD/`, and `.hedgehog/chain/00-brief.md`.
   On first run, hands off to the `bootstrap` agent once Confirm & Lock
-  holds.
+  holds. This core has no module axis for a later `planner` run to add an
+  intent to, so new scope after the build is complete doesn't return to
+  `planner` at all: a new section on a page whose subject, audience, and
+  job are unchanged (`.hedgehog/chain/00-brief.md` still holds) is
+  additive work inside the existing chain, routed to
+  `hedgehog-landing-loop`'s Correction Protocol post-build entry instead.
+  A different subject, audience, or job is a different page and belongs
+  in its own landing-page project; `00-brief.md` is never rewritten to
+  fit new scope, since it's the root every phase's traceability audit
+  walks back to.
 - **`bootstrap`** — runs `hedgehog-bootstrap-landing-page-core`'s steps.
   Triggered automatically by `planner` after its first run; skip if
   `astro.config.mjs` already exists.

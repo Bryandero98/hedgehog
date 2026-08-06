@@ -218,8 +218,32 @@ When a downstream step reveals an upstream step was wrong:
 4. The commit messages are the explanation.
 5. Resume the loop.
 
+The orchestrating session runs this protocol. A phase-owning agent that
+hits the problem reports it rather than correcting across steps: the
+commits at step 3 are the session's act, the same way `hedgehog verify`
+always is.
+
 Use `conventional-commits` when a correction touches several steps in one
 working-tree pass and needs splitting back into per-step commits.
+
+### Post-build entry
+
+The protocol also runs after a build has reached its Stop Condition, when
+a `tweaker` session finds that something structural is wrong rather than
+something small (`tweaker` routes it here). Steps 2, 3, and 4 are
+unchanged. The two ends differ:
+
+- There is nothing to **stop** — no task is in flight. Start by naming
+  which committed step was wrong and what revealed it.
+- There is no loop to **resume**: every task is already `complete`, so
+  `hedgehog next` has nothing to emit. Return to the `tweaker` session
+  instead.
+
+Every task the correction touches is already `complete` and stays that
+way — a correction is fixed forward in new commits, never by reopening a
+finished task. Verify each patched step by running that step's own verify
+command directly. Log the correction with `hedgehog friction add` so the
+next friction review sees what the build got wrong.
 
 ## Phase Transition Checks
 
@@ -233,7 +257,10 @@ Use the `reviewer` agent for this — it checks what the mechanical gate
 can't (port discipline, FK-by-ID discipline, contract shape).
 
 Before starting Phase A for a module, confirm it's inside the stated scope
-boundary from planning intake (`planner`). If not, stop and ask.
+boundary from planning intake (`planner`). If not, stop and ask — and if
+the answer is that the scope really should grow, that's `planner`'s
+Re-entry pass, which adds it to the graph properly. Don't build a module
+the graph doesn't have a task for.
 
 ## Rules
 
@@ -264,10 +291,23 @@ question and wait.
 
 On the former (a real build completion, not an ambiguity stop), offer a
 fresh-context handoff before doing anything else: tell the user the
-build is complete, that clearing context now costs nothing (the build
-graph and the commit log hold everything), and that a `tweaker` session
-is the right next step for any adjustments — it starts clean, reviews
-the friction log (`hedgehog friction list`) once for a possible
-discipline-improvement suggestion, and takes tweak requests one at a
-time from there. Don't start making tweaks in the current, already-large
-context; that's what the fresh session is for.
+build is complete, and that clearing context now costs nothing (the
+build graph and the commit log hold everything). Nothing gets deleted at
+completion — `.hedgehog/hedgehog.db` stays committed as the permanent
+record, and it's what makes the next session cheap.
+
+Name **both** ways forward, because which one applies depends on what the
+user wants next:
+
+- **Adjustments to what's built** — a `tweaker` session. It starts clean,
+  reviews the friction log (`hedgehog friction list`) once for a possible
+  discipline-improvement suggestion, and takes tweak requests one at a
+  time from there.
+- **New scope** — a new module, a new feature, anything beyond adjusting
+  what exists — goes to `planner`, which runs
+  `hedgehog-planning-intake`'s Re-entry pass: it adds intents for the new
+  work without re-running planning from scratch, and without disturbing
+  anything already built. A completed build is extendable, not sealed.
+
+Don't start making tweaks or planning new scope in the current,
+already-large context; that's what the fresh session is for.

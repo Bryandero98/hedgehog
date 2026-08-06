@@ -1,6 +1,6 @@
 ---
 name: hedgehog-planning-intake
-description: Use once per project, at the start, on any core — Phase 0 (running the vendored BMAD-METHOD planning shelf) is shared by every core; Phase 1 (mining `04-prd.md` into intent records plus the Add-ons decision) is full-stack-app's own procedure, run again on a scoped pass when new domain scope enters play. Invoked by the `planner` agent after Phase 0 core selection; don't run standalone. landing-page runs this skill's Phase 0, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1. An authored core runs this skill's Phase 0, then `hedgehog-core-design`, then this skill's Phase 1 mining against the designed layer sequence.
+description: Use on any core for first-run planning intake — Phase 0 runs the vendored BMAD-METHOD planning shelf, shared by every core, and Phase 1 (mining `04-prd.md` into intent records plus the Add-ons decision) is full-stack-app's own procedure. Also use for the Re-entry pass, which mines new scope into additional intents without re-running the shelf, on any core with a module axis to add an intent to (full-stack-app, authored) — landing-page has none, so its own new-scope path runs through `hedgehog-landing-loop`'s Correction Protocol instead. Invoked by the `planner` agent, which decides the path; don't run standalone. landing-page runs this skill's Phase 0 on first run, then mines the same archive through `hedgehog-landing-loop`'s own planning-intake section, that core's counterpart to this skill's Phase 1. An authored core runs this skill's Phase 0, then `hedgehog-core-design`, then this skill's Phase 1 mining against the designed layer sequence.
 ---
 
 # Hedgehog Planning Intake
@@ -17,11 +17,25 @@ Lock either way) belongs to `planner`; this skill (Phase 0, and Phase 1 on
 full-stack-app) and `hedgehog-landing-loop` (landing-page's own mining)
 are the fixed procedures that judgment runs inside.
 
-## Phase 0 — BMAD elicitation (every core)
+That shelf run is a **first run**, once per project. When new scope
+enters play later on a core with a module axis (full-stack-app,
+authored), `planner` runs the **Re-entry pass** at the end of this file
+instead: it reads the existing archive as context and elicits only what's
+new, adding intents to a graph that keeps everything already built.
+Landing-page has no module axis for this pass to add an intent to; its
+own new-scope path runs through `hedgehog-landing-loop`'s Correction
+Protocol post-build entry instead — see that skill, not this one.
+
+## Phase 0 — BMAD elicitation (every core, first run only)
+
+Phase 0 and Phase 1 below are the **first run** — a project whose build
+graph holds no intents yet. When the graph already holds intents, run the
+**Re-entry pass** at the end of this file instead; the shelf does not run
+twice on one project.
 
 State the BMAD attribution, then run the vendored shelf in full
-sequence, every time — no per-project skip logic, no reduced default
-set:
+sequence — on a first run there is no per-project skip logic and no
+reduced default set:
 
 1. `bmad-brainstorming` (`skills/BMAD/core-skills/bmad-brainstorming`) —
    diverge on the idea before locking anything.
@@ -124,13 +138,10 @@ Procedure:
    comment block at the top of that file. Leave every other line
    untouched.
 
-On a later run (new scope entering play), skip steps 8 and 9 unless new
-scope genuinely changes an add-on trigger or the project's identity
-itself changed — mine only the PRD's new or changed Features into
-additional `hedgehog intent add` calls, never re-add or edit an intent
-already in the graph.
+This is the first-run sequence. New scope entering play later runs the
+**Re-entry pass** below, which has its own steps.
 
-## Confirm & Lock
+## Confirm & Lock (first run)
 
 Everything through Phase 1 mining is provisional and cheap to change —
 nothing has been written yet. This stage is the last point before that
@@ -159,3 +170,99 @@ pass — update the draft, re-run this stage, don't write anything until
 the confirmation holds. Once confirmed, after every `hedgehog intent add`
 call lands, run `hedgehog status` and show it in full as the graph's
 confirmation view.
+
+## Re-entry pass — new scope on an existing project (full-stack-app, authored core)
+
+Runs when `planner`'s Workflow step 2 finds intents already in the graph,
+on a core with a module axis to add an intent to: new scope entering play
+on a project that's already been built or is mid-build. Landing-page has
+no module axis — its equivalent runs through
+`hedgehog-landing-loop`'s Correction Protocol post-build entry, not this
+pass. Adding one module is not a reason to re-interview a project from
+scratch, so **the BMAD shelf does not run again** and `.hedgehog/BMAD/`
+is not rewritten — it's read as context, exactly the historical-record
+relationship Phase 0 describes.
+
+This works because the graph is append-only by construction:
+`hedgehog plan` only compiles intents still `proposed`/`planned`, and
+skips any intent whose tasks already exist. Adding scope cannot disturb
+work already done — completed tasks keep their `complete` status and
+their commits.
+
+1. **Read `.hedgehog/BMAD/` for context**, chiefly `02-brief.md` and
+   `04-prd.md` — what this project is, and what its existing vocabulary
+   calls things. Read-only. The new scope has to sit inside the same
+   product and reuse its terms; you're extending a project, not starting
+   a neighbouring one.
+2. **Read the existing graph**: `hedgehog status` for what's built, and
+   the existing intent ids for the vocabulary already in play. New scope
+   names must not collide with an existing intent id.
+3. **Elicit only what's new.** A short, scoped set of questions — not a
+   full interview:
+   - What is the new scope, in the project's own vocabulary?
+   - Which entities/tables does it introduce? On full-stack-app each
+     table is its own module, same rule as Phase 1.
+   - What does it depend on that already exists? Each answer becomes a
+     `--depends-on` onto an existing intent.
+   - What has to be true for it to be done? Each answer becomes an
+     `--acceptance` row.
+   - Any cross-cutting rule scoped to this new module specifically (not a
+     project-wide NFR)? Each answer becomes a `--rule` row — same as
+     Phase 1 step 3, asked here only if the new scope actually has one.
+
+   If the answers reveal this isn't new scope at all but a change to
+   something already built, stop: that's the Correction Protocol, not an
+   extension.
+4. **Check whether any add-on trigger actually changed** (full-stack-app).
+   Usually none has. Only if the new scope genuinely introduces one — the
+   first accounts in a project that had none, the first long-running job —
+   edit `.hedgehog/addons.yaml`, and say plainly that turning an add-on on
+   after bootstrap needs its Bootstrap step run before anything depends on
+   it. Never rewrite root `CLAUDE.md`'s `{{PROJECT_NAME}}`/
+   `{{PROJECT_SUMMARY}}` placeholders here; they describe the project,
+   which hasn't changed.
+5. **Run Confirm & Lock (extension)** below.
+6. **Write the new intents** via `hedgehog intent add`, one call per new
+   module, then run **`hedgehog plan`**. Never re-add or edit an intent
+   already in the graph. `plan` reports one compiled line per new intent
+   and nothing else — intents already built are `active`/`complete`, so
+   `plan` never even reads them. If it reports compiling something you
+   didn't just add, stop: an existing intent was edited by mistake.
+7. **Show `hedgehog status` in full**, then hand to this core's loop
+   skill; `hedgehog next` now emits the first task of the new work.
+
+`planner` commits this pass as `chore(planning): extend scope` — distinct
+from `chore(planning): intake` on a first run, so the two are
+distinguishable in the log.
+
+**Dependency direction is forward only.** A new intent may depend on an
+existing one — the edge lands on that intent's last layer, so the new
+chain is ready immediately when the upstream module is already complete.
+An existing intent can never be made to depend on a new one: those edges
+are written when the depending intent compiles, and that already
+happened. If new scope genuinely needs to sit *underneath* something
+already built, that's a Correction Protocol case, not a re-entry.
+
+### Confirm & Lock (extension)
+
+Same hard stop as the first-run stage, showing what's actually different.
+
+🔒 **Confirm & Lock**. Show, in full, not condensed:
+
+- Each **new** intent about to be added: `id`, `goal`, `outcome`, its
+  `requirements`, and its `depends_on` list — naming which existing
+  modules those dependencies point at.
+- The existing intents, named, stated explicitly as untouched.
+- Any add-on change from step 4, or "no add-on triggers changed."
+
+Then state plainly what happens on confirmation, before it happens:
+
+> This adds the intents above via `hedgehog intent add`, then compiles
+> them with `hedgehog plan`. Existing work is untouched: `plan` skips
+> intents already compiled, and every `complete` task keeps its status.
+> The build resumes at the first task of the new scope. Anything wrong or
+> missing — say so now; it's a normal edit before this point, and a
+> Correction Protocol entry after. Confirm to proceed, or tell me what to
+> change.
+
+Wait for an explicit go-ahead, same as the first-run stage.

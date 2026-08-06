@@ -54,10 +54,27 @@ discipline as the rest of the build (`fix(<scope>): <what>` or
 
 A tweak is a small, targeted edit to something that already exists —
 not a new module, not a new phase, not scope growth. If a request turns
-out to be either of those, say so and route it back to `planner`
-(full-stack-app: new scope entering play; landing-page: a new page or
-section is its own planning pass; authored core: new scope, or a change
-to the layer sequence itself) rather than absorbing it here.
+out to be either of those, say so and route it onward — a completed
+build is extendable, not sealed, and the user should not hear "no" where
+the answer is "that's a different session." Where it routes depends on
+the core:
+
+- **full-stack-app** — a new domain module, or a feature that needs one,
+  routes to `planner`, which runs `hedgehog-planning-intake`'s
+  **Re-entry pass**: it adds intents for the new work without re-running
+  planning from scratch, and without disturbing anything already built.
+- **authored core** — new scope on the module axis routes to `planner`'s
+  Re-entry pass the same way. A change to the layer sequence itself is
+  the Correction Protocol instead (`.hedgehog/core.yaml` is locked).
+- **landing-page** — the test is whether `.hedgehog/chain/00-brief.md`
+  still holds. This core has no module axis, so a new section under a
+  brief that still holds does **not** route to `planner` — it routes to
+  the Correction Protocol's post-build entry (this core's own loop skill),
+  which re-runs the sequencer and copy phases for that section and
+  rebuilds the artifact. A different subject, audience, or job is a
+  different page and belongs in its own landing-page project — say so
+  rather than routing it, and never rewrite `00-brief.md` to fit new
+  scope into the old chain.
 
 ### Job 2 — Friction review, user feedback, and issue suggestion
 
@@ -201,8 +218,12 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   never treated as approval for another.
 - Every tweak is its own commit, scoped to what the user actually asked
   for — no drive-by refactor riding along on a color change.
-- A request that's actually new scope (a new module, a new page section)
-  was routed back to `planner`, not built here.
+- A request that's actually new scope (a new module on full-stack-app or
+  an authored core, or a new landing-page section whose subject
+  statement still holds) was routed onward — to `planner`'s Re-entry
+  pass, or on landing-page to the Correction Protocol's post-build entry
+  — not built here, and the user was told the build is extendable, not
+  that the request was refused.
 
 ## Constraints
 
@@ -242,8 +263,13 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   write-once per row, same as `.hedgehog/BMAD/`.
 - Don't expand a tweak into a rebuild. If a "tweak" actually requires
   redoing a phase (e.g. the voice spec itself needs to change, not just
-  one line of copy), that's the Correction Protocol, run by the owning
-  agent — say so and route it there rather than patching around it here.
+  one line of copy), that's the Correction Protocol — say so and route it
+  there rather than patching around it here. Use its **post-build entry**
+  (in this core's own loop skill): the build is already at its Stop
+  Condition, so there's no task in flight to stop and no loop to resume,
+  and the correction is fixed forward in new commits rather than by
+  reopening a `complete` task. The orchestrating session runs it and owns
+  the commits, the same way `hedgehog verify` always is.
 - Don't run job 2's friction detection against anything other than
   `hedgehog friction list` — don't re-scan the whole commit log or
   conversation history looking for friction; if it wasn't logged, it
