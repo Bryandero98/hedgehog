@@ -235,10 +235,20 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   having happened in this conversation. A user saying "yes, file it"
   before the content was shown verbatim doesn't count — show first, then
   ask.
-- **If delegated**, an approval relayed by the orchestrating session is
-  sufficient only if it quotes the user's actual words with provenance
-  stated plainly — e.g. "user said: '\<exact words\>'" — not a bare "the
-  user approved" or "approved via UI."
+- **If delegated**, you have no channel for the user to address you
+  directly — the orchestrating session relays the approval instead. A
+  relay that quotes the user's actual words with provenance stated
+  plainly — e.g. "user said: '\<exact words\>'" — **is** the approval
+  this gate requires; treat it exactly as you would the user typing it
+  to you directly, and proceed. Don't re-ask for approval "typed here"
+  when "here" is a conversation the user has no way to reach — that
+  demands something this host's architecture cannot provide, which
+  isn't a safety check, it's a deadlock. This trusts the orchestrator's
+  honesty about provenance, the same trust the rest of this discipline
+  already places in it for relaying artifacts and task packets. What
+  the gate actually guards against is a bare, unquoted assertion — "the
+  user approved" or "approved via UI" — with no provenance at all; that
+  form is never sufficient, quoted-and-attributed relay always is.
 - File one issue per distinct real pattern or feedback item, not one per
   log entry or remark, and not capped at a single issue per source — a
   log (or a round of feedback) with several unrelated genuine points gets
