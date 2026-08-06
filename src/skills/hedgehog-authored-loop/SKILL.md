@@ -100,18 +100,9 @@ Three hold on every authored core regardless of stack:
 
 ## Friction log
 
-Real friction during a build — an agent's instructions were unclear, a
-redline had to be issued twice for the same underlying gap, the user had
-to correct the same kind of mistake more than once, or user feedback
-implied something was wrong even without a direct correction — is signal
-worth keeping past this session, separate from the Correction Protocol
-that fixes it in the moment. Log one entry via `hedgehog friction add
-"<note>" [--task <task-id>]` when that happens: what was tried, what went
-wrong or was implied, why if visible, and the commit/message it traces
-to, all in the note text; pass `--task` with the layer's task id when the
-friction traces to one. This is a log, not a todo list — don't let it
-block or slow the Loop; log and keep moving. `tweaker` reads it (via
-`hedgehog friction list`) once the build reaches its Stop Condition.
+Same mechanic as `hedgehog-loop`'s Friction log — log real friction via
+`hedgehog friction add "<note>" [--task <task-id>]`, `tweaker` reads it at
+the Stop Condition.
 
 An authored core's own layer sequence is a live subject for this log: a
 layer that keeps needing scope it doesn't have, or two layers that are
@@ -120,25 +111,14 @@ Correction Protocol resolves the immediate case.
 
 ## Correction Protocol
 
-When a downstream layer reveals an upstream layer was wrong:
-
-1. Stop.
-2. Patch the upstream layer directly, in place.
-3. Fast-forward every dependent layer that breaks, each its own small
-   commit. If the patched layer produces a build artifact that downstream
-   layers or a running dev process consume (a compiled package, a
-   generated client, a bundled asset), rebuild it before re-verifying —
-   an unbuilt patch looks unchanged to anything reading the built output.
-4. The commit messages are the explanation.
-5. Resume the loop.
-
-The orchestrating session runs this protocol. A layer-owning agent that
-hits the problem reports it rather than correcting across layers: the
-commits at step 3 are the session's act, the same way `hedgehog verify`
-always is.
-
-Use `conventional-commits` when a correction touches several layers in
-one working-tree pass and needs splitting back into per-layer commits.
+Same 5-step mechanic as `hedgehog-loop`'s Correction Protocol (stop, patch
+the upstream layer in place, fast-forward every dependent layer as its own
+commit, commit messages as the explanation, resume the loop) — read that
+skill's version for the full statement. One difference: if the patched
+layer produces a build artifact that downstream layers or a running dev
+process consume (a compiled package, a generated client, a bundled
+asset), rebuild it before re-verifying — an unbuilt patch looks unchanged
+to anything reading the built output.
 
 When the correction is to the **layer sequence itself** — a layer in the
 wrong place, a missing layer, a scope glob that never fits — that's a
@@ -149,22 +129,11 @@ task the graph compiles. Stop, say what the design got wrong, and hand to
 
 ### Post-build entry
 
-The protocol also runs after a build has reached its Stop Condition, when
-a `tweaker` session finds that something structural is wrong rather than
-something small (`tweaker` routes it here). Steps 2, 3, and 4 are
-unchanged. The two ends differ:
-
-- There is nothing to **stop** — no task is in flight. Start by naming
-  which committed layer was wrong and what revealed it.
-- There is no loop to **resume**: every task is already `complete`, so
-  `hedgehog next` has nothing to emit. Return to the `tweaker` session
-  instead.
-
-Every task the correction touches is already `complete` and stays that
-way — a correction is fixed forward in new commits, never by reopening a
-finished task. Verify each patched layer with its own `verify` command
-from `.hedgehog/core.yaml`. Log the correction with `hedgehog friction
-add` so the next friction review sees what the build got wrong.
+Same shape as `hedgehog-loop`'s Post-build entry — `tweaker` routes here
+for something structural, there's no task to stop and no loop to resume
+(return to `tweaker` instead), every touched task stays `complete` and is
+fixed forward in new commits. Verify each patched layer with its own
+`verify` command from `.hedgehog/core.yaml`.
 
 ## Layer Transition Checks
 
@@ -196,39 +165,22 @@ the ones that were designed.
 
 ## Stop Condition
 
-A build session ends when `hedgehog status` shows every task `complete`
-(on a module axis: every intent through every layer), or when scope is
-ambiguous enough that continuing means guessing — ask one question and
-wait.
+Same fresh-context handoff as `hedgehog-loop`'s Stop Condition (offer it
+once every task is `complete` or scope is genuinely ambiguous; nothing
+gets deleted, `.hedgehog/hedgehog.db` stays committed; a `tweaker` session
+in a *new* chat window handles adjustments, using the same paste-in
+prompt that skill's Stop Condition gives). On a module axis, "every task
+complete" means every intent through every layer, not the last layer
+completed once.
 
-On the former (a real build completion, not an ambiguity stop), offer a
-fresh-context handoff before doing anything else: tell the user the build
-is complete, and that clearing context now costs nothing (the build graph
-and the commit log hold everything). Nothing gets deleted at completion —
-`.hedgehog/hedgehog.db` stays committed as the permanent record, and it's
-what makes the next session cheap.
+**New scope** — a new intent on the module axis, anything beyond
+adjusting what exists — goes to `planner`, which runs
+`hedgehog-planning-intake`'s Re-entry pass: it adds intents for the new
+work without re-running planning from scratch, compiling them through
+the layer sequence `.hedgehog/core.yaml` already defines, and without
+disturbing anything already built. A completed build is extendable, not
+sealed. Changing the **layer sequence itself** is the separate case
+above — a Correction Protocol entry, not a re-entry pass.
 
-Name **both** ways forward, because which one applies depends on what the
-user wants next:
-
-- **Adjustments to what's built** — a `tweaker` session, in a *new* chat
-  window, not a subagent call inside this one — this session's context
-  has been building the whole project and is exactly what "clearing
-  context now costs nothing" above means to discard. Tell the user
-  plainly: close this chat window and open a new one, then paste this to
-  start it:
-
-  > The build is complete. Use the tweaker agent: first review the
-  > friction log and ask me for feedback on the build, then take my
-  > tweak requests one at a time.
-
-  In the new window, `tweaker` picks up post-build tweaks and friction
-  review from a clean context.
-- **New scope** — a new intent on the module axis, anything beyond
-  adjusting what exists — goes to `planner`, which runs
-  `hedgehog-planning-intake`'s Re-entry pass: it adds intents for the new
-  work without re-running planning from scratch, compiling them through
-  the layer sequence `.hedgehog/core.yaml` already defines, and without
-  disturbing anything already built. A completed build is extendable, not
-  sealed. Changing the **layer sequence itself** is the separate case
-  above — a Correction Protocol entry, not a re-entry pass.
+Don't start making tweaks or planning new scope in the current,
+already-large context; that's what the fresh session is for.

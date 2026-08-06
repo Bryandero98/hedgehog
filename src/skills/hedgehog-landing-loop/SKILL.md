@@ -187,72 +187,52 @@ Protocol.
 
 ## Friction log
 
-Real friction during a build — a phase's instructions were unclear,
-`landing-critic` had to redline the same underlying gap more than once,
-the user had to correct the same kind of mistake more than once, or
-user feedback implied something was wrong even without a direct
-correction (a preference stated once that, read plainly, means an
-earlier phase missed something) — is signal worth keeping past this
-session, separate from the Correction Protocol that fixes it in the
-moment. Log one entry via `hedgehog friction add "<note>" [--task
-<task-id>]` when that happens: what was tried, what went wrong or was
-implied, why if visible, and the commit/redline it traces to, all in the
-note text; pass `--task` with the compiled layer's task id when the
-friction traces to one. This is a log, not a todo list — don't let it
-block or slow the loop; log and keep moving. `tweaker` reads it (via
-`hedgehog friction list`) once the build reaches its Stop Condition.
+Same mechanic as `hedgehog-loop`'s Friction log — log real friction (a
+phase's instructions unclear, `landing-critic` redlining the same
+underlying gap twice, a repeated user correction) via `hedgehog friction
+add "<note>" [--task <task-id>]`, `tweaker` reads it at the Stop
+Condition.
 
 ## Correction Protocol
 
-When a downstream phase reveals an upstream phase was wrong — most often
-`landing-critic` redlining something that doesn't trace back to the
-subject statement, or matches a known AI-default cluster:
+Same core mechanic as `hedgehog-loop`'s Correction Protocol (stop, patch
+the upstream step in place, fast-forward every dependent step as its own
+commit, commit messages as the explanation, resume the loop), triggered
+most often by `landing-critic` redlining something that doesn't trace
+back to the subject statement or matches a known AI-default cluster. Two
+differences for this core:
 
-1. Stop.
-2. Patch the upstream phase directly, in place, via that phase's owning
-   agent.
-3. Fast-forward every dependent phase that breaks. A token system change
-   (phase 6) ripples through the signature element (7), the sequence
-   (8), the headline (9, if the voice spec shifted) and every locked
-   section of copy (10, re-run per affected section, not the whole phase
-   over again), and the build (12) — each gets its own small commit, in
-   order, not one bundled fix.
-4. Re-run `landing-critic` against the patched chain before resuming.
-5. The commit messages are the explanation.
-6. Resume the loop.
+- **Fast-forwarding ripples further.** A token system change (phase 6)
+  ripples through the signature element (7), the sequence (8), the
+  headline (9, if the voice spec shifted) and every locked section of
+  copy (10, re-run per affected section, not the whole phase over again),
+  and the build (12) — each its own small commit, in order.
+- **Re-run `landing-critic` against the patched chain before resuming** —
+  an extra step this core adds, since traceability is what the whole
+  chain rests on.
 
 The orchestrating session runs this protocol and owns every commit in it.
-A phase agent re-runs its own phase at step 2 when the patch is to that
-phase's artifact, but most of these agents carry no `Bash` tool at all
-(`capabilities.mjs`), so the commits at step 3 are always the session's
-act — the same way `hedgehog verify` always is.
+A phase agent re-runs its own phase when the patch is to that phase's
+artifact, but most of these agents carry no `Bash` tool at all
+(`capabilities.mjs`), so the commits are always the session's act — the
+same way `hedgehog verify` always is.
 
 Use `conventional-commits` when a correction touches several phases in
 one working-tree pass and needs splitting back into per-phase commits.
 
 ### Post-build entry
 
-The protocol also runs after a build has reached its Stop Condition, for
-two distinct reasons `tweaker` or the Stop Condition above routes here:
-something structural is wrong rather than small (the voice spec itself
-rather than one line of copy), or new scope is genuinely additive but has
-nowhere else to go — a new section under a brief that still holds, since
-this core has no module axis for `planner`'s Re-entry pass to add an
-intent to. Either way, steps 2 through 5 are unchanged; only step 2's
-"patch" reads as "add" in the additive case. The two ends differ:
-
-- There is nothing to **stop** — no task is in flight. Start by naming
-  which committed phase was wrong and what revealed it.
-- There is no loop to **resume**: every task is already `complete`, so
-  `hedgehog next` has nothing to emit. Return to the `tweaker` session
-  instead.
-
-Every task the correction touches is already `complete` and stays that
-way — a correction is fixed forward in new commits, never by reopening a
-finished task. Step 4 still holds: re-run `landing-critic` against the
-patched chain before handing back, since traceability is what the whole
-core rests on. Log the correction with `hedgehog friction add` so the
-next friction review sees what the build got wrong.
+Same shape as `hedgehog-loop`'s Post-build entry — no task to stop, no
+loop to resume (return to `tweaker` instead), every touched task stays
+`complete` and is fixed forward in new commits. This core routes here for
+two distinct reasons: something structural is wrong rather than small
+(the voice spec itself rather than one line of copy), or new scope is
+genuinely additive but has nowhere else to go — a new section under a
+brief that still holds, since this core has no module axis for
+`planner`'s Re-entry pass to add an intent to. Either way, the protocol's
+"patch" step reads as "add" in the additive case, and re-running
+`landing-critic` against the patched chain still holds before handing
+back, since traceability is what the whole core rests on.
 
 ## Phase Transition Checks
 
@@ -337,54 +317,35 @@ procedure:
 
 ## Stop Condition
 
-A build session ends when `hedgehog status` shows the `artifact` task
-`complete` (`landing-builder`'s artifact is committed and every task in
-the chain is done), or when the subject statement or an adjective is
-ambiguous enough that continuing means guessing — ask one question and
-wait.
+Same fresh-context handoff as `hedgehog-loop`'s Stop Condition (offer it
+once the `artifact` task is `complete` — every task in the chain done —
+or the subject statement or an adjective is genuinely ambiguous; nothing
+gets deleted, `.hedgehog/hedgehog.db` stays committed; a `tweaker` session
+in a *new* chat window handles adjustments, using the same paste-in
+prompt that skill's Stop Condition gives).
 
-On the former (a real build completion, not an ambiguity stop), offer a
-fresh-context handoff before doing anything else: tell the user the
-build is complete, and that clearing context now costs nothing (the
-build graph and the commit log hold everything). Nothing gets deleted at
-completion — `.hedgehog/hedgehog.db` stays committed as the permanent
-record, and it's what makes the next session cheap.
+**New scope** — anything beyond adjusting what exists — and on this
+core the deciding question is whether `.hedgehog/chain/00-brief.md`
+still holds:
 
-Name **both** ways forward, because which one applies depends on what the
-user wants next:
+- **It holds** (a new section on a page whose subject, audience, and
+  job are unchanged): this core has no module axis to add an intent
+  to — the `landing` intent already compiles into the fixed five-phase
+  chain, and a section is new content inside phases already `complete`,
+  not a new graph row. Route it to the Correction Protocol's post-build
+  entry instead of `planner`: re-run `landing-sequencer` to place the
+  new section in the beat structure, then `landing-headline-writer` and
+  `landing-copywriter` for that section only, `landing-critic` against
+  the full patched chain, then `landing-builder` to rebuild the
+  artifact — each its own small commit, same as any other correction.
+- **It doesn't hold** (a different subject, audience, or job): that's a
+  different page, and belongs in its own landing-page project via
+  `planner`'s first run there, not an edit to this one's locked brief.
+  Never rewrite `00-brief.md` to accommodate new scope — it's the root
+  every phase's traceability audit walks back to.
 
-- **Adjustments to what's built** — a `tweaker` session, in a *new* chat
-  window, not a subagent call inside this one — this session's context
-  has been building the whole page and is exactly what "clearing context
-  now costs nothing" above means to discard. Tell the user plainly:
-  close this chat window and open a new one, then paste this to start
-  it:
-
-  > The build is complete. Use the tweaker agent: first review the
-  > friction log and ask me for feedback on the build, then take my
-  > tweak requests one at a time.
-
-  In the new window, `tweaker` starts clean, reviews the friction log
-  (`hedgehog friction list`) once for a possible discipline-improvement
-  suggestion, and takes tweak requests one at a time from there.
-- **New scope** — anything beyond adjusting what exists — and on this
-  core the deciding question is whether `.hedgehog/chain/00-brief.md`
-  still holds:
-  - **It holds** (a new section on a page whose subject, audience, and
-    job are unchanged): this core has no module axis to add an intent
-    to — the `landing` intent already compiles into the fixed five-phase
-    chain, and a section is new content inside phases already `complete`,
-    not a new graph row. Route it to the Correction Protocol's post-build
-    entry instead of `planner`: re-run `landing-sequencer` to place the
-    new section in the beat structure, then `landing-headline-writer` and
-    `landing-copywriter` for that section only, `landing-critic` against
-    the full patched chain, then `landing-builder` to rebuild the
-    artifact — each its own small commit, same as any other correction.
-  - **It doesn't hold** (a different subject, audience, or job): that's a
-    different page, and belongs in its own landing-page project via
-    `planner`'s first run there, not an edit to this one's locked brief.
-    Never rewrite `00-brief.md` to accommodate new scope — it's the root
-    every phase's traceability audit walks back to.
+Don't start making tweaks or planning new scope in the current,
+already-large context; that's what the fresh session is for.
 
 Don't start making tweaks or planning new scope in the current,
 already-large context; that's what the fresh session is for.
