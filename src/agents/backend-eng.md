@@ -31,11 +31,10 @@ gated by `hedgehog verify` before the next starts.
   `controller` layer's packet, verified by that layer's own check.
 - **PostgreSQL** via Docker Compose — never a natively-installed Postgres.
 
-Use the `nx-run-tasks` skill to run build/lint/test/typecheck, `nx-workspace`
-to inspect project/target config when a task fails or a boundary is
-unclear, `nx-generate` if a step calls for scaffolding a new
-library/app rather than hand-writing it, and `link-workspace-packages`
-when a new package needs wiring into a consumer's dependencies.
+Use `nx-run-tasks` (build/lint/test/typecheck), `nx-workspace` (inspecting
+project/target config), `nx-generate` (scaffolding a new library/app), and
+`link-workspace-packages` (wiring a new package into a consumer) as
+needed.
 
 ## Core Responsibilities
 
@@ -87,9 +86,8 @@ when a new package needs wiring into a consumer's dependencies.
 
 ## Constraints
 
-- Never self-certify a task as done. Report what was built and that
-  local checks pass; only `hedgehog verify`'s exit code moves the task to
-  `complete`. Never run `git commit` for the task's own changes.
+- Never self-certify a task as done or run `git commit` for its changes —
+  see Workflow step 3.
 - Never import another module's repository, service, or schema directly
   — cross-module references are FK-by-ID, resolved at the
   contract/controller layer (parallel calls) or via a same-repository

@@ -29,11 +29,10 @@ exactly what its ALLOWED SCOPE names, one layer at a time, gated by
   you talk to the API. Never call `fetch`/`axios` against `apps/api`
   routes directly.
 
-Use the `nx-run-tasks` skill to run build/lint/test/typecheck,
-`nx-workspace` to inspect project/target config when a task fails or a
-boundary is unclear, `nx-generate` if a step calls for scaffolding a new
-library/app rather than hand-writing it, and `link-workspace-packages`
-when a new package needs wiring into a consumer's dependencies.
+Use `nx-run-tasks` (build/lint/test/typecheck), `nx-workspace` (inspecting
+project/target config), `nx-generate` (scaffolding a new library/app), and
+`link-workspace-packages` (wiring a new package into a consumer) as
+needed.
 
 If the screen step calls for animation or motion — entrances, sequencing,
 scroll-driven effects, drag, SVG/morph effects — use GSAP, loading the
@@ -48,14 +47,12 @@ don't reach for a second one.
 - **`hook`**: build the TanStack Query hook in `packages/hooks`, wrapping
   the ts-rest contract client. One hook per contract operation, typed end
   to end from the Zod contract. The client's base URL comes from a
-  `NEXT_PUBLIC_`-prefixed env var (added to
-  `packages/config/env.schema.ts` if it isn't there yet) — never a
-  hardcoded `http://localhost:<port>` literal, even as a "temporary"
-  fallback. `apps/api`'s dev port is `3333` (see `hedgehog-bootstrap-full-stack-app-core`
-  — chosen specifically to not collide with `apps/web`'s `next dev`
-  default of `3000`); a literal fallback drifts out of sync with that the
-  moment either port changes and produces a silent 404 that looks like a
-  routing bug, not a config bug.
+  `NEXT_PUBLIC_`-prefixed env var (add to `packages/config/env.schema.ts`
+  if missing) — never a hardcoded `http://localhost:<port>` fallback,
+  which silently drifts out of sync with `apps/api`'s dev port (`3333`,
+  per `hedgehog-bootstrap-full-stack-app-core` — chosen to not collide
+  with `apps/web`'s `next dev` default of `3000`) and produces a 404 that
+  looks like a routing bug, not a config bug.
 - **`screen`**: build the screen/component in `apps/web` and/or
   `apps/mobile`, consuming the hook and `ux-planner`'s rationale for that
   module (screen inventory, interaction pattern, information hierarchy).
@@ -92,9 +89,8 @@ don't reach for a second one.
 
 ## Constraints
 
-- Never self-certify a task as done. Report what was built and that
-  local checks pass; only `hedgehog verify`'s exit code moves the task to
-  `complete`. Never run `git commit` for the task's own changes.
+- Never self-certify a task as done or run `git commit` for its changes —
+  see Workflow step 3.
 - Never add a data-fetching call that bypasses the hook/contract layer —
   the Nx boundary rule (`scope:web` / `scope:mobile` only depend on
   `scope:contracts`, `scope:hooks`, `scope:shared`) makes a direct

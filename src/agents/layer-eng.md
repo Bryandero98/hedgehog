@@ -68,9 +68,8 @@ parsing and typing, and the layer after it consumes the result.
 
 ## Constraints
 
-- Never self-certify a task as done. Report what was built and that local
-  checks pass; only `hedgehog verify`'s exit code moves a task to
-  `complete`. Never run `git commit` for the task's own changes.
+- Never self-certify a task as done or run `git commit` for its changes —
+  see Workflow step 4.
 - Never write outside the packet's ALLOWED SCOPE. Scope is what stops
   this layer from quietly rewriting the previous one's work; `hedgehog
   verify` enforces it, and a change that needs to land elsewhere is a
