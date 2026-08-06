@@ -3,13 +3,9 @@ name: nx-run-tasks
 description: Helps with running tasks in an Nx workspace. USE WHEN the user wants to execute build, test, lint, serve, or run any other tasks defined in the workspace.
 ---
 
-Run tasks with Nx via `pnpm nx` (Hedgehog workspaces are pnpm-only).
+Run tasks via `pnpm nx` (see the `nx-workspace` skill for the pnpm-only convention and for checking which targets a project has before running one).
 
 For more details on any command, run it with `--help` (e.g. `pnpm nx run-many --help`, `pnpm nx affected --help`).
-
-## Understand which tasks can be run
-
-You can check those via `pnpm nx show project <projectname> --json`, for example `pnpm nx show project myapp --json`. It contains a `targets` section which has information about targets that can be run. You can also just look at the `package.json` scripts or `project.json` targets, but you might miss out on inferred tasks by Nx plugins.
 
 ## Run a single task
 

@@ -112,41 +112,16 @@ Key nx.json sections:
 - `targetDefaults` - Default configuration applied to all targets of a given name
 - `namedInputs` - Reusable input definitions for caching
 - `plugins` - Nx plugins and their configuration
-- ...and much more, read the schema or nx.json for details
 
 ## Affected Projects
 
 If the user is asking about affected projects, read the [affected projects reference](references/AFFECTED.md) for detailed commands and examples.
 
-## Common Exploration Patterns
-
-### "What's in this workspace?"
-
-```bash
-pnpm nx show projects
-pnpm nx show projects --type app
-pnpm nx show projects --type lib
-```
-
-### "How do I build/test/lint project X?"
-
-```bash
-pnpm nx show project X --json | jq '.targets | keys'
-pnpm nx show project X --json | jq '.targets.build'
-```
-
-### "What depends on library Y?"
-
-```bash
-# Use the project graph to find dependents
-pnpm nx graph --print | jq '.graph.dependencies | to_entries[] | select(.value[].target == "Y") | .key'
-```
-
 ## Programmatic Answers
 
 When processing nx CLI results, use command-line tools to compute the answer programmatically rather than counting or parsing output manually. Always use `--json` flags to get structured output that can be processed with `jq`, `grep`, or other tools you have installed locally.
 
-### Listing Projects
+### Listing Projects ("What's in this workspace?")
 
 ```bash
 pnpm nx show projects --json
@@ -171,7 +146,7 @@ pnpm nx show projects --json | jq '.[] | select(startswith("shared-"))'
 pnpm nx show projects --affected --json | jq '.'
 ```
 
-### Project Details
+### Project Details ("How do I build/test/lint project X?")
 
 ```bash
 pnpm nx show project my-app --json
@@ -220,7 +195,7 @@ pnpm nx show project my-app --json | jq '.tags'
 pnpm nx show project my-app --json | jq -r '.root'
 ```
 
-### Project Graph
+### Project Graph ("What depends on library Y?")
 
 ```bash
 pnpm nx graph --print
