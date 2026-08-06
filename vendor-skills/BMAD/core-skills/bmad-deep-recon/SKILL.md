@@ -29,7 +29,7 @@ Three services, freely combined — each detailed in its reference: **Draft** a 
 ## Resolution rules
 
 - Bare paths and `{skill-root}` (e.g. `references/run.md`) resolve from this skill's installed directory.
-- `{project-root}` → the project working directory; `{skill-name}` → the skill directory's basename; `{bmad-root}` → the vendored `skills/BMAD/` root.
+- `{project-root}` → the project working directory; `{skill-name}` → the skill directory's basename; `{bmad-root}` → the vendored `vendor-skills/BMAD/` root.
 - `{workflow.<name>}` → a merged `customize.toml` field; `{doc_workspace}` → the bound run folder.
 - Forward slashes only. Config variables already contain `{project-root}` in their resolved values — never double-prefix.
 

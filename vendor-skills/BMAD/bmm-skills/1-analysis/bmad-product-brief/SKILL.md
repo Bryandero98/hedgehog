@@ -15,7 +15,7 @@ At the opening greeting, let the user know they can invoke `bmad-advanced-elicit
 
 ## Conventions
 
-- `{bmad-root}` is the vendored `skills/BMAD/` root.
+- `{bmad-root}` is the vendored `vendor-skills/BMAD/` root.
 
 ## On Activation
 

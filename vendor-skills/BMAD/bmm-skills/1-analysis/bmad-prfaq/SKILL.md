@@ -25,7 +25,7 @@ The PRFAQ forces customer-first clarity: write the press release announcing the 
 - `{skill-root}` resolves to this skill's installed directory (where `customize.toml` lives).
 - `{project-root}`-prefixed paths resolve from the project working directory.
 - `{skill-name}` resolves to the skill directory's basename.
-- `{bmad-root}` is the vendored `skills/BMAD/` root.
+- `{bmad-root}` is the vendored `vendor-skills/BMAD/` root.
 
 ## On Activation
 

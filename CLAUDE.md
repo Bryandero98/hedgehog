@@ -29,7 +29,7 @@ discipline's stance and rationale.
     Mobile) planning intake turned on, one commit per step, after core
     has landed.
   - `hedgehog-planning-intake` — runs the vendored BMAD-METHOD planning
-    shelf (`skills/BMAD/`), shared by every core, and mines its output
+    shelf (`vendor-skills/BMAD/`), shared by every core, and mines its output
     into scope boundary, domain modules, and the Add-ons decision on
     `full-stack-app`. Invoked by `planner`; `landing-page` runs this
     skill's shelf too, then mines the same archive through
@@ -62,10 +62,10 @@ discipline's stance and rationale.
     package dependencies) used by `backend-eng` and `front-end-eng`.
     Adapted from `nrwl/nx-ai-agents-config` (MIT-licensed, see
     `README.md`'s Credits section) for Hedgehog's pnpm-only convention.
-- `skills/BMAD/` — BMAD-METHOD (`bmad-code-org/BMAD-METHOD`,
+- `vendor-skills/BMAD/` — BMAD-METHOD (`bmad-code-org/BMAD-METHOD`,
   MIT-licensed), vendored in full: the planning shelf
-  `hedgehog-planning-intake` runs. See `skills/BMAD/ATTRIBUTION.md` for
-  the pinned source commit; re-vendoring is a deliberate act via the
+  `hedgehog-planning-intake` runs. See `vendor-skills/BMAD/ATTRIBUTION.md`
+  for the pinned source commit; re-vendoring is a deliberate act via the
   `bmad-revendor` skill, not automatic.
 - `src/templates/` — files a consuming project copies (and then edits or
   deletes) rather than running as-is: `TODO.md`, the live build checklist

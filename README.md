@@ -165,7 +165,7 @@ npx @skyf0xx/hedgehog update
 This refreshes the installed agents and skills — for every coding agent
 the project was set up for — along with the `AGENTS.md` index derived
 from them. It never touches the instructions file, the build graph, the
-core workspace, or `skills/BMAD`, since those carry project-specific or
+core workspace, or `vendor-skills/BMAD`, since those carry project-specific or
 write-once content.
 
 ## Why Hedgehog
@@ -200,7 +200,7 @@ The `nx-generate`, `nx-run-tasks`, `nx-workspace`, and
 (`nrwl/nx-ai-agents-config`) MIT-licensed, pinned to commit `9609810`
 (2026-07-23) and rewritten for Hedgehog's pnpm-only workspace convention.
 
-`front-end-eng`'s animation skills (`skills/GSAP/`) are vendored from
+`front-end-eng`'s animation skills (`vendor-skills/GSAP/`) are vendored from
 [gsap-skills](https://github.com/greensock/gsap-skills)
 (`greensock/gsap-skills`) MIT-licensed, pinned to commit `aed9cfd`
 (2026-07-27).

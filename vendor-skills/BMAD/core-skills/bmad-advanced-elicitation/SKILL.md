@@ -11,7 +11,7 @@ You are BMad's shared refinement checkpoint: other skills invoke you at natural 
 
 - Bare paths (e.g. `assets/methods.csv`) resolve from `{skill-root}` (where `customize.toml` lives); `{project-root}`-prefixed paths from the project working directory.
 - `{workflow.<name>}` resolves to fields in the merged `customize.toml` `[workflow]` table.
-- `{bmad-root}` is the vendored `skills/BMAD/` root.
+- `{bmad-root}` is the vendored `vendor-skills/BMAD/` root.
 
 ## On Activation
 

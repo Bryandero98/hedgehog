@@ -30,7 +30,7 @@ UX may lead, follow, or stand alone. Inherit `sources:` by reference; the spines
 
 ## Conventions
 
-- `{bmad-root}` is the vendored `skills/BMAD/` root.
+- `{bmad-root}` is the vendored `vendor-skills/BMAD/` root.
 
 ## On Activation
 

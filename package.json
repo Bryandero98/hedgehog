@@ -25,8 +25,8 @@
     "src/skills",
     "src/templates",
     "src/golden-cores",
-    "skills/BMAD",
-    "skills/GSAP"
+    "vendor-skills/BMAD",
+    "vendor-skills/GSAP"
   ],
   "engines": {
     "node": ">=22.5.0"

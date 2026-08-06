@@ -108,12 +108,12 @@ function plan(core, host = DEFAULT_HOST, { hostOnly = false } = {}) {
     : [
         // The vendored BMAD-METHOD planning shelf that
         // hedgehog-planning-intake runs — referenced by repo-root-relative
-        // path (skills/BMAD/...), so it lands there rather than under a
-        // host's own directory.
-        { type: 'dir', from: 'skills/BMAD', to: 'skills/BMAD' },
+        // path (vendor-skills/BMAD/...), so it lands there rather than under
+        // a host's own directory.
+        { type: 'dir', from: 'vendor-skills/BMAD', to: 'vendor-skills/BMAD' },
         // The vendored GSAP animation skill shelf that front-end-eng loads
         // for motion work — same repo-root-relative referencing.
-        { type: 'dir', from: 'skills/GSAP', to: 'skills/GSAP' },
+        { type: 'dir', from: 'vendor-skills/GSAP', to: 'vendor-skills/GSAP' },
       ];
 
   const base = [...perHost, ...shared];
@@ -157,8 +157,9 @@ function plan(core, host = DEFAULT_HOST, { hostOnly = false } = {}) {
 // this, always overwriting, since a consuming project's installed agents
 // and skills are supposed to match upstream verbatim. The bootstrap file
 // carries project-filled content, the build graph and core workspace are
-// verified once by their own init/bootstrap-core steps, and skills/BMAD
-// and skills/GSAP are re-vendored only deliberately (a manual re-vendor,
+// verified once by their own init/bootstrap-core steps, and
+// vendor-skills/BMAD and vendor-skills/GSAP are re-vendored only
+// deliberately (a manual re-vendor,
 // per each shelf's ATTRIBUTION.md) — none of those belong in an update.
 function updatePlan(host = DEFAULT_HOST) {
   const h = HOSTS[host];
@@ -293,8 +294,9 @@ derived from them) from the installed Hedgehog version, so an
 already-bootstrapped project can pick up changes from a newer release. It
 refreshes every host the project was installed for, always overwriting
 those directories. The instructions file, the build graph, the core
-workspace, and skills/BMAD and skills/GSAP stay as they are — those are
-project-specific or updated deliberately, not by this command.
+workspace, and vendor-skills/BMAD and vendor-skills/GSAP stay as they
+are — those are project-specific or updated deliberately, not by this
+command.
 `);
 }
 
@@ -452,7 +454,7 @@ async function update({ hosts }) {
   console.log(
     dim(
       `${bootstraps}, the build graph, the core workspace, and\n` +
-        'skills/BMAD and skills/GSAP are untouched — those carry\n' +
+        'vendor-skills/BMAD and vendor-skills/GSAP are untouched — those carry\n' +
         'project-specific or write-once content.',
     ),
   );

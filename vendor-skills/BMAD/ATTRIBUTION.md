@@ -41,7 +41,7 @@ every skill file that referenced it:
 - Misroute-detection logic pointing at non-vendored BMAD skills.
 
 `{bmad-root}` is introduced as a convention across the vendored files,
-meaning this directory (`skills/BMAD/`) — used to address the shared
+meaning this directory (`vendor-skills/BMAD/`) — used to address the shared
 scripts (`{bmad-root}/scripts/memlog.py`, etc.) without reaching outside
 this vendored tree.
 

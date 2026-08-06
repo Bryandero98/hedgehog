@@ -37,21 +37,21 @@ State the BMAD attribution, then run the vendored shelf in full
 sequence — on a first run there is no per-project skip logic and no
 reduced default set:
 
-1. `bmad-brainstorming` (`skills/BMAD/core-skills/bmad-brainstorming`) —
+1. `bmad-brainstorming` (`vendor-skills/BMAD/core-skills/bmad-brainstorming`) —
    diverge on the idea before locking anything.
-2. `bmad-product-brief` (`skills/BMAD/bmm-skills/1-analysis/bmad-product-brief`)
+2. `bmad-product-brief` (`vendor-skills/BMAD/bmm-skills/1-analysis/bmad-product-brief`)
    — the product brief.
-3. `bmad-prfaq` (`skills/BMAD/bmm-skills/1-analysis/bmad-prfaq`) — vets
+3. `bmad-prfaq` (`vendor-skills/BMAD/bmm-skills/1-analysis/bmad-prfaq`) — vets
    the idea press-release-style.
-4. `bmad-prd` (`skills/BMAD/bmm-skills/2-plan-workflows/bmad-prd`) — the
+4. `bmad-prd` (`vendor-skills/BMAD/bmm-skills/2-plan-workflows/bmad-prd`) — the
    PRD, including its Glossary (entities, relationships, cardinality).
-5. `bmad-ux` (`skills/BMAD/bmm-skills/2-plan-workflows/bmad-ux`) — the UX
+5. `bmad-ux` (`vendor-skills/BMAD/bmm-skills/2-plan-workflows/bmad-ux`) — the UX
    spec, `DESIGN.md` + `EXPERIENCE.md`.
-6. `bmad-deep-recon` (`skills/BMAD/core-skills/bmad-deep-recon`) —
+6. `bmad-deep-recon` (`vendor-skills/BMAD/core-skills/bmad-deep-recon`) —
    market/competitive/user-voice research.
 
 Any skill may itself invoke `bmad-advanced-elicitation`
-(`skills/BMAD/core-skills/bmad-advanced-elicitation`) at its own pause
+(`vendor-skills/BMAD/core-skills/bmad-advanced-elicitation`) at its own pause
 points — that's expected, let it run.
 
 Write each skill's output to `.hedgehog/BMAD/`, per the fixed layout:
@@ -70,7 +70,7 @@ Write each skill's output to `.hedgehog/BMAD/`, per the fixed layout:
 ```
 
 Every file/folder carries a one-line attribution header. `00-manifest.md`
-states the source repo, pinned version (`skills/BMAD/ATTRIBUTION.md` has
+states the source repo, pinned version (`vendor-skills/BMAD/ATTRIBUTION.md` has
 the pinned commit), date, and which skills ran.
 
 `.hedgehog/BMAD/` is archival and immutable once written, on every core.
