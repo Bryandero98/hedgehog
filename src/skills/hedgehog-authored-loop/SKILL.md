@@ -211,8 +211,19 @@ what makes the next session cheap.
 Name **both** ways forward, because which one applies depends on what the
 user wants next:
 
-- **Adjustments to what's built** — a `tweaker` session, which picks up
-  post-build tweaks and friction review from a clean context.
+- **Adjustments to what's built** — a `tweaker` session, in a *new* chat
+  window, not a subagent call inside this one — this session's context
+  has been building the whole project and is exactly what "clearing
+  context now costs nothing" above means to discard. Tell the user
+  plainly: close this chat window and open a new one, then paste this to
+  start it:
+
+  > The build is complete. Use the tweaker agent: first review the
+  > friction log and ask me for feedback on the build, then take my
+  > tweak requests one at a time.
+
+  In the new window, `tweaker` picks up post-build tweaks and friction
+  review from a clean context.
 - **New scope** — a new intent on the module axis, anything beyond
   adjusting what exists — goes to `planner`, which runs
   `hedgehog-planning-intake`'s Re-entry pass: it adds intents for the new

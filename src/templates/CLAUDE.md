@@ -94,14 +94,25 @@ makes every later session cheap.
 A completed build is **extendable, not sealed**. Offer the user a
 fresh-context handoff, and name both ways forward:
 
-- **Adjustments to what's built** → the `tweaker` agent. It starts clean,
-  once reviews the friction log (`hedgehog friction list`) for possible
-  discipline-improvement issues and separately asks the user directly for
-  feedback on the build, filing each real pattern or piece of feedback as
-  its own GitHub issue against the Hedgehog repo itself, never this
-  project's repo (friction as `bug`/`help wanted`, feedback as
-  `suggestion`, each only after showing the exact content and getting
-  explicit approval), then takes any tweak requests one at a time.
+- **Adjustments to what's built** → the `tweaker` agent, from a *new*
+  chat window, not a subagent call inside this one — this session's
+  context has been building the whole project and is exactly what
+  "clearing context now costs nothing" (above) means to discard. Tell
+  the user plainly: close this chat window and open a new one, then
+  paste this to start it:
+
+  > The build for {{PROJECT_NAME}} is complete. Use the tweaker agent:
+  > first review the friction log and ask me for feedback on the build,
+  > then take my tweak requests one at a time.
+
+  In the new window, `tweaker` starts clean, once reviews the friction
+  log (`hedgehog friction list`) for possible discipline-improvement
+  issues and separately asks the user directly for feedback on the
+  build, filing each real pattern or piece of feedback as its own GitHub
+  issue against the Hedgehog repo itself, never this project's repo
+  (friction as `bug`/`help wanted`, feedback as `suggestion`, each only
+  after showing the exact content and getting explicit approval), then
+  takes any tweak requests one at a time.
 - **New scope** — a new module or feature, anything beyond adjusting what
   exists → on a core with a module axis, the `planner` agent, which runs
   `hedgehog-planning-intake`'s **Re-entry pass**. It reads the existing
