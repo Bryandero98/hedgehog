@@ -260,6 +260,22 @@ if missed:
   of) passes on an empty implementation. Pair typecheck/build commands
   with a test command that exercises the layer's actual output whenever
   the layer produces behavior, not just types.
+- **A `verify` filter token must cross-check against that same layer's
+  `scope`.** When `verify` includes a test-runner filter string (`pnpm
+  test <token>`, `pnpm test <token1> <token2> ...`), each token is a
+  claim that some file matching the layer's own `scope` globs exists and
+  will run under that filter. Neither the loader nor the test runner
+  checks this — a token with zero matching scope paths is a silent
+  no-op (the runner contributes zero tests for a filter that matches
+  nothing rather than failing on an empty match set), and a scope-listed
+  test file with no filter token covering it never runs at all under
+  `verify`, both invisible until `hedgehog verify` rejects a legitimate
+  file as out-of-scope or a coverage gap ships unnoticed. For every
+  layer, walk each filter token in `verify` and confirm at least one
+  path in that layer's `scope` list would match it, and walk `scope`'s
+  own test-file paths back to confirm each has a covering token — fix
+  both directions (add the missing scope path, or add the missing
+  filter token) before Step 6, not after a build discovers the gap live.
 
 Verify the file loads before showing it back, by calling the loader
 directly:
@@ -272,7 +288,9 @@ Read the layers it prints back: a field the parser dropped shows up as an
 empty string or `[]` there, and a `{module}` you meant to include is
 visible in the globs or absent from them. A `core.yaml` that throws at
 load time is the one failure mode that strands a project with no path
-forward.
+forward. The loader only confirms the file parses — it does not run the
+filter/scope cross-check above, so do that by hand against this printed
+output before moving on.
 
 ## Step 6 — write `.hedgehog/core-design.md`
 
@@ -300,7 +318,8 @@ to change only until the file lands. Hard stop.
   whether it's the shape's default or a substitution — and if a
   substitution, the one-line constraint that justified it.
 - Each layer in order: what it owns, its scope globs, its verify command,
-  its commit message.
+  its commit message — each verify command's filter tokens already
+  cross-checked against that same layer's scope globs (Step 5).
 - The module-axis decision, named as such, with the consequence stated
   (intents × layers tasks, or one task per layer).
 - That this is an authored core: the sequence was designed for this
