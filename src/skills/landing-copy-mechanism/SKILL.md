@@ -46,9 +46,8 @@ walking through (in which case genuinely enumerable steps become a `-`
 list per `landing-copywriter`'s output format, alongside the connecting
 prose — not instead of it).
 
-## Writing standard (scoped to this section)
+## Writing standard (this section's delta from `landing-copywriter`'s full standard)
 
-- Apply `landing-copywriter`'s full writing standard.
 - **No unnamed authority, here specifically.** A mechanism section is the
   easiest place to reach for "proven approach" or "industry-standard
   method" without naming what makes it proven — if there's no named
@@ -71,10 +70,6 @@ prose — not instead of it).
   same plain-verb discipline from `landing-strategist`'s step 1).
 - This section's central claim connects directly to the specific
   friction the problem section named, not a generic benefit.
-- No proof point (stat, name, benchmark) appears here — that content is
-  flagged to `landing-copy-proof` instead.
-- The terminology matches whatever the hero section already named the
-  mechanism — no synonym rotation across the section boundary.
 
 ## Constraints
 

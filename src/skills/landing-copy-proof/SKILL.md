@@ -44,9 +44,8 @@ report" or "studies show" without the name attached (per
 `landing-copywriter`'s no-unnamed-authority rule, which applies with
 extra weight here since this entire section exists to be checkable).
 
-## Writing standard (scoped to this section)
+## Writing standard (this section's delta from `landing-copywriter`'s full standard)
 
-- Apply `landing-copywriter`'s full writing standard.
 - **No unnamed authority — this is the section's core failure mode.** If
   a proof point has no name, number, or date attached, it doesn't ship in
   this section in that form. Reframe it as the subject's own claim
@@ -60,12 +59,6 @@ extra weight here since this entire section exists to be checkable).
 
 ## Self-test
 
-- Every proof point names a specific source — a number, a customer, a
-  date, a quoted person. None reads as "studies show" or "users love it"
-  without attribution.
-- Each proof point connects to a specific claim made in an earlier
-  section (usually `landing-copy-mechanism`'s), not floating as generic
-  credibility.
 - The shape (prose vs. list vs. mixed) matches whether the content is
   genuinely one strong point or several parallel ones — not forced into
   prose to avoid "too many bullets," and not listed out of laziness when

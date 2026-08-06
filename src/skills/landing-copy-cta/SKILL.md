@@ -5,12 +5,10 @@ description: Use whenever `landing-copywriter` drafts the CTA/close — the fina
 
 # Landing Copy: CTA / Close
 
-This is the ask. Every other section builds toward this moment; this
-section's only job is to make the ask itself, matched to the urgency the
-token system already specified. It is not a place to introduce new
-argument, new proof, or new mechanism — if the case isn't made by the
-time this section runs, that's an upstream section's gap, not something
-to patch here with more copy.
+This is the ask, matched to the urgency the token system already
+specified. No new argument, proof, or mechanism here — an unmade case by
+this point is an upstream section's gap, not something to patch with more
+CTA copy.
 
 ## What this section answers
 
@@ -45,9 +43,8 @@ The line itself, in order:
    CTA line itself; if that reassurance is load-bearing, it's a
    fragment of copy just below the button, not inside the CTA text.
 
-## Writing standard (scoped to this section)
+## Writing standard (this section's delta from `landing-copywriter`'s full standard)
 
-- Apply `landing-copywriter`'s full writing standard.
 - **No stock closers.** Never end the page on "the future looks bright"
   or "join us on this journey" — the CTA is the specific action, not a
   sentiment.
@@ -62,13 +59,8 @@ The line itself, in order:
 
 - The line is a specific action verb, not a vague "Learn more" where a
   more specific true verb was available.
-- Verb mode matches the token system's stated CTA urgency (high-pressure
-  vs. low-pressure) — checked explicitly, not assumed.
 - The line stands alone as a `>` blockquote, not merged into the
   preceding paragraph's last sentence.
-- No new argument, proof, or mechanism claim appears in this section —
-  if the case isn't made by now, that's flagged upstream, not patched
-  here.
 
 ## Constraints
 

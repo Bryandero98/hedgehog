@@ -44,9 +44,8 @@ A 1-beat problem section compresses all three into one paragraph (state
 plus cost in the same breath, sharpened in the closing clause); a 3-beat
 section gets a full paragraph each.
 
-## Writing standard (scoped to this section)
+## Writing standard (this section's delta from `landing-copywriter`'s full standard)
 
-- Apply `landing-copywriter`'s full writing standard.
 - **Create contrast that clarifies, not drama that manufactures it.**
   "Most AI tools help you generate more code. Hedgehog helps you keep
   control of it" sharpens the reader's picture of what's actually
@@ -66,9 +65,6 @@ section gets a full paragraph each.
   run it unchanged.
 - The section names both the current state and its concrete cost, not
   just a feeling of friction.
-- The section ends on the tension at its sharpest, not on a hint of
-  resolution.
-- No product name, feature, or mechanism appears in this section's copy.
 
 ## Constraints
 

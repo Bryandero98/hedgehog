@@ -47,9 +47,8 @@ If genuinely FAQ-shaped (3+ parallel question/answer pairs), render as a
 list per `landing-copywriter`'s output format — each item a
 question-plus-answer pair, not a bare noun phrase.
 
-## Writing standard (scoped to this section)
+## Writing standard (this section's delta from `landing-copywriter`'s full standard)
 
-- Apply `landing-copywriter`'s full writing standard.
 - **Answer honestly, including real limitations.** A section that only
   handles softball objections ("Is it easy to use? Yes!") reads as
   evasive by omission — if there's a genuine, known limitation the
@@ -63,15 +62,9 @@ question-plus-answer pair, not a bare noun phrase.
 
 ## Self-test
 
-- Each objection handled is specific and nameable — not a generic FAQ
-  restating the mechanism or proof sections.
-- Each answer is direct — no hedge stack, no deflection to "it depends."
 - At least one genuine limitation or edge case is addressed honestly, if
   the subject statement or brief surfaces one — not only favorable
   objections selected.
-- No objection restates content already fully covered in
-  `landing-copy-mechanism` or `landing-copy-proof` — if it must reference
-  that content, it does so briefly, not by repeating it.
 
 ## Constraints
 
@@ -83,3 +76,5 @@ question-plus-answer pair, not a bare noun phrase.
   one objection per beat, not stacked.
 - Never soften an honest limitation into a non-answer — a hedge here
   undermines the section's entire purpose.
+- Never restate content already fully covered in `landing-copy-mechanism`
+  or `landing-copy-proof` — reference it briefly instead of repeating it.

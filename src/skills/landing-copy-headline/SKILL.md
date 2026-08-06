@@ -121,13 +121,13 @@ step 1.
   catch.
 - Every candidate passed the outcome-subject test individually — not
   waved through because the set as a whole "feels balanced."
-- The user was shown all 3, labeled by mechanism, and explicitly picked
-  or redirected — not assumed.
 
 ## Constraints
 
 - Never present fewer than 3 distinct-mechanism candidates.
-- Never lock a headline without the user's explicit confirmation.
+- Never lock a headline without the user's explicit confirmation — the
+  user must be shown all 3, labeled by mechanism, and explicitly pick or
+  redirect, not be assumed to have chosen.
 - Never draft the subhead, section body, or CTA copy here — that's
   `landing-copywriter`'s `landing-copy-hero` and other section skills,
   run only after this one locks.

@@ -51,10 +51,8 @@ Two sentences is the ceiling for a single-beat hero. If it's taking a
 third sentence to make the mechanism credible, the mechanism itself is
 underspecified — flag it back rather than padding the section to compensate.
 
-## Writing standard (scoped to this section)
+## Writing standard (this section's delta from `landing-copywriter`'s full standard)
 
-- Apply `landing-copywriter`'s full writing standard (inflated words, em
-  dashes, hedge stacks, etc.) — this section gets no exception.
 - **No proof, no numbers, no named evidence here.** A stat or case study
   in the hero section is `landing-copy-proof`'s content pulled forward —
   redirect it downstream, keep this section to the plain claim.
@@ -67,8 +65,6 @@ underspecified — flag it back rather than padding the section to compensate.
 ## Self-test
 
 - The mechanism is named in plain language, not gestured at.
-- The section makes no argument, cites no proof, and handles no
-  objection — those are the next sections' jobs.
 - Paragraph count matches the beat count `landing-sequencer` assigned —
   1 paragraph for a single beat, not padded to 2 for weight.
 - Read against the locked headline: does this section make the headline

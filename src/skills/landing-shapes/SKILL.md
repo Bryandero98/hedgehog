@@ -244,15 +244,12 @@ parameters rather than picking one wholesale.
 
 ## Constraints
 
-- This skill covers construction technique only. What the signature
-  element is, why it recurs, and where it must appear are
-  `landing-systems`'s step 6 decisions, audited by `landing-critic`'s
-  traceability test — this skill doesn't originate those choices, only
-  implements them.
-- Lucide is the only icon source. Don't add a second icon library, an
-  illustration set, or an animation-file format (Rive, Lottie) to work
-  around a gap — build the shape from the technique library above
-  instead.
+- Construction technique only, per the opening section above — this
+  skill doesn't originate what the signature element is, why it recurs,
+  or where it appears.
+- Lucide is the only icon source, per Icons above — no second icon
+  library, illustration set, or animation-file format (Rive, Lottie) to
+  work around a gap.
 - Don't install a new geometry or animation library to cover something
   this skill's techniques don't reach — `ogl` (canvas/WebGL) and CSS
   are this core's locked tools for shape construction; a felt need for
