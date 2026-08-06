@@ -53,10 +53,8 @@ project will eventually need) before deriving layers — a layer's `verify`
 command can't be written until the test runner and build tooling are
 decided, and layer boundaries themselves often follow framework
 conventions (e.g. a middleware layer only exists if the framework has
-middleware). Don't ask the user to choose — the same reasoning Step 1
-applies to layers applies here: naming a stack is exactly what a build
-discipline exists to decide unprompted, and asking would just relocate
-the design work onto the person who came here to avoid doing it.
+middleware). Don't ask the user to choose — see the opening section
+above; the same reasoning applies here.
 
 Pick one default per system shape, the same way the shipped cores commit
 to one choice per row rather than a menu (`hedgehog-bootstrap`'s stack

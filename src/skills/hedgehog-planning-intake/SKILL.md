@@ -245,9 +245,9 @@ already built, that's a Correction Protocol case, not a re-entry.
 
 ### Confirm & Lock (extension)
 
-Same hard stop as the first-run stage, showing what's actually different.
-
-🔒 **Confirm & Lock**. Show, in full, not condensed:
+Same hard stop as the first-run stage above — show in full, not
+condensed, and wait for an explicit go-ahead before writing anything.
+Show:
 
 - Each **new** intent about to be added: `id`, `goal`, `outcome`, its
   `requirements`, and its `depends_on` list — naming which existing
@@ -255,14 +255,8 @@ Same hard stop as the first-run stage, showing what's actually different.
 - The existing intents, named, stated explicitly as untouched.
 - Any add-on change from step 4, or "no add-on triggers changed."
 
-Then state plainly what happens on confirmation, before it happens:
-
-> This adds the intents above via `hedgehog intent add`, then compiles
-> them with `hedgehog plan`. Existing work is untouched: `plan` skips
-> intents already compiled, and every `complete` task keeps its status.
-> The build resumes at the first task of the new scope. Anything wrong or
-> missing — say so now; it's a normal edit before this point, and a
-> Correction Protocol entry after. Confirm to proceed, or tell me what to
-> change.
-
-Wait for an explicit go-ahead, same as the first-run stage.
+State plainly, before it happens: this adds the intents above via
+`hedgehog intent add`, then compiles them with `hedgehog plan` — existing
+work is untouched (`plan` skips intents already compiled, every
+`complete` task keeps its status), and the build resumes at the first
+task of the new scope.

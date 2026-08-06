@@ -167,18 +167,12 @@ bug by "cleaning up" what looks like an unnecessary pin or directive.
   `TS2591`/`TS2339` on both. Add `"types": ["node"]` to
   `compilerOptions` there.
 - **`prettier-plugin-tailwindcss` must stay pinned to `^0.7.4`, not
-  `^0.8.x`.** Versions 0.8.0/0.8.1 rewrote their parser-wrapping layer so
-  `parser.preprocess` is unconditionally `async`, but Prettier core calls
-  `parser.preprocess` synchronously (per Prettier's own parser-API
-  contract — only the printer-level hook is awaited). The wrapped
-  TypeScript parser has no `preprocess` of its own, so the async wrapper
-  still returns a `Promise<string>` instead of a `string`, which gets
-  threaded into the real parser and crashes with `TypeError: e.charAt is
-  not a function` on every `.ts`/`.tsx` file — independent of Tailwind
-  config, module format, or Nx/pnpm. `0.7.4` defines `preprocess`
-  synchronously and fully supports Tailwind v4's `tailwindStylesheet`
-  option, so there's no capability lost by staying on it. Re-check this
-  pin when bumping the plugin — this may be fixed upstream by then.
+  `^0.8.x`.** `0.8.0+` made `parser.preprocess` async, but Prettier core
+  calls it synchronously — crashes with `TypeError: e.charAt is not a
+  function` on every `.ts`/`.tsx` file, independent of Tailwind config,
+  module format, or Nx/pnpm. `0.7.4` fully supports Tailwind v4's
+  `tailwindStylesheet` option, so nothing is lost by staying on it.
+  Re-check this pin when bumping the plugin.
 - **Tailwind v4 needs `tailwindStylesheet` set explicitly in
   `apps/web/.prettierrc.js`.** There's no `tailwind.config.js` for the
   plugin to autodetect under v4 — point it at
@@ -187,17 +181,10 @@ bug by "cleaning up" what looks like an unnecessary pin or directive.
 - **Any component that imports Radix's `Slot` (the `asChild` pattern —
   e.g. `components/ui/button.tsx`) needs `'use client'` as its first
   line, even if a given render path never actually sets `asChild`.**
-  Without it, the component is a Server Component by default under the
-  App Router. React 19's package exports a separate `react-server`
-  condition build with no `createContext` (Server Components
-  architecturally can't use client-side context). `Slot` calls
-  `React.createContext(...)` at module top level, so merely *importing*
-  it — regardless of whether it's rendered — crashes `next build`'s SSR
-  page-data collection with `TypeError: e.createContext is not a
-  function`. This only reproduces on a clean `.next`/Nx cache; a warm
-  cache from before the crashing import existed can mask it, so verify
-  `apps/web`'s build with `rm -rf apps/web/.next .nx/cache` first, not
-  just an incremental build.
+  `Slot` calls `React.createContext` at module scope, which crashes
+  Server Component builds (`TypeError: e.createContext is not a
+  function`) purely on import. Verify with a clean `.next`/Nx cache
+  (`rm -rf apps/web/.next .nx/cache`) — a warm cache can mask this.
 - **`apps/web/package.json` needs `"type": "module"`, same reasoning as
   the root `package.json`** — `apps/web/.prettierrc.js`
   is ESM (`export default`), and without a matching `"type": "module"`

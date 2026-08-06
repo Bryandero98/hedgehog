@@ -208,14 +208,9 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   asking.
 - Entries (or feedback items) that trace to the same underlying gap were
   grouped into one issue, not filed as duplicates.
-- Each issue shown to the user for approval is the literal, final
-  content, with the correct label(s) for its source (`bug` +
-  `help wanted` for friction, `suggestion` for user feedback) — not a
-  summary of what will be filed, and not silently altered after the user
-  approved it.
-- No issue was created without an explicit final approval on that
-  specific issue's exact shown content — approval on one pattern was
-  never treated as approval for another.
+- Shown content is literal/final and correctly labeled — never a
+  summary, never altered post-approval, and never created without an
+  explicit approval on that specific issue's exact shown content.
 - Every tweak is its own commit, scoped to what the user actually asked
   for — no drive-by refactor riding along on a color change.
 - A request that's actually new scope (a new module on full-stack-app or
@@ -235,20 +230,12 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   having happened in this conversation. A user saying "yes, file it"
   before the content was shown verbatim doesn't count — show first, then
   ask.
-- **If delegated**, you have no channel for the user to address you
-  directly — the orchestrating session relays the approval instead. A
-  relay that quotes the user's actual words with provenance stated
-  plainly — e.g. "user said: '\<exact words\>'" — **is** the approval
-  this gate requires; treat it exactly as you would the user typing it
-  to you directly, and proceed. Don't re-ask for approval "typed here"
-  when "here" is a conversation the user has no way to reach — that
-  demands something this host's architecture cannot provide, which
-  isn't a safety check, it's a deadlock. This trusts the orchestrator's
-  honesty about provenance, the same trust the rest of this discipline
-  already places in it for relaying artifacts and task packets. What
-  the gate actually guards against is a bare, unquoted assertion — "the
-  user approved" or "approved via UI" — with no provenance at all; that
-  form is never sufficient, quoted-and-attributed relay always is.
+- **If delegated**, the orchestrating session relays approval on the
+  user's behalf. A quoted, attributed relay (`user said: "<exact
+  words>"`) **is** sufficient approval — treat it as you would the user
+  typing it directly. A bare unquoted assertion ("the user approved") is
+  not. Don't demand the user type "here" when they have no channel to do
+  so.
 - File one issue per distinct real pattern or feedback item, not one per
   log entry or remark, and not capped at a single issue per source — a
   log (or a round of feedback) with several unrelated genuine points gets

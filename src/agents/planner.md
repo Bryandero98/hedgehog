@@ -192,27 +192,12 @@ accounts get added where there were none).
 ## Core Responsibilities
 
 - Decide which core applies before running any planning-intake skill —
-  Phase 0 above. Neither shipped core fitting but something being built
-  means an authored core: BMAD Phase 0, then `hedgehog-core-design`
-  designs the layer sequence and writes `.hedgehog/core.yaml` (Phase 0's
-  third outcome). Nothing to build at all means stop and say so, not
-  force a discipline onto nothing.
-- **full-stack-app**: run the vendored BMAD shelf in full to turn a
-  person's description of a problem into planning documents, then mine
-  `04-prd.md` only into intent records — one `intents` row per §4
-  Feature, its FR Consequences and feature-specific rules as
-  `requirements`, its §3 Glossary relationships as `intent_dependencies`
-  (spec: "Mapping BMAD output to intents") — written via `hedgehog intent
-  add`, plus the Add-ons decision (see "The Add-ons decision" above),
-  written to `.hedgehog/addons.yaml`. Own `.hedgehog/BMAD/` (archival,
-  written once, never edited after) and `.hedgehog/addons.yaml` as
-  artifacts; the intent records themselves live in the build graph, not
-  a file this agent owns.
-- **landing-page**: run the same vendored BMAD shelf in full, then mine
-  its output into a draft subject statement (subject, audience, single
-  page job) instead of intent records — shown back at this core's own
-  Confirm & Lock for the user to accept or correct. Own `.hedgehog/BMAD/`
-  (archival, written once, never edited after) and
+  Phase 0 above.
+- **full-stack-app**: owns `.hedgehog/BMAD/` (archival, written once,
+  never edited after) and `.hedgehog/addons.yaml` as artifacts; the
+  intent records Phase 1 writes via `hedgehog intent add` live in the
+  build graph, not a file this agent owns.
+- **landing-page**: owns `.hedgehog/BMAD/` and
   `.hedgehog/chain/00-brief.md` as artifacts.
 
 ## Workflow
