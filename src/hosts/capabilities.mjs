@@ -16,6 +16,7 @@ export const AGENT_CAPABILITY = {
   'front-end-eng': 'full',
   'landing-builder': 'full',
   'landing-copywriter': 'full',
+  'landing-executor': 'full',
   'layer-eng': 'full',
   planner: 'full',
   tweaker: 'full',
@@ -26,8 +27,12 @@ export const AGENT_CAPABILITY = {
   'landing-strategist': 'no-bash',
   'landing-systems': 'no-bash',
 
-  // Inspect and report; the verification command is theirs to run.
+  // Inspect and report; the verification command (and, for the Polish
+  // Loop reviewers, the build/screenshot/interaction commands) is theirs
+  // to run.
   reviewer: 'readonly-bash',
+  'landing-visual-reviewer': 'readonly-bash',
+  'landing-ux-reviewer': 'readonly-bash',
 
   // Inspect and report only.
   'landing-critic': 'readonly',

@@ -17,9 +17,11 @@ discipline's stance and rationale.
   the `landing-page` core's own chain agents
   (`landing-strategist`, `landing-systems`, `landing-sequencer`,
   `landing-headline-writer`, `landing-copywriter`, `landing-critic`,
-  `landing-builder`). `tweaker`
-  (post-build tweak requests and friction-log-driven Hedgehog issue
-  suggestions) is shared by every core.
+  `landing-builder`), plus that core's Polish Loop agents
+  (`landing-executor`, `landing-visual-reviewer`, `landing-ux-reviewer`)
+  that run after `landing-builder` and before the handoff to `tweaker`.
+  `tweaker` (post-build tweak requests and friction-log-driven Hedgehog
+  issue suggestions) is shared by every core.
 - `src/skills/` — the packaged procedures a consuming project copies into
   its own `.claude/skills/`:
   - `hedgehog-bootstrap-full-stack-app-core` — lands the always-on core workspace (Nx,

@@ -102,6 +102,23 @@ pinned icon source. Neither restates the other's decision.
   markdown structure to the matching markup. Anything that can't be
   built as specified is flagged back up the chain, never silently
   improvised around.
+- **Polish Loop** (`landing-executor`, `landing-visual-reviewer`,
+  `landing-ux-reviewer`) — runs after `landing-builder`, uncompiled (no
+  graph task, no `hedgehog verify` gate). All three work on their own
+  editorial judgment, not the chain's generation-time constraints —
+  critiquing a finished page is a different instinct than building one
+  from a brief. `landing-visual-reviewer` and `landing-ux-reviewer`
+  build, screenshot, and interact with the rendered page, redlining
+  AI-tell patterns, dead/uneven gaps, scan-pattern and interaction
+  friction, and taste, on their own judgment rather than a fixed
+  checklist — independent of `landing-critic`'s traceability/usability
+  audit, which already ran before the page existed. `landing-executor`
+  has full license over the rendered page's markup, styling, and copy
+  substance to fix each redline (a rewritten sentence or cut paragraph,
+  not just a word swap), bounded only by the locked stack/token system
+  and by never touching `.hedgehog/chain/*.md`. Loops until both reviewers return
+  clean or 10 iterations pass, one commit per iteration
+  (`feat(landing): polish iteration <n>`), then hands off to `tweaker`.
 
 ## The constants (do not deviate)
 

@@ -1,6 +1,6 @@
 ---
 name: landing-builder
-description: Use for the build phase of the Chain Method (landing-page core) — implementing the audited spec exactly in Astro, Tailwind, Motion/Lenis, SplitType, and the CSS/canvas signature-element construction via `landing-shapes`, placing landing-headline-writer's locked headline and landing-copywriter's final section copy verbatim, reading each section's markdown structure to choose prose, list, or CTA markup. Runs last, only after landing-critic returns a pass. Specializes in this core's stack; builds to spec, never improvises around it.
+description: Use for the build phase of the Chain Method (landing-page core) — implementing the audited spec exactly in Astro, Tailwind, Motion/Lenis, SplitType, and the CSS/canvas signature-element construction via `landing-shapes`, placing landing-headline-writer's locked headline and landing-copywriter's final section copy verbatim, reading each section's markdown structure to choose prose, list, or CTA markup. Runs last of the compiled chain phases, only after landing-critic returns a pass — the uncompiled Polish Loop (landing-executor, landing-visual-reviewer, landing-ux-reviewer) runs after this, before the build hands off to tweaker. Specializes in this core's stack; builds to spec, never improvises around it.
 model: sonnet
 color: green
 tools: Read, Glob, Grep, Edit, Write, Bash
