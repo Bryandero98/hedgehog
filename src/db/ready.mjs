@@ -5,23 +5,27 @@
 // the exclusive/scope/verify ordering this mirrors. Claims nothing —
 // claimTasks in claim.mjs is the only writer.
 
-import { findClaimableTasks } from './claim.mjs';
+import { findClaimableTasks, findInFlightTasks } from './claim.mjs';
 import { conflicts, verifyRadius } from './conflict.mjs';
 
 // Walks the same candidates claimTasks would, in the same priority/id
 // order, greedily sorting each into CLAIMABLE (doesn't conflict with
-// anything already CLAIMABLE) or HELD BACK (does) — the same simulation
-// claimTasks's fan-out performs, minus the atomic UPDATE. `reason` records
-// which already-CLAIMABLE task the conflict is against and its kind, for
+// anything already CLAIMABLE or already in flight) or HELD BACK (does) —
+// the same simulation claimTasks's fan-out performs, minus the atomic
+// UPDATE. In-flight tasks (building/verifying) are seeded in up front so a
+// candidate that conflicts with real work already running is correctly
+// HELD BACK, not just against other candidates in this batch. `reason`
+// records which task the conflict is against and its kind, for
 // formatReady to render.
 export function readyTasks(db) {
   const candidates = findClaimableTasks(db);
+  const inFlight = findInFlightTasks(db);
   const claimable = [];
   const heldBack = [];
 
   for (const candidate of candidates) {
     let conflict = null;
-    for (const accepted of claimable) {
+    for (const accepted of [...inFlight, ...claimable]) {
       const kind = conflicts(candidate, accepted);
       if (kind !== null) {
         conflict = { with: accepted, kind };

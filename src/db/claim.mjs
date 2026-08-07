@@ -25,6 +25,13 @@ export function findClaimableTasks(db) {
   return db.prepare(CLAIMABLE_TASKS_SQL).all();
 }
 
+// Tasks another call already holds a lease on — the conflict check's other
+// seed alongside the batch being accepted in this call. Exported for
+// ready.mjs, which needs the same seed to simulate the fan-out accurately.
+export function findInFlightTasks(db) {
+  return db.prepare(`SELECT * FROM tasks WHERE status IN ('building', 'verifying')`).all();
+}
+
 function loadTask(db, taskId) {
   return db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
 }
@@ -63,13 +70,16 @@ const claimOne = (db) =>
 // Claims up to `count` ready tasks for `owner`. `count` is a maximum, not
 // a promise — returns however many were actually claimed, possibly zero.
 //
-// Fan-out keeps the batch mutually non-conflicting per conflict.mjs's
+// Fan-out keeps the batch mutually non-conflicting, and non-conflicting
+// with every task already in flight, per conflict.mjs's
 // exclusive/scope/verify predicate (item 11): a candidate that conflicts
-// with anything already accepted into this batch is left ready for a
-// future call rather than claimed alongside it. Every other in-flight
-// task is already excluded by CLAIMABLE_TASKS_SQL's `lease_owner IS
-// NULL`, so only this-batch membership needs checking. A race lost to a
-// concurrent claimer (the atomic UPDATE returns undefined) is skipped
+// with anything already accepted into this batch *or* already
+// building/verifying is left ready for a future call rather than claimed
+// alongside it. CLAIMABLE_TASKS_SQL's `lease_owner IS NULL` only keeps an
+// in-flight task out of the candidate pool itself — it does not compare a
+// candidate against that task's scope or verify radius, so in-flight
+// tasks must be seeded into the conflict check explicitly. A race lost to
+// a concurrent claimer (the atomic UPDATE returns undefined) is skipped
 // and doesn't count against `count` — it neither joins the batch nor
 // short-circuits the loop.
 export function claimTasks(db, { owner, count = 1, leaseMinutes = 45 }) {
@@ -77,12 +87,14 @@ export function claimTasks(db, { owner, count = 1, leaseMinutes = 45 }) {
     reapExpiredLeases(db);
 
     const candidates = findClaimableTasks(db);
+    const inFlight = findInFlightTasks(db);
     const runClaim = claimOne(db);
     const claimed = [];
 
     for (const candidate of candidates) {
       if (claimed.length >= count) break;
-      if (claimed.some((accepted) => conflicts(candidate, accepted) !== null)) continue;
+      const against = [...inFlight, ...claimed];
+      if (against.some((accepted) => conflicts(candidate, accepted) !== null)) continue;
       const result = runClaim.get(owner, leaseMinutes, candidate.id);
       if (result === undefined) continue; // lost the race, skip
       claimed.push(loadTask(db, candidate.id));
