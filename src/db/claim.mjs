@@ -31,8 +31,14 @@ function loadTask(db, taskId) {
 
 // Expired leases go to `blocked`/`lease_expired`, never back to `ready` —
 // a dead agent may have left half-written files, and silently re-handing
-// that task to a fresh agent starts it from a mess it can't see.
-function reapExpiredLeases(db) {
+// that task to a fresh agent starts it from a mess it can't see. Exported
+// for verify.mjs's claimForVerify, which reaps its own task's lease
+// before checking ownership — reaping is otherwise lazy (only run here,
+// from claimTasks), so a build that outlives its lease with no
+// concurrent `claim` call in the interim would otherwise reach `verify`
+// with a technically-expired lease that still matches status/lease_owner
+// and sail through unreaped.
+export function reapExpiredLeases(db) {
   db.prepare(
     `
     UPDATE tasks

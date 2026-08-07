@@ -3,12 +3,20 @@
 // hedgehog-persistent-build-graph.md, "Task lifecycle", "`hedgehog
 // verify`", and "Scope enforcement is a hard pre-verification check".
 //
-// Phase 0: load the task, assert it's `building` and leased to `owner`,
-// then set `verifying` — a small transaction, before either gate below.
+// Phase 0: load the task, reap its lease if `lease_expires_at` has
+// passed (same reaping claimTasks does lazily — otherwise a build that
+// outlived its lease with no concurrent `claim` call in the interim
+// would still look legitimately leased here), assert it's `building` and
+// leased to `owner`, then set `verifying` — a small transaction, before
+// either gate below.
 //
 // Two gates, in order:
 //   1. `git diff --name-only` (working tree) against the task's
-//      scope_globs. Any touched path outside scope refuses to run
+//      scope_globs, with paths inside any other in-flight task's own
+//      declared scope excluded first — those are a concurrent neighbor's
+//      legitimate uncommitted edits, not this task's violation, since
+//      there's no working-tree isolation between concurrent tasks by
+//      design. Any remaining touched path outside scope refuses to run
 //      verification at all — the task moves to `blocked` with
 //      blocked_reason `scope_violation`, no `verifications` row written,
 //      lease released. This is a scope violation, not a failing check.
@@ -22,20 +30,36 @@
 //      with blocked_reason `verification_failed`, lease released,
 //      dependents stay blocked.
 //
+// The commit lock (commitLock.mjs, backed by the gitignored `.hedgehog/
+// commit.lock`) wraps gate 1's diff read and, separately, gate 2's
+// artifact-classify-and-commit — git has one working tree and one index
+// shared by every concurrent `hedgehog verify` process, so two tasks'
+// commit phases interleaving would let one task's `git commit` (no
+// pathspec) sweep up the other's staged-but-uncommitted files under the
+// wrong commit message, and would let one task's scope diff and its own
+// neighbor-exclusion diff (two separate git calls) see a working tree
+// that changed between them. verify_command itself runs outside the lock
+// — it's the slow part, and holding a lock across it would serialize
+// verification itself rather than just the git-mutating instants around
+// it.
+//
 // No subprocess (git, verify_command) ever runs while a sqlite
 // transaction is open: every execSync call in this file happens before
 // BEGIN or after COMMIT, never between them.
 
 import { execSync } from 'node:child_process';
 import { DB_PATH } from './init.mjs';
+import { withCommitLock, LOCK_PATH } from './commitLock.mjs';
+import { reapExpiredLeases } from './claim.mjs';
 
-// The build graph file itself is engine state, written only by this CLI,
-// never by an agent — it's excluded from every task's scope check (and
-// from artifacts/commits), or verify's own writes ahead of the
-// verify_command run would trip the very check it's performing. Covers
-// SQLite's journal/WAL/SHM sidecar files too.
+// The build graph file and the commit lock are engine state, written
+// only by this CLI, never by an agent — both are excluded from every
+// task's scope check (and from artifacts/commits), or verify's own
+// writes ahead of and during the verify_command run would trip the very
+// check they're performing. Covers SQLite's journal/WAL/SHM sidecar
+// files too.
 function isEngineStatePath(path) {
-  return path === DB_PATH || path.startsWith(`${DB_PATH}-`);
+  return path === DB_PATH || path.startsWith(`${DB_PATH}-`) || path === LOCK_PATH;
 }
 
 // Shell-safe quoting for paths interpolated into a git command line,
@@ -62,13 +86,44 @@ function changedPaths(pathspecs) {
   return [...paths].filter((p) => !isEngineStatePath(p));
 }
 
-// Paths touched outside `scopeGlobs`: the full changed set minus the same
-// query re-run with the globs applied as git pathspec magic. Git's own
-// matcher handles `**` correctly, so no hand-rolled glob→regex is needed.
-function offendingPaths(touched, scopeGlobs) {
+// Every other task currently `building` or `verifying` — their declared
+// scope_globs are files a concurrent neighbor legitimately owns mid-edit,
+// not this task's violation. There is no working-tree isolation between
+// concurrent tasks (by design — see the plan's "one working tree with
+// disjoint scopes"), so the repo-wide diff below sees every in-flight
+// task's uncommitted edits at once; this is what lets the gate tell them
+// apart. Whether a neighbor shares this task's owner doesn't matter: the
+// scheduler's conflict predicate (conflict.mjs) already guarantees any
+// task the same owner holds concurrently has a disjoint scope from this
+// one, the same as a different owner's task would.
+function loadOtherInFlightScopes(db, taskId) {
+  const rows = db
+    .prepare(`SELECT scope_globs FROM tasks WHERE id <> ? AND status IN ('building', 'verifying')`)
+    .all(taskId);
+  return rows.flatMap((row) => JSON.parse(row.scope_globs));
+}
+
+// Splits the working tree's touched paths into `inScope` (this task's own
+// scope_globs — the only set that gets classified, recorded as artifacts,
+// and committed) and `offending` (touched outside scope AND outside every
+// other in-flight task's own declared scope — a real violation, not a
+// concurrent neighbor's legitimate uncommitted work). `touched` (the
+// full, unrestricted diff) is used only to compute `offending`; it is
+// never itself the commit set, or a neighbor's uncommitted file sitting
+// in the shared working tree would ride along into this task's commit.
+function splitByScope(db, taskId, touched, scopeGlobs) {
   const pathspecs = scopeGlobs.map((glob) => `:(glob)${glob}`);
-  const inScope = new Set(changedPaths(pathspecs));
-  return touched.filter((path) => !inScope.has(path));
+  const inScope = changedPaths(pathspecs);
+  const inScopeSet = new Set(inScope);
+
+  const neighborGlobs = loadOtherInFlightScopes(db, taskId);
+  const neighborPathspecs = neighborGlobs.map((glob) => `:(glob)${glob}`);
+  const neighborOwned = new Set(
+    neighborPathspecs.length > 0 ? changedPaths(neighborPathspecs) : [],
+  );
+
+  const offending = touched.filter((path) => !inScopeSet.has(path) && !neighborOwned.has(path));
+  return { inScope, offending };
 }
 
 function loadTask(db, taskId) {
@@ -203,11 +258,11 @@ function classifyArtifacts(paths) {
 // exactly the task's touched paths with commit_message. Returns the new
 // commit sha.
 //
-// The build graph is committed in the same commit as the work it
-// describes. The spec's "SQLite as build state" requires the DB be
-// committed to git — that's what makes state survive `/clear`, machine
-// moves, and reclone. The DB is excluded from the *scope check* (it's
-// engine state, not agent output — see isEngineStatePath) but the commit
+// The build graph (`.hedgehog/hedgehog.db`) is gitignored and derived —
+// isEngineStatePath excludes it from `touched`, so it's never staged or
+// committed here. What survives `/clear`, machine moves, and reclone is
+// the committed intents/friction/core.yaml plus the commit history
+// itself; `hedgehog db rebuild` replays those into a fresh DB. The commit
 // this function makes is the task's final commit; nothing amends it
 // afterward.
 function commitTouchedPaths(paths, commitMessage) {
@@ -217,14 +272,22 @@ function commitTouchedPaths(paths, commitMessage) {
   return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
 }
 
-// Phase 0: load `taskId`, assert it's `building` and leased to `owner`,
-// then set `verifying` — one small transaction. Throws rather than
-// proceeding when the lease doesn't match, so a stale or racing caller
-// can't run verification against a task it doesn't hold.
+// Phase 0: reap expired leases, load `taskId`, assert it's `building` and
+// leased to `owner`, then set `verifying` — one small transaction. Throws
+// rather than proceeding when the lease doesn't match (including a lease
+// that was just reaped for expiring), so a stale or racing caller can't
+// run verification against a task it doesn't hold.
 function claimForVerify(db, taskId, owner) {
   let task;
   db.exec('BEGIN IMMEDIATE');
   try {
+    // Reaps this (and any other) task's lease if lease_expires_at has
+    // passed, before the ownership check below reads status/lease_owner
+    // — otherwise a build that outlived its lease with no concurrent
+    // `claim` call in the interim reaches the check below still looking
+    // legitimately leased, and verify would honor a lease that's already
+    // expired.
+    reapExpiredLeases(db);
     task = loadTask(db, taskId);
     if (!task) throw new Error(`no such task: ${taskId}`);
     if (task.status !== 'building' || task.lease_owner !== owner) {
@@ -256,8 +319,20 @@ export function verifyTask(db, taskId, owner) {
   const task = claimForVerify(db, taskId, owner);
 
   const scopeGlobs = JSON.parse(task.scope_globs);
-  const touched = changedPaths();
-  const offending = offendingPaths(touched, scopeGlobs);
+  // Gate 1 runs inside the commit lock: the diff has to see a working
+  // tree no other task's commit is landing into mid-read, and the
+  // neighbor-scope split has to be computed against a snapshot, not a
+  // set that another verify's commit could shrink out from under it
+  // between the several changedPaths() calls inside it. Only `offending`
+  // is used here — `inScope` is discarded and recomputed fresh just
+  // before the commit below, since verify_command (which runs, unlocked,
+  // in between) can itself touch files inside this task's own scope
+  // (generated lockfiles, formatted output), and committing a stale
+  // pre-verify_command snapshot would silently drop those.
+  const { offending } = withCommitLock(() => {
+    const touchedNow = changedPaths();
+    return splitByScope(db, taskId, touchedNow, scopeGlobs);
+  });
 
   if (offending.length > 0) {
     db.exec('BEGIN IMMEDIATE');
@@ -294,11 +369,25 @@ export function verifyTask(db, taskId, owner) {
     return { outcome: 'failed', exitCode, output };
   }
 
-  // Artifact classification and the git commit both run subprocesses, so
-  // both happen here, before the DB transaction opens — nothing inside
-  // BEGIN/COMMIT below is anything but a sqlite statement.
-  const kindByPath = classifyArtifacts(touched);
-  const commitSha = touched.length > 0 ? commitTouchedPaths(touched, task.commit_message) : null;
+  // Re-diffs against `scopeGlobs` directly (not the gate's `offending`
+  // check) rather than reusing gate 1's snapshot — verify_command ran
+  // unlocked, above, and may have touched files inside this task's own
+  // scope since. Classification, staging, and the commit all run inside
+  // the commit lock, on exactly this in-scope set: `git add` followed by
+  // `git commit` with no pathspec stages and commits whatever is in the
+  // index at that instant, so a neighbor's `git add` landing between this
+  // task's `add` and `commit` would otherwise ride along in this task's
+  // commit under this task's message, and committing the raw (not
+  // scope-restricted) touched set would sweep up a neighbor's untracked,
+  // in-scope-for-them files sitting in the same working tree.
+  const { touched, kindByPath, commitSha } = withCommitLock(() => {
+    const inScope = changedPaths(scopeGlobs.map((glob) => `:(glob)${glob}`));
+    return {
+      touched: inScope,
+      kindByPath: classifyArtifacts(inScope),
+      commitSha: inScope.length > 0 ? commitTouchedPaths(inScope, task.commit_message) : null,
+    };
+  });
 
   let unlocked;
   let intentComplete;
