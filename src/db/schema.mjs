@@ -39,14 +39,21 @@ CREATE TABLE IF NOT EXISTS tasks (
   verify_command TEXT NOT NULL,
   commit_message TEXT NOT NULL,
   priority       INTEGER NOT NULL DEFAULT 100,
+  exclusive      INTEGER NOT NULL DEFAULT 0,
+  verify_radius  TEXT,
   -- Every value here is one the engine actually writes. A CHECK listing
   -- states nothing can produce documents a lifecycle that doesn't exist
   -- and invites writing one the engine can't handle.
   status         TEXT NOT NULL DEFAULT 'proposed'
-                 CHECK (status IN ('proposed','planned','ready',
-                                   'implemented','verified',
-                                   'complete','failed')),
-  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+                 CHECK (status IN ('proposed','planned','ready','building',
+                                   'verifying','complete','blocked')),
+  blocked_reason TEXT CHECK (blocked_reason IS NULL OR blocked_reason IN
+                   ('scope_violation','verification_failed','lease_expired')),
+  lease_owner      TEXT,
+  lease_expires_at TEXT,
+  leased_at        TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK ((lease_owner IS NULL) = (status NOT IN ('building','verifying')))
 );
 
 CREATE TABLE IF NOT EXISTS task_requirements (

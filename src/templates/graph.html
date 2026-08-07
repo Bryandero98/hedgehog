@@ -49,8 +49,8 @@
     color: var(--node-status-fg);
     background: var(--node-status-bg);
   }
-  /* The "in progress" proxy badge — see STATUS_STYLE comment for why this
-     is a hint on `implemented`, not a real status. */
+  /* Names the lease holder while a task is building/verifying — see
+     STATUS_STYLE's progressHint. */
   .rf-task-node .progress-hint {
     font-size: 9px;
     color: #8b949e;
@@ -284,29 +284,24 @@
   const LARGE_GRAPH_THRESHOLD = 30;
 
   // Mirrors status.mjs's TASK_STATUSES lifecycle order and colour intent:
-  // grey (not started) -> blue (in progress) -> amber (needs attention) ->
-  // green (done) -> red (blocked). Each status gets a distinct hue rather
-  // than reusing green for both `ready` and `verified` (the two are
-  // different points in the lifecycle and looked identical before).
+  // grey (not started) -> blue (in progress) -> amber (leased, mid-work) ->
+  // cyan (leased, verifying) -> green (done) -> red (blocked). Each status
+  // gets a distinct hue rather than reusing one across different points in
+  // the lifecycle.
   //
-  // `implemented` also carries a `progressHint`: the engine has no real
-  // in_progress state (tasks has no started_at/updated_at — only
-  // created_at, and the closest recency signal anywhere in the schema,
-  // verifications.ran_at, isn't even in /graph.json today). `implemented`
-  // — code written, verification not yet run — is the closest honest
-  // proxy a client can infer from this payload alone, so it's labelled as
-  // a hint rather than invented as a fake status. A real "started N
-  // minutes ago" signal is a separate, deliberately unbuilt follow-up: it
-  // needs tasks.started_at (or surfacing verifications.ran_at through
-  // graph.mjs) — a schema/query change, not a viewer-only UX pass.
+  // `building` and `verifying` are real observable states (the lease
+  // columns on `tasks` — lease_owner, leased_at, lease_expires_at — are
+  // set for exactly as long as an agent or the engine holds the task), so
+  // both carry a `progressHint` naming who holds the lease rather than
+  // guessing progress from a proxy status.
   const STATUS_STYLE = {
     proposed:    { bg: '#282e37', border: '#6e7681', badgeBg: '#6e768133', badgeFg: '#c9d1d9' },
     planned:     { bg: '#122a4d', border: '#58a6ff', badgeBg: '#58a6ff33', badgeFg: '#79c0ff' },
     ready:       { bg: '#1c3a29', border: '#3fb950', badgeBg: '#3fb95033', badgeFg: '#56d364' },
-    implemented: { bg: '#3d2f0a', border: '#d29922', badgeBg: '#d2992233', badgeFg: '#e3b341', progressHint: 'in progress — awaiting verify' },
-    verified:    { bg: '#123a3c', border: '#39c5cf', badgeBg: '#39c5cf33', badgeFg: '#56d4dd' },
+    building:    { bg: '#3d2f0a', border: '#d29922', badgeBg: '#d2992233', badgeFg: '#e3b341', progressHint: (task) => `building — leased to ${task.lease_owner}` },
+    verifying:   { bg: '#123a3c', border: '#39c5cf', badgeBg: '#39c5cf33', badgeFg: '#56d4dd', progressHint: (task) => `verifying — leased to ${task.lease_owner}` },
     complete:    { bg: '#0f2818', border: '#238636', badgeBg: '#23863633', badgeFg: '#3fb950' },
-    failed:      { bg: '#3d1418', border: '#f85149', badgeBg: '#f8514933', badgeFg: '#ff7b72' },
+    blocked:     { bg: '#3d1418', border: '#f85149', badgeBg: '#f8514933', badgeFg: '#ff7b72' },
   };
   const STATUS_ORDER = Object.keys(STATUS_STYLE);
 
@@ -500,7 +495,7 @@
         'div',
         { className: 'status-row' },
         h('span', { className: 'status' }, data.task.status),
-        style.progressHint ? h('span', { className: 'progress-hint' }, style.progressHint) : null,
+        style.progressHint ? h('span', { className: 'progress-hint' }, style.progressHint(data.task)) : null,
       ),
       h(Handle, { type: 'source', position: Position.Bottom }),
     );
@@ -524,8 +519,8 @@
       h(
         'span',
         { className: 'counts' },
-        data.statusCounts.failed
-          ? h('span', { className: 'count-pill attn' }, `${data.statusCounts.failed} failed`)
+        data.statusCounts.blocked
+          ? h('span', { className: 'count-pill attn' }, `${data.statusCounts.blocked} blocked`)
           : null,
         data.statusCounts.ready
           ? h('span', { className: 'count-pill ready' }, `${data.statusCounts.ready} ready`)
@@ -556,7 +551,7 @@
       h('div', null, task.intentGoal),
       h('div', { className: 'field-label' }, 'Objective'),
       h('div', null, task.objective),
-      (task.status === 'failed' || task.status === 'planned')
+      (task.status === 'blocked' || task.status === 'planned')
         ? h(
             'button',
             {
@@ -769,8 +764,8 @@
 
     const isLargeGraph = !!raw && raw.nodes.length > LARGE_GRAPH_THRESHOLD;
 
-    // The modules worth a first look — anything with a failed task
-    // (blocking) or a ready task (actionable). Drives both which lanes
+    // The modules worth a first look — anything with a blocked task
+    // (needs a fix) or a ready task (actionable). Drives both which lanes
     // start collapsed and, on first paint, which lanes fitView zooms to
     // (see attentionModulesRef below) — a large graph should open on what
     // needs attention, not zoomed out far enough to fit every idle lane.
@@ -783,7 +778,7 @@
       }
       const next = new Set();
       for (const [moduleName, statuses] of byModule) {
-        if (statuses.some((s) => s === 'failed' || s === 'ready')) next.add(moduleName);
+        if (statuses.some((s) => s === 'blocked' || s === 'ready')) next.add(moduleName);
       }
       return next;
     }, [raw]);

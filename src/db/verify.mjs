@@ -1,20 +1,25 @@
-// `hedgehog verify <task-id>` — scope pre-check, then verify_command, then
-// state transition. See hedgehog-persistent-build-graph.md, "Task
-// lifecycle", "`hedgehog verify`", and "Scope enforcement is a hard
-// pre-verification check".
+// `hedgehog verify <task-id>` — lease check, scope pre-check, then
+// verify_command, then state transition. See
+// hedgehog-persistent-build-graph.md, "Task lifecycle", "`hedgehog
+// verify`", and "Scope enforcement is a hard pre-verification check".
+//
+// Phase 0: load the task, assert it's `building` and leased to `owner`,
+// then set `verifying` — a small transaction, before either gate below.
 //
 // Two gates, in order:
 //   1. `git diff --name-only` (working tree) against the task's
 //      scope_globs. Any touched path outside scope refuses to run
-//      verification at all — the task stays `implemented`, no
-//      `verifications` row written. This is a scope violation, not a
-//      failing check.
+//      verification at all — the task moves to `blocked` with
+//      blocked_reason `scope_violation`, no `verifications` row written,
+//      lease released. This is a scope violation, not a failing check.
 //   2. Only once every touched path matches scope does verify_command run.
-//      Exit 0: verifications row (passed) → verified → artifacts recorded
-//      → git commit with commit_message → complete → direct dependents
-//      re-evaluated (a dependent is ready once every dependency is
-//      complete — same check as the readiness SELECT in next.mjs).
-//      Nonzero: verifications row (failed, output retained) → failed,
+//      Exit 0: verifications row (passed) → artifacts recorded → git
+//      commit with commit_message → complete, lease released → direct
+//      dependents re-evaluated (a dependent is ready once every
+//      dependency is complete — same check as the readiness SELECT in
+//      next.mjs).
+//      Nonzero: verifications row (failed, output retained) → blocked
+//      with blocked_reason `verification_failed`, lease released,
 //      dependents stay blocked.
 //
 // No subprocess (git, verify_command) ever runs while a sqlite
@@ -70,8 +75,23 @@ function loadTask(db, taskId) {
   return db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
 }
 
-function setTaskStatus(db, taskId, status) {
-  db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, taskId);
+// Sets `status`, and whenever that status leaves building/verifying
+// (complete or blocked) clears the lease fields — a task that isn't
+// building or verifying holds no lease, per the schema's CHECK. Pass
+// `blockedReason` when status is `blocked`.
+function setTaskStatus(db, taskId, status, { blockedReason } = {}) {
+  const releasesLease = status === 'complete' || status === 'blocked';
+  db.prepare(
+    `
+    UPDATE tasks SET
+      status = ?,
+      blocked_reason = ?,
+      lease_owner = CASE WHEN ? THEN NULL ELSE lease_owner END,
+      lease_expires_at = CASE WHEN ? THEN NULL ELSE lease_expires_at END,
+      leased_at = CASE WHEN ? THEN NULL ELSE leased_at END
+    WHERE id = ?
+  `,
+  ).run(status, blockedReason ?? null, releasesLease ? 1 : 0, releasesLease ? 1 : 0, releasesLease ? 1 : 0, taskId);
 }
 
 const insertVerification = (db) =>
@@ -121,9 +141,9 @@ function hasNoIncompleteDependency(db, taskId) {
 
 // Marks `taskId`'s direct dependents `ready` wherever every one of their
 // dependencies (not just this one) is now `complete` — but only if the
-// dependent is still `planned`. A dependent already `failed` or
-// `implemented` is stalled, not blocked-on-deps, and must not be silently
-// cleared back to `ready` just because its deps happened to complete.
+// dependent is still `planned`. A dependent already `blocked` is stalled,
+// not blocked-on-deps, and must not be silently cleared back to `ready`
+// just because its deps happened to complete.
 function unlockReadyDependents(db, taskId) {
   const unlocked = [];
   for (const dependent of loadDirectDependents(db, taskId)) {
@@ -197,21 +217,61 @@ function commitTouchedPaths(paths, commitMessage) {
   return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
 }
 
-// Runs the full verify flow for `taskId`. Returns a result object
-// describing what happened:
+// Phase 0: load `taskId`, assert it's `building` and leased to `owner`,
+// then set `verifying` — one small transaction. Throws rather than
+// proceeding when the lease doesn't match, so a stale or racing caller
+// can't run verification against a task it doesn't hold.
+function claimForVerify(db, taskId, owner) {
+  let task;
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    task = loadTask(db, taskId);
+    if (!task) throw new Error(`no such task: ${taskId}`);
+    if (task.status !== 'building' || task.lease_owner !== owner) {
+      throw new Error(
+        `Task ${taskId} is not leased to ${owner} (currently: ${task.status}${
+          task.lease_owner ? ', leased to ' + task.lease_owner : ''
+        })`,
+      );
+    }
+    setTaskStatus(db, task.id, 'verifying');
+    db.exec('COMMIT');
+  } catch (err) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Rollback failing must not mask the original error.
+    }
+    throw err;
+  }
+  return { ...task, status: 'verifying' };
+}
+
+// Runs the full verify flow for `taskId`, held by `owner`'s lease.
+// Returns a result object describing what happened:
 //   { outcome: 'scope_violation', offending: [...] }
 //   { outcome: 'failed', exitCode, output }
 //   { outcome: 'complete', exitCode, output, commitSha, unlocked: [...] }
-export function verifyTask(db, taskId) {
-  const task = loadTask(db, taskId);
-  if (!task) throw new Error(`no such task: ${taskId}`);
+export function verifyTask(db, taskId, owner) {
+  const task = claimForVerify(db, taskId, owner);
 
   const scopeGlobs = JSON.parse(task.scope_globs);
   const touched = changedPaths();
   const offending = offendingPaths(touched, scopeGlobs);
 
   if (offending.length > 0) {
-    setTaskStatus(db, task.id, 'implemented');
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      setTaskStatus(db, task.id, 'blocked', { blockedReason: 'scope_violation' });
+      db.exec('COMMIT');
+    } catch (err) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // Rollback failing must not mask the original error.
+      }
+      throw err;
+    }
     return { outcome: 'scope_violation', offending };
   }
 
@@ -221,7 +281,7 @@ export function verifyTask(db, taskId) {
     db.exec('BEGIN IMMEDIATE');
     try {
       insertVerification(db).run(task.id, task.verify_command, exitCode, output, 'failed');
-      setTaskStatus(db, task.id, 'failed');
+      setTaskStatus(db, task.id, 'blocked', { blockedReason: 'verification_failed' });
       db.exec('COMMIT');
     } catch (err) {
       try {
@@ -245,7 +305,6 @@ export function verifyTask(db, taskId) {
   db.exec('BEGIN IMMEDIATE');
   try {
     insertVerification(db).run(task.id, task.verify_command, exitCode, output, 'passed');
-    setTaskStatus(db, task.id, 'verified');
 
     const runInsertArtifact = insertArtifact(db);
     for (const path of touched) {

@@ -23,6 +23,7 @@ import { planTasks } from '../src/db/plan.mjs';
 import { addIntent, INTENTS_DIR } from '../src/db/intent.mjs';
 import { nextTask, formatNext, stalledTasks } from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
+import { claimTasks, releaseTask, renewLease } from '../src/db/claim.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
@@ -31,6 +32,12 @@ import { HOSTS, HOST_FLAGS, DEFAULT_HOST, availableHosts } from '../src/hosts/in
 import { recordHosts, installedHosts } from '../src/hosts/installed.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
+
+const BLOCKED_REASON_LABELS = {
+  verification_failed: 'verification failed',
+  scope_violation: 'scope violation',
+  lease_expired: 'lease expired',
+};
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = resolve(__dirname, '..');
@@ -302,8 +309,11 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
   npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
   npx @skyf0xx/hedgehog next                      print the task packet for one ready task
-  npx @skyf0xx/hedgehog verify <task-id>          run scope + verify checks, commit on pass
-  npx @skyf0xx/hedgehog status                    graph overview: counts by status, ready list
+  npx @skyf0xx/hedgehog claim --owner <owner>     atomically claim one ready task
+  npx @skyf0xx/hedgehog release <task-id> --owner <owner>   hand a claimed task back to ready
+  npx @skyf0xx/hedgehog renew <task-id> --owner <owner> [--minutes <n>]   extend a held lease
+  npx @skyf0xx/hedgehog verify <task-id> --owner <owner>   run scope + verify checks, commit on pass
+  npx @skyf0xx/hedgehog status                    graph overview: counts by status, ready list, in flight
   npx @skyf0xx/hedgehog graph                     start (or reuse) the live graph server and open it
   npx @skyf0xx/hedgehog graph --no-open           start (or reuse) the server; print the URL instead
   npx @skyf0xx/hedgehog why <path>                provenance chain for a file
@@ -736,8 +746,7 @@ async function nextCommand() {
     if (stalled.length > 0) {
       console.error(`${red(bold('No ready task, but the graph is blocked.'))}\n`);
       for (const task of stalled) {
-        const reason =
-          task.status === 'failed' ? 'verification failed' : 'scope violation';
+        const reason = BLOCKED_REASON_LABELS[task.blocked_reason] ?? task.blocked_reason;
         console.error(`  ${red('✗')} ${bold(task.id)}   ${task.layer}   ${dim(reason)}`);
       }
       console.error(
@@ -757,8 +766,10 @@ async function verifyCommand(args) {
   await ensureDb();
 
   const taskId = args[0];
-  if (!taskId) {
-    console.error(`${red('Usage:')} hedgehog verify <task-id>\n`);
+  const ownerIdx = args.indexOf('--owner');
+  const owner = ownerIdx !== -1 ? args[ownerIdx + 1] : undefined;
+  if (!taskId || !owner) {
+    console.error(`${red('Usage:')} hedgehog verify <task-id> --owner <owner>\n`);
     process.exitCode = 1;
     return;
   }
@@ -772,7 +783,7 @@ async function verifyCommand(args) {
   const db = openDb();
   let result;
   try {
-    result = verifyTask(db, taskId);
+    result = verifyTask(db, taskId, owner);
   } catch (err) {
     console.error(`${red('Verify failed:')} ${err.message}\n`);
     process.exitCode = 1;
@@ -782,7 +793,7 @@ async function verifyCommand(args) {
   }
 
   if (result.outcome === 'scope_violation') {
-    console.error(`${red(bold('Scope violation.'))} Task ${bold(taskId)} stays ${bold('implemented')}.\n`);
+    console.error(`${red(bold('Scope violation.'))} Task ${bold(taskId)} is now ${bold('blocked')}.\n`);
     console.error('Touched paths outside allowed scope:');
     for (const path of result.offending) console.error(`  ${red('✗')} ${path}`);
     console.error();
@@ -791,7 +802,7 @@ async function verifyCommand(args) {
   }
 
   if (result.outcome === 'failed') {
-    console.error(`${red(bold('Verification failed.'))} Task ${bold(taskId)} is now ${bold('failed')} (exit ${result.exitCode}).\n`);
+    console.error(`${red(bold('Verification failed.'))} Task ${bold(taskId)} is now ${bold('blocked')} (exit ${result.exitCode}).\n`);
     if (result.output) console.error(result.output);
     process.exitCode = 1;
     return;
@@ -807,6 +818,122 @@ async function verifyCommand(args) {
   if (result.intentComplete) {
     console.log(`  ${green('intent complete')}  ${dim('every task for this intent is done')}`);
   }
+}
+
+// `hedgehog claim --owner <owner>` — atomically claims one ready task and
+// prints its packet, same shape as `hedgehog next`, plus which owner now
+// holds it. `--count` is accepted but fixed at 1 for now (plan: get real-
+// world confidence in the lease lifecycle before adding fan-out).
+async function claimCommand(args) {
+  await ensureDb();
+
+  const ownerIdx = args.indexOf('--owner');
+  const owner = ownerIdx !== -1 ? args[ownerIdx + 1] : undefined;
+  if (!owner) {
+    console.error(`${red('Usage:')} hedgehog claim --owner <owner>\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = openDb();
+  let claimed;
+  try {
+    claimed = claimTasks(db, { owner, count: 1 });
+  } finally {
+    db.close();
+  }
+
+  if (claimed.length === 0) {
+    console.log(`${dim('No claimable task.')} Nothing is ready with no lease held.\n`);
+    return;
+  }
+
+  const task = claimed[0];
+  console.log(`${green(bold('Claimed.'))} Task ${bold(task.id)} leased to ${bold(owner)}.`);
+  console.log(`  ${dim('expires')}  ${task.lease_expires_at}`);
+}
+
+// `hedgehog release <task-id> --owner <owner>` — hands a claimed task
+// back to `ready` without marking it blocked, for an agent stopping
+// cleanly before finishing.
+async function releaseCommand(args) {
+  await ensureDb();
+
+  const taskId = args[0];
+  const ownerIdx = args.indexOf('--owner');
+  const owner = ownerIdx !== -1 ? args[ownerIdx + 1] : undefined;
+  if (!taskId || !owner) {
+    console.error(`${red('Usage:')} hedgehog release <task-id> --owner <owner>\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = openDb();
+  let result;
+  try {
+    result = releaseTask(db, taskId, owner);
+  } finally {
+    db.close();
+  }
+
+  if (!result.released) {
+    console.error(`${red('Not released.')} Task ${bold(taskId)} is not leased to ${bold(owner)} as ${bold('building')}.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(`${green(bold('Released.'))} Task ${bold(taskId)} is now ${bold('ready')}.`);
+}
+
+// `hedgehog renew <task-id> --owner <owner> [--minutes <n>]` — extends a
+// held lease, for an agent still working past the original lease window.
+async function renewCommand(args) {
+  await ensureDb();
+
+  const taskId = args[0];
+  const ownerIdx = args.indexOf('--owner');
+  const owner = ownerIdx !== -1 ? args[ownerIdx + 1] : undefined;
+  const minutesIdx = args.indexOf('--minutes');
+  const minutes = minutesIdx !== -1 ? Number(args[minutesIdx + 1]) : 45;
+  if (!taskId || !owner) {
+    console.error(`${red('Usage:')} hedgehog renew <task-id> --owner <owner> [--minutes <n>]\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = openDb();
+  let result;
+  try {
+    result = renewLease(db, taskId, owner, minutes);
+  } finally {
+    db.close();
+  }
+
+  if (!result.renewed) {
+    console.error(`${red('Not renewed.')} Task ${bold(taskId)} is not leased to ${bold(owner)}.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(`${green(bold('Renewed.'))} Task ${bold(taskId)}'s lease extended by ${minutes} minute(s).`);
 }
 
 async function statusCommand() {
@@ -1143,6 +1270,21 @@ async function main() {
 
   if (cmd === 'verify') {
     await verifyCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'claim') {
+    await claimCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'release') {
+    await releaseCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'renew') {
+    await renewCommand(args.slice(1));
     return;
   }
 

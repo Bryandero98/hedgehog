@@ -17,15 +17,16 @@ const TASK_STATUSES = [
   'proposed',
   'planned',
   'ready',
-  'implemented',
-  'verified',
+  'building',
+  'verifying',
   'complete',
-  'failed',
+  'blocked',
 ];
 
 const READY_TASKS_SQL = `
   SELECT t.* FROM tasks t
   WHERE t.status IN ('planned', 'ready')
+    AND t.lease_owner IS NULL
     AND NOT EXISTS (
       SELECT 1 FROM dependencies d
       JOIN tasks dep ON dep.id = d.depends_on_task_id
@@ -33,6 +34,16 @@ const READY_TASKS_SQL = `
     )
   ORDER BY t.priority, t.id;
 `;
+
+const IN_FLIGHT_TASKS_SQL = `
+  SELECT t.* FROM tasks t
+  WHERE t.status IN ('building', 'verifying')
+  ORDER BY t.priority, t.id;
+`;
+
+function loadInFlightTasks(db) {
+  return db.prepare(IN_FLIGHT_TASKS_SQL).all();
+}
 
 function countTasksByStatus(db) {
   const rows = db
@@ -47,17 +58,16 @@ function loadReadyTasks(db) {
   return db.prepare(READY_TASKS_SQL).all();
 }
 
-// Tasks that need a human/agent decision before the graph can move again:
-// `failed` (verification ran and returned nonzero) and `implemented` (a
-// scope violation refused to run verification). Neither is pickable by
-// `hedgehog next`, so without listing them here a build whose only
-// remaining work is a failed task looks identical to a finished one —
-// "READY (none)" with no indication anything is wrong. Listing them is
-// what makes the fix-and-re-verify path in hedgehog-loop's Loop step 4
-// discoverable from a fresh context.
+// Tasks that need a human/agent decision before the graph can move again
+// — `blocked`, for any blocked_reason. Not pickable by `hedgehog next`,
+// so without listing them here a build whose only remaining work is a
+// blocked task looks identical to a finished one — "READY (none)" with
+// no indication anything is wrong. Listing them is what makes the
+// fix-and-re-verify path in hedgehog-loop's Loop step 4 discoverable
+// from a fresh context.
 const ATTENTION_TASKS_SQL = `
   SELECT t.* FROM tasks t
-  WHERE t.status IN ('failed', 'implemented')
+  WHERE t.status = 'blocked'
   ORDER BY t.priority, t.id;
 `;
 
@@ -65,21 +75,30 @@ function loadAttentionTasks(db) {
   return db.prepare(ATTENTION_TASKS_SQL).all();
 }
 
-// Returns { counts, ready, attention, total } — counts keyed by every
-// status in the tasks CHECK constraint (present even at zero), ready the
-// full list of currently-pickable tasks, attention the stalled tasks
-// needing a re-verify, total the sum across all statuses.
+// Returns { counts, ready, inFlight, attention, total } — counts keyed by
+// every status in the tasks CHECK constraint (present even at zero),
+// ready the full list of currently-pickable tasks, inFlight the tasks
+// currently leased (building or verifying), attention the stalled tasks
+// needing a fix, total the sum across all statuses.
 export function graphStatus(db) {
   const counts = countTasksByStatus(db);
   const ready = loadReadyTasks(db);
+  const inFlight = loadInFlightTasks(db);
   const attention = loadAttentionTasks(db);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  return { counts, ready, attention, total };
+  return { counts, ready, inFlight, attention, total };
 }
 
+const BLOCKED_REASON_LABELS = {
+  verification_failed: 'verification failed',
+  scope_violation: 'scope violation',
+  lease_expired: 'lease expired',
+};
+
 // Renders a graphStatus() result into a plain-text overview: counts by
-// status (only non-zero ones, in lifecycle order), then the ready list.
-export function formatStatus({ counts, ready, attention, total }) {
+// status (only non-zero ones, in lifecycle order), the ready list, tasks
+// currently in flight, and anything needing attention.
+export function formatStatus({ counts, ready, inFlight, attention, total }) {
   const lines = [];
   lines.push(`TASKS  ${total}`);
   lines.push('');
@@ -97,12 +116,19 @@ export function formatStatus({ counts, ready, attention, total }) {
     }
   }
 
+  if (inFlight && inFlight.length > 0) {
+    lines.push('');
+    lines.push('IN FLIGHT');
+    for (const task of inFlight) {
+      lines.push(`  ${task.id}   ${task.layer}   ${task.status}    owner: ${task.lease_owner}`);
+    }
+  }
+
   if (attention && attention.length > 0) {
     lines.push('');
     lines.push('NEEDS ATTENTION');
     for (const task of attention) {
-      const reason =
-        task.status === 'failed' ? 'verification failed' : 'scope violation';
+      const reason = BLOCKED_REASON_LABELS[task.blocked_reason] ?? task.blocked_reason;
       lines.push(`  ${task.id}   ${task.layer}   ${reason}`);
     }
     lines.push('');

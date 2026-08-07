@@ -68,6 +68,7 @@ export function buildGraph(db) {
     module: t.module,
     layer: t.layer,
     status: t.status,
+    lease_owner: t.lease_owner,
     objective: t.objective,
     verifyCommand: t.verify_command,
     commitMessage: t.commit_message,

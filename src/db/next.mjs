@@ -17,6 +17,7 @@
 const READY_TASK_SQL = `
   SELECT t.* FROM tasks t
   WHERE t.status IN ('planned', 'ready')
+    AND t.lease_owner IS NULL
     AND NOT EXISTS (
       SELECT 1 FROM dependencies d
       JOIN tasks dep ON dep.id = d.depends_on_task_id
@@ -108,18 +109,18 @@ export function nextTask(db) {
   return assemblePacket(db, task);
 }
 
-// Tasks stalled awaiting a re-verify: `failed` (verification returned
-// nonzero) or `implemented` (scope violation refused to run it). Neither
-// is pickable by the readiness query, so when `nextTask` returns null the
-// caller uses this to tell "the build is finished" apart from "the build
-// is stuck on a task that needs fixing" — otherwise a failed task makes
-// a blocked graph look complete.
+// Tasks stalled awaiting a fix: `blocked` (verification failed, a scope
+// violation refused to run it, or a lease expired mid-build — see
+// blocked_reason). Not pickable by the readiness query, so when
+// `nextTask` returns null the caller uses this to tell "the build is
+// finished" apart from "the build is stuck on a task that needs fixing"
+// — otherwise a blocked task makes the graph look complete.
 export function stalledTasks(db) {
   return db
     .prepare(
       `
       SELECT t.* FROM tasks t
-      WHERE t.status IN ('failed', 'implemented')
+      WHERE t.status = 'blocked'
       ORDER BY t.priority, t.id
     `,
     )
