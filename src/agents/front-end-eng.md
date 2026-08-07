@@ -68,7 +68,7 @@ don't reach for a second one.
 
 ## Workflow
 
-1. Read the `hedgehog next` task packet: its WHY NOW section already
+1. Read the claimed task packet: its WHY NOW section already
    confirms Phase A is closed for this module (the `hook`/`screen`
    layer's dependencies wouldn't be `complete` otherwise) — no need to
    re-derive that by hand. If you're handed a step outside a packet with
@@ -84,7 +84,7 @@ don't reach for a second one.
 4. Build the screen consuming the hook the same way — packet, build,
    report, `hedgehog verify`.
 5. One layer at a time — `hook` fully `complete` before the `screen`
-   layer that depends on it starts, same gate `hedgehog next` already
+   layer that depends on it starts, same gate `hedgehog claim` already
    enforces.
 
 ## Constraints

@@ -6,13 +6,14 @@ description: Use for every unit of work on the landing-page core, from planning 
 # Hedgehog Landing Loop
 
 The operating loop for a bootstrapped `landing-page` project: `hedgehog
-next` emits the packet for one ready phase, run it through its owning
-agent, `hedgehog verify` gates and commits it. The build graph
-(`.hedgehog/hedgehog.db`) is the live list — query it via `hedgehog
-status`/`hedgehog next`, never re-derive state from prose. The five
-compiled phases (`src/golden-cores/landing-page/core.yaml`, already the
-source of truth) are the degenerate one-module case of the layer graph:
-one task per phase, each depending on the one before it.
+claim --owner <owner> --count <n>` emits the packet for one ready phase
+(this core's chain is linear, so `--count N` always returns 1), run it
+through its owning agent, `hedgehog verify` gates and commits it. The
+build graph (`.hedgehog/hedgehog.db`) is the live list — query it via
+`hedgehog status`/`hedgehog ready`, never re-derive state from prose. The
+five compiled phases (`src/golden-cores/landing-page/core.yaml`, already
+the source of truth) are the degenerate one-module case of the layer
+graph: one task per phase, each depending on the one before it.
 
 This is the **Chain Method**: a pipeline where every visual choice traces
 back to a reason. No agent may introduce a choice that doesn't originate
@@ -76,10 +77,12 @@ back at Confirm & Lock for the user to accept or correct.
    tasks. Run `hedgehog plan` next, then `hedgehog status` to show the
    compiled chain.
 6. **Commit planning intake's output as one commit**,
-   `chore(planning): intake` — the committed `.hedgehog/hedgehog.db` (the
-   `landing` intent and its compiled tasks), `.hedgehog/BMAD/`,
+   `chore(planning): intake` — the committed intent
+   (`.hedgehog/intents/landing.json`), `.hedgehog/BMAD/`,
    `.hedgehog/chain/00-brief.md`, and root `CLAUDE.md`'s filled
-   placeholders.
+   placeholders. `.hedgehog/hedgehog.db` is gitignored and derived —
+   `hedgehog plan` compiles it from the committed intent, and `hedgehog db
+   rebuild` re-derives it from that same intent plus git history.
 7. **Hand off to `bootstrap`** once the commit lands.
 
 `planner` owns this section; see that agent for when it runs.
@@ -134,11 +137,14 @@ paragraph algorithm, and their self-tests.
 
 ## The Loop (every unit of work)
 
-1. **Run `hedgehog next`.** It emits the task packet for one ready
-   compiled layer (STATUS/WHY NOW/BLOCKED DOWNSTREAM/ALLOWED
-   SCOPE/VERIFICATION) — trust it: `hedgehog next` never emits a layer
-   whose dependency isn't `complete`, so there's no separate gate check to
-   run by hand.
+1. **Run `hedgehog claim --owner <owner> --count <n>`.** `<owner>` is
+   this session (a stable id — session id or equivalent). It emits the
+   task packet for one ready compiled layer (STATUS/WHY NOW/BLOCKED
+   DOWNSTREAM/ALLOWED SCOPE/VERIFICATION) — trust it: `hedgehog claim`
+   never hands out a layer whose dependency isn't `complete`, so there's
+   no separate gate check to run by hand. This core's chain is linear, so
+   `--count N` always returns 1 task, never more — see Rules below.
+   `hedgehog ready` previews the same decision without claiming anything.
 2. **Map the packet's layer to the fine-grained phases it bundles**, per
    the table above (`feeling` = phases 1–4, `tokens` = 5–7, `sequence` =
    8–10, `artifact` = 11–12), and **delegate to that layer's owning
@@ -172,14 +178,17 @@ paragraph algorithm, and their self-tests.
    the orchestrating session's act via `hedgehog verify`, never the phase
    agent's own.
 4. Once every phase inside the packet's layer has been presented and
-   locked by the user, **run `hedgehog verify <task-id>`.** It checks the
-   touched files against the packet's ALLOWED SCOPE, runs the layer's
-   `VERIFICATION` command, and on a pass writes the commit (the exact
-   Conventional Commit message from the table above) and unlocks the next
-   layer. On a scope violation or a failing check, the task stays
-   `implemented`/`failed` and nothing downstream unlocks — fix it and
-   re-run `hedgehog verify`, don't hand-commit around it.
-5. **Repeat** — `hedgehog next` again for the following layer.
+   locked by the user, **run `hedgehog verify <task-id> --owner
+   <owner>`.** It checks the touched files against the packet's ALLOWED
+   SCOPE, runs the layer's `VERIFICATION` command, and on a pass writes
+   the commit (the exact Conventional Commit message from the table
+   above) and unlocks the next layer. On a scope violation or a failing
+   check, the task moves to `blocked` with a `blocked_reason` of
+   `scope_violation` or `verification_failed`, and nothing downstream
+   unlocks — fix it and re-run `hedgehog verify <task-id> --owner
+   <owner>`, don't hand-commit around it.
+5. **Repeat** — `hedgehog claim --owner <owner> --count <n>` again for
+   the following layer.
 
 Each `hedgehog verify` call commits exactly one compiled layer's
 artifact; a wrong phase is fixed forward later via the Correction
@@ -286,7 +295,7 @@ graph is done — `hedgehog status` shows every task `complete` — but the
 orchestrating session runs one more uncompiled pass before offering the
 Stop Condition's handoff: a bounded loop that polishes the rendered page
 for visual and interaction quality independent of the chain's own
-traceability concerns. This is not a compiled layer (no `hedgehog next`
+traceability concerns. This is not a compiled layer (no `hedgehog claim`
 packet, no `hedgehog verify` gate) — it runs the same way the Correction
 Protocol's post-build entry does, driven directly by the orchestrating
 session, because it operates on the built page after the graph's own
@@ -396,9 +405,12 @@ way `hedgehog-loop`'s Stop Condition works. The `artifact` task being
 `complete` opens the Polish Loop; the Polish Loop exiting is what actually
 ends the build session. The subject statement or an adjective being
 genuinely ambiguous mid-chain is the other, earlier trigger, same as
-before. Nothing gets deleted either way — `.hedgehog/hedgehog.db` stays
-committed, including every `feat(landing): polish iteration <n>` commit
-the loop made.
+before. Nothing gets deleted either way — the permanent record is the
+committed intent (`.hedgehog/intents/landing.json`), `.hedgehog/chain/`,
+the friction log, and the git commit history itself, including every
+`feat(landing): polish iteration <n>` commit the loop made.
+`.hedgehog/hedgehog.db` is gitignored: a derived index, rebuildable at
+any time via `hedgehog db rebuild`.
 
 Tell the user plainly that the build (including the polish pass) is
 complete, and that clearing context now costs nothing — the chain
@@ -440,9 +452,6 @@ still holds:
   `planner`'s first run there, not an edit to this one's locked brief.
   Never rewrite `00-brief.md` to accommodate new scope — it's the root
   every phase's traceability audit walks back to.
-
-Don't start making tweaks or planning new scope in the current,
-already-large context; that's what the fresh session is for.
 
 Don't start making tweaks or planning new scope in the current,
 already-large context; that's what the fresh session is for.
