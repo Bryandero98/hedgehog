@@ -3,6 +3,7 @@
 // columns added to `tasks` in schema.mjs.
 
 import { inTransaction } from './init.mjs';
+import { conflicts } from './conflict.mjs';
 
 // Same no-incomplete-dependency shape as next.mjs's READY_TASK_SQL, without
 // the LIMIT 1 — claimTasks may take more than one candidate per call.
@@ -18,7 +19,9 @@ const CLAIMABLE_TASKS_SQL = `
   ORDER BY t.priority, t.id
 `;
 
-function findClaimableTasks(db) {
+// Exported for ready.mjs, which walks the identical candidate set to
+// simulate this same fan-out without claiming anything.
+export function findClaimableTasks(db) {
   return db.prepare(CLAIMABLE_TASKS_SQL).all();
 }
 
@@ -53,6 +56,16 @@ const claimOne = (db) =>
 
 // Claims up to `count` ready tasks for `owner`. `count` is a maximum, not
 // a promise — returns however many were actually claimed, possibly zero.
+//
+// Fan-out keeps the batch mutually non-conflicting per conflict.mjs's
+// exclusive/scope/verify predicate (item 11): a candidate that conflicts
+// with anything already accepted into this batch is left ready for a
+// future call rather than claimed alongside it. Every other in-flight
+// task is already excluded by CLAIMABLE_TASKS_SQL's `lease_owner IS
+// NULL`, so only this-batch membership needs checking. A race lost to a
+// concurrent claimer (the atomic UPDATE returns undefined) is skipped
+// and doesn't count against `count` — it neither joins the batch nor
+// short-circuits the loop.
 export function claimTasks(db, { owner, count = 1, leaseMinutes = 45 }) {
   return inTransaction(db, () => {
     reapExpiredLeases(db);
@@ -63,6 +76,7 @@ export function claimTasks(db, { owner, count = 1, leaseMinutes = 45 }) {
 
     for (const candidate of candidates) {
       if (claimed.length >= count) break;
+      if (claimed.some((accepted) => conflicts(candidate, accepted) !== null)) continue;
       const result = runClaim.get(owner, leaseMinutes, candidate.id);
       if (result === undefined) continue; // lost the race, skip
       claimed.push(loadTask(db, candidate.id));

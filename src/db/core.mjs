@@ -57,6 +57,8 @@ function indentOf(line) {
 //       scope: [<scalar>, <scalar>]
 //       verify: <scalar>
 //       commit: <scalar>
+//       exclusive: <bool>             # optional, default false
+//       verify_radius: [<scalar>, ...] # optional, default null (falls back to scope)
 export function parseCoreYaml(text) {
   const rawLines = text.split('\n');
   const lines = [];
@@ -108,6 +110,14 @@ export function parseCoreYaml(text) {
       scope: layer.scope !== undefined ? parseInlineList(layer.scope) : [],
       verify: layer.verify !== undefined ? parseScalar(layer.verify) : '',
       commit: layer.commit !== undefined ? parseScalar(layer.commit) : '',
+      // Scheduler isolation flag (conflict.mjs) — absent means concurrency-safe.
+      exclusive:
+        layer.exclusive !== undefined && parseScalar(layer.exclusive) === 'true',
+      // null (not []) is the sentinel conflict.mjs reads as "fall back to scope".
+      verify_radius:
+        layer.verify_radius !== undefined
+          ? parseInlineList(layer.verify_radius)
+          : null,
     });
   }
 
@@ -132,6 +142,30 @@ export function validateCore(core) {
       throw new Error(`layer "${layer.id}" missing verify`);
     }
   }
+
+  // A module-axis core's per-module layers must all vary by module in
+  // scope — a partial mix means some layer's file-level isolation
+  // silently collapses across modules at plan.mjs's fillModule step.
+  // scope (not verify/commit) is the check because scope is what
+  // determines file-level isolation. An `exclusive: true` layer is
+  // exempt: exclusive is the declared escape hatch for irreducibly
+  // global work (a join/integration layer), which by definition has no
+  // per-module scope to declare and needs none — the scheduler already
+  // never co-schedules it with anything.
+  const isModuleAxis = core.layers.some((layer) =>
+    layer.scope.join('').includes('{module}'),
+  );
+  if (isModuleAxis) {
+    for (const layer of core.layers) {
+      if (layer.exclusive) continue;
+      if (!layer.scope.join('').includes('{module}')) {
+        throw new Error(
+          `layer "${layer.id}" has no {module} in scope, but core "${core.id}" is module-axis (another layer's scope uses {module})`,
+        );
+      }
+    }
+  }
+
   return core;
 }
 

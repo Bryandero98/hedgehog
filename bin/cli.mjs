@@ -24,6 +24,7 @@ import { addIntent, INTENTS_DIR } from '../src/db/intent.mjs';
 import { nextTask, formatNext, stalledTasks } from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
 import { claimTasks, releaseTask, renewLease } from '../src/db/claim.mjs';
+import { readyTasks, formatReady } from '../src/db/ready.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
@@ -309,11 +310,13 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
   npx @skyf0xx/hedgehog intent add --file <path>  add an intent from a JSON file
   npx @skyf0xx/hedgehog next                      print the task packet for one ready task
-  npx @skyf0xx/hedgehog claim --owner <owner>     atomically claim one ready task
+  npx @skyf0xx/hedgehog claim --owner <owner> [--count <n>]   atomically claim up to n ready tasks
   npx @skyf0xx/hedgehog release <task-id> --owner <owner>   hand a claimed task back to ready
   npx @skyf0xx/hedgehog renew <task-id> --owner <owner> [--minutes <n>]   extend a held lease
   npx @skyf0xx/hedgehog verify <task-id> --owner <owner>   run scope + verify checks, commit on pass
   npx @skyf0xx/hedgehog status                    graph overview: counts by status, ready list, in flight
+  npx @skyf0xx/hedgehog ready                     preview which ready tasks are claimable now vs held back
+  npx @skyf0xx/hedgehog quiesce                   report whether anything is still in flight
   npx @skyf0xx/hedgehog graph                     start (or reuse) the live graph server and open it
   npx @skyf0xx/hedgehog graph --no-open           start (or reuse) the server; print the URL instead
   npx @skyf0xx/hedgehog why <path>                provenance chain for a file
@@ -820,17 +823,19 @@ async function verifyCommand(args) {
   }
 }
 
-// `hedgehog claim --owner <owner>` — atomically claims one ready task and
-// prints its packet, same shape as `hedgehog next`, plus which owner now
-// holds it. `--count` is accepted but fixed at 1 for now (plan: get real-
-// world confidence in the lease lifecycle before adding fan-out).
+// `hedgehog claim --owner <owner> [--count <n>]` — atomically claims up to
+// `count` mutually non-conflicting ready tasks (claimTasks's fan-out, item
+// 13) and prints each one's packet-level summary, plus which owner now
+// holds them.
 async function claimCommand(args) {
   await ensureDb();
 
   const ownerIdx = args.indexOf('--owner');
   const owner = ownerIdx !== -1 ? args[ownerIdx + 1] : undefined;
+  const countIdx = args.indexOf('--count');
+  const count = countIdx !== -1 ? Number(args[countIdx + 1]) : 1;
   if (!owner) {
-    console.error(`${red('Usage:')} hedgehog claim --owner <owner>\n`);
+    console.error(`${red('Usage:')} hedgehog claim --owner <owner> [--count <n>]\n`);
     process.exitCode = 1;
     return;
   }
@@ -844,7 +849,7 @@ async function claimCommand(args) {
   const db = openDb();
   let claimed;
   try {
-    claimed = claimTasks(db, { owner, count: 1 });
+    claimed = claimTasks(db, { owner, count });
   } finally {
     db.close();
   }
@@ -854,9 +859,15 @@ async function claimCommand(args) {
     return;
   }
 
-  const task = claimed[0];
-  console.log(`${green(bold('Claimed.'))} Task ${bold(task.id)} leased to ${bold(owner)}.`);
-  console.log(`  ${dim('expires')}  ${task.lease_expires_at}`);
+  if (claimed.length > 1) {
+    console.log(`${green(bold('Claimed.'))} ${claimed.length} task(s) to ${bold(owner)}.`);
+  } else {
+    console.log(`${green(bold('Claimed.'))} Task ${bold(claimed[0].id)} leased to ${bold(owner)}.`);
+  }
+  for (const task of claimed) {
+    if (claimed.length > 1) console.log(`  ${bold(task.id)}`);
+    console.log(`  ${dim('expires')}  ${task.lease_expires_at}`);
+  }
 }
 
 // `hedgehog release <task-id> --owner <owner>` — hands a claimed task
@@ -954,6 +965,63 @@ async function statusCommand() {
   }
 
   console.log(formatStatus(result));
+}
+
+// `hedgehog ready` — read-only preview of what a `hedgehog claim` call
+// would claim right now, and why anything ready is held back. Claims
+// nothing.
+async function readyCommand() {
+  await ensureDb();
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = openDb();
+  let result;
+  try {
+    result = readyTasks(db);
+  } finally {
+    db.close();
+  }
+
+  console.log(formatReady(result));
+}
+
+// `hedgehog quiesce` — reports whether anything is still in flight
+// (`building` or `verifying`), for a caller that has stopped dispatching
+// and wants to know it's safe to treat the graph as settled. Claims and
+// changes nothing; exits non-zero when the graph isn't quiesced yet so a
+// caller can poll it in a loop or script.
+async function quiesceCommand() {
+  await ensureDb();
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const db = openDb();
+  let inFlight;
+  try {
+    ({ inFlight } = graphStatus(db));
+  } finally {
+    db.close();
+  }
+
+  if (inFlight.length === 0) {
+    console.log(`${green(bold('Quiesced.'))} Nothing in flight.`);
+    return;
+  }
+
+  console.error(`${yellow(bold('Not quiesced.'))} ${inFlight.length} task(s) still in flight:\n`);
+  for (const task of inFlight) {
+    console.error(`  ${task.id}   ${task.status}    owner: ${task.lease_owner}`);
+  }
+  process.exitCode = 1;
 }
 
 const GRAPH_PIDFILE_PATH = '.hedgehog/graph-server.json';
@@ -1290,6 +1358,16 @@ async function main() {
 
   if (cmd === 'status') {
     await statusCommand();
+    return;
+  }
+
+  if (cmd === 'ready') {
+    await readyCommand();
+    return;
+  }
+
+  if (cmd === 'quiesce') {
+    await quiesceCommand();
     return;
   }
 

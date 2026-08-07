@@ -34,6 +34,11 @@ function compileIntentTasks(intent, core) {
     verify_command: fillModule(layer.verify, module),
     commit_message: fillModule(layer.commit, module),
     priority: intent.priority,
+    exclusive: layer.exclusive ? 1 : 0,
+    verify_radius:
+      layer.verify_radius === null
+        ? null
+        : JSON.stringify(layer.verify_radius.map((g) => fillModule(g, module))),
   }));
 
   const dependencies = [];
@@ -112,8 +117,8 @@ const insertTask = (db) =>
   db.prepare(`
     INSERT INTO tasks
       (id, intent_id, module, layer, objective, scope_globs, verify_command,
-       commit_message, priority, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned')
+       commit_message, priority, exclusive, verify_radius, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'planned')
   `);
 
 const insertDependency = (db) =>
@@ -134,9 +139,10 @@ const insertTaskRequirement = (db) =>
 // plan` after adding a new intent doesn't touch already-compiled ones.
 //
 // Cross-intent ordering: for each `intent_dependencies` edge (A depends
-// on B), A's first task in layer order gets an extra `dependencies` row
-// on B's last task in layer order — so A's chain cannot start until B's
-// chain is entirely `complete`.
+// on B), every layer of A gets an extra `dependencies` row on that same
+// layer of B — so e.g. `orders-repository` waits on `users-repository`,
+// not on `users-screen`, letting independent layers of A and B proceed
+// in parallel instead of serializing A's whole chain behind B's.
 //
 // Requirement linkage: every task an intent compiles to is linked to all
 // of that intent's requirements via `task_requirements`. The compiler has
@@ -159,7 +165,6 @@ export function planTasks(db, core) {
   }
 
   const firstLayerId = core.layers[0].id;
-  const lastLayerId = core.layers[core.layers.length - 1].id;
 
   const runInsert = insertTask(db);
   const runInsertDep = insertDependency(db);
@@ -190,6 +195,8 @@ export function planTasks(db, core) {
           t.verify_command,
           t.commit_message,
           t.priority,
+          t.exclusive,
+          t.verify_radius,
         );
         for (const requirementId of requirementIds) {
           runInsertTaskReq.run(t.id, requirementId);
@@ -199,11 +206,13 @@ export function planTasks(db, core) {
         runInsertDep.run(d.task_id, d.depends_on_task_id);
       }
 
-      // Cross-intent edge: this intent's first task can't be ready until
-      // every intent it depends_on has its last task complete.
+      // Cross-intent edge: per layer, not first-to-last — this intent's
+      // layer task can't be ready until the matching layer of every
+      // intent it depends_on is complete.
       for (const depIntentId of dependsOnByIntent.get(intent.id) ?? []) {
-        const depLastTaskId = taskId(depIntentId, lastLayerId);
-        runInsertDep.run(firstTaskId, depLastTaskId);
+        for (const layer of core.layers) {
+          runInsertDep.run(taskId(intent.id, layer.id), taskId(depIntentId, layer.id));
+        }
       }
 
       // An intent whose tasks now exist is no longer `proposed` — it's
