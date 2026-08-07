@@ -1,15 +1,15 @@
 ---
 name: hedgehog-authored-loop
-description: Use for every unit of work on an authored core (`.hedgehog/core.yaml` present) once bootstrap has closed — building one layer per `hedgehog next` packet, gated by `hedgehog verify` and committed one layer at a time. Triggers on "next step", "what's next", "build this", or the start of any work session on a bootstrapped authored-core project. Also covers the Correction Protocol and the Stop Condition for this core.
+description: Use for every unit of work on an authored core (`.hedgehog/core.yaml` present) once bootstrap has closed — building one layer per claimed packet, gated by `hedgehog verify` and committed one layer at a time. Triggers on "next step", "what's next", "build this", or the start of any work session on a bootstrapped authored-core project. Also covers the Correction Protocol and the Stop Condition for this core.
 ---
 
 # Hedgehog Authored Loop
 
 The operating loop for a bootstrapped project on an authored core:
-`hedgehog next` emits the packet for one ready layer, `layer-eng` builds
-it, `hedgehog verify` gates and commits it. The build graph
+`hedgehog claim` reserves the packet(s) for ready layers, `layer-eng`
+builds each, `hedgehog verify` gates and commits it. The build graph
 (`.hedgehog/hedgehog.db`) is the live list — query it via `hedgehog
-status`/`hedgehog next`, never re-derive state from prose.
+status`/`hedgehog ready`, never re-derive state from prose.
 
 ## Where this core's shape lives
 
@@ -40,37 +40,56 @@ seem to disagree.
 - **Linear chain** — one pass total, one task per layer, no `module`
   dimension. The project is built once, front to back.
 
-`hedgehog next` handles both — it emits whatever is ready. This matters
-for reading `hedgehog status`: on a module axis, "done" means every
-intent completed every layer, not the last layer completed once.
+`hedgehog claim` handles both — it reserves whatever is ready. This
+matters for reading `hedgehog status`: on a module axis, "done" means
+every intent completed every layer, not the last layer completed once.
+
+Concurrent execution pays off on a module axis and not on a linear chain.
+Intents are independent of each other, so their layer tasks can be
+claimed and built together whenever the scheduler's conflict predicate
+clears them — `hedgehog claim --count N --owner <owner>` can return more
+than one task at a time. A linear chain has only one task ready at any
+point, so `hedgehog claim --count N` naturally returns 1 regardless of
+`N`; fan-out buys nothing there. This is a factor in the module-axis-vs-
+linear-chain choice `hedgehog-core-design`'s Step 4 makes, not just a
+runtime detail.
 
 ## The Loop (every unit of work)
 
-1. **Run `hedgehog next`.** It emits the task packet for one ready layer
-   (STATUS/INTENT/RELEVANT RULES/WHY NOW/BLOCKED DOWNSTREAM/ALLOWED
-   SCOPE/VERIFICATION) — trust it: `hedgehog next` never emits a layer
-   whose dependencies aren't `complete`, so there's no separate gate
-   check to run by hand.
-2. **Delegate the full packet** (not a layer name) to `layer-eng`, along
+1. **Run `hedgehog claim --count N --owner <owner>`.** `<owner>` is this
+   session. Claim is atomic and lease-based, and returns up to N task
+   packets (STATUS/INTENT/RELEVANT RULES/WHY NOW/BLOCKED
+   DOWNSTREAM/ALLOWED SCOPE/VERIFICATION each) that the scheduler has
+   already verified are safe to run together — trust it: a packet is
+   never handed out unless its dependencies are `complete` and it
+   doesn't conflict with anything else in the batch. `--count` is a
+   maximum, not a promise. `hedgehog ready` previews the claimable/held-
+   back split without claiming anything.
+2. **Dispatch each claimed packet to its own `layer-eng` subagent** — in
+   ONE message with parallel tool calls when there's more than one — along
    with the reminder to read `.hedgehog/core-design.md` for what its
    layer owns.
-3. The agent **runs the packet's VERIFICATION command on its own work**
+3. Each agent **runs the packet's VERIFICATION command on its own work**
    as a sanity check before reporting back — necessary, not sufficient.
-   The agent reports the work as done; it does not move the task and does
-   not commit.
-4. **Run `hedgehog verify <task-id>`.** It checks the touched files
-   against the packet's ALLOWED SCOPE, runs the layer's VERIFICATION
-   command, and on a pass writes the commit (the exact message from
-   `core.yaml`, plus the updated build graph) and unlocks the next layer.
-   On a scope violation or a failing check, the task stays
-   `implemented`/`failed` and nothing downstream unlocks — fix it and
-   re-run `hedgehog verify <task-id>`, don't hand-commit around it.
+   Per task, per agent: the agent reports the work as done; it does not
+   move the task and does not commit.
+4. **As each report arrives, verify it — one at a time, serially.** Run
+   `hedgehog verify <task-id> --owner <owner>`. It checks the touched
+   files against the packet's ALLOWED SCOPE, runs the layer's
+   VERIFICATION command, and on a pass writes the commit (the exact
+   message from `core.yaml`, plus the updated build graph) and unlocks
+   the next layer. On a scope violation or a failing check, the task
+   moves to `blocked` with a `blocked_reason` of `scope_violation` or
+   `verification_failed`, and nothing downstream unlocks — fix it and
+   re-run `hedgehog verify <task-id> --owner <owner>`, don't hand-commit
+   around it.
 
-   A stalled task is not pickable by `hedgehog next`, so both `hedgehog
-   next` and `hedgehog status` list it under NEEDS ATTENTION with the
-   task id to re-verify. If `hedgehog next` reports the graph blocked,
+   A `blocked` task is not pickable by `hedgehog claim`, so `hedgehog
+   status` lists it under NEEDS ATTENTION with the task id to re-verify.
+   If `hedgehog claim` returns nothing and the graph isn't actually done,
    fix that task — don't treat it as "nothing left to do."
-5. **Repeat** — `hedgehog next` again for the following layer.
+5. **Repeat** — `hedgehog claim --count N --owner <owner>` again for the
+   next batch.
 
 Each `hedgehog verify` call commits exactly one layer, built right for
 what's known now; a wrong layer is fixed forward later via the Correction
@@ -111,14 +130,16 @@ Correction Protocol resolves the immediate case.
 
 ## Correction Protocol
 
-Same 5-step mechanic as `hedgehog-loop`'s Correction Protocol (stop, patch
-the upstream layer in place, fast-forward every dependent layer as its own
-commit, commit messages as the explanation, resume the loop) — read that
-skill's version for the full statement. One difference: if the patched
-layer produces a build artifact that downstream layers or a running dev
-process consume (a compiled package, a generated client, a bundled
-asset), rebuild it before re-verifying — an unbuilt patch looks unchanged
-to anything reading the built output.
+Same 5-step mechanic as `hedgehog-loop`'s Correction Protocol (quiesce,
+patch the upstream layer in place, fast-forward every dependent layer as
+its own commit, commit messages as the explanation, resume the loop with
+`hedgehog claim`) — read that skill's version for the full statement,
+including why quiescing rather than stopping in-flight work is strictly
+correct. One difference: if the patched layer produces a build artifact
+that downstream layers or a running dev process consume (a compiled
+package, a generated client, a bundled asset), rebuild it before
+re-verifying — an unbuilt patch looks unchanged to anything reading the
+built output.
 
 When the correction is to the **layer sequence itself** — a layer in the
 wrong place, a missing layer, a scope glob that never fits — that's a
@@ -138,7 +159,7 @@ fixed forward in new commits. Verify each patched layer with its own
 ## Layer Transition Checks
 
 Before starting a layer that depends on an earlier one, confirm the
-earlier layer's task is `complete` in `hedgehog status` — `hedgehog next`
+earlier layer's task is `complete` in `hedgehog status` — `hedgehog claim`
 already guarantees this, so this check matters only when picking work up
 by hand after an interruption.
 
@@ -150,8 +171,13 @@ the ones that were designed.
 
 ## Rules
 
-- **Sequential within the chain.** A layer starts once the one before it
-  passes its own verification.
+- **Concurrent within a layer, bounded by the scheduler.** On a module
+  axis, tasks for the same layer across different intents can run
+  together when `hedgehog ready` shows them both claimable — never assume
+  two tasks are safe together without checking. On a linear chain only
+  one task is ever ready, so this rule is moot in practice. Either way, a
+  layer starts only once the one before it (for that intent) passes its
+  own verification.
 - **A wrong layer gets fixed at its source** — the Correction Protocol,
   not a downstream workaround.
 - **The layer's own `verify` command gates every commit.** Never weaken
@@ -166,12 +192,14 @@ the ones that were designed.
 ## Stop Condition
 
 Same fresh-context handoff as `hedgehog-loop`'s Stop Condition (offer it
-once every task is `complete` or scope is genuinely ambiguous; nothing
-gets deleted, `.hedgehog/hedgehog.db` stays committed; a `tweaker` session
-in a *new* chat window handles adjustments, using the same paste-in
-prompt that skill's Stop Condition gives). On a module axis, "every task
-complete" means every intent through every layer, not the last layer
-completed once.
+once every task is `complete`, nothing is still in flight — check
+`hedgehog status`'s IN FLIGHT section or run `hedgehog quiesce` — and
+scope isn't genuinely ambiguous; the permanent record is the committed
+intents, friction log, and `core.yaml`, not `.hedgehog/hedgehog.db`,
+which is gitignored and derived; a `tweaker` session in a *new* chat
+window handles adjustments, using the same paste-in prompt that skill's
+Stop Condition gives). On a module axis, "every task complete" means
+every intent through every layer, not the last layer completed once.
 
 **New scope** — a new intent on the module axis, anything beyond
 adjusting what exists — goes to `planner`, which runs

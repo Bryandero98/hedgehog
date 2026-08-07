@@ -156,9 +156,17 @@ alike:
   into its neighbour or drop it. `verify: manually inspect` is not a
   verify command, and the loader rejects an empty one outright
   (`validateCore`, `src/db/core.mjs`).
-- **A layer whose file scope overlaps another layer's is not a layer.**
-  Scope is what stops step N from quietly rewriting step N−1's work;
-  overlapping globs make that enforcement meaningless.
+- **A layer whose file scope overlaps another layer's must be rejected,
+  full stop.** Scope is what stops step N from quietly rewriting step
+  N−1's work, and it's also what the scheduler reads to decide two tasks
+  can run concurrently (`conflict.mjs`) — overlapping globs break both at
+  once. The loader does not check this for you: `validateCore`
+  (`src/db/core.mjs`) only rejects a missing scope and, on a module-axis
+  core, a layer whose scope omits `{module}`; it does not scan every pair
+  of layers for a general scope collision. Getting this right is on
+  whoever designs the core — check every layer's scope glob against every
+  other layer's by hand before Step 5, not just against its immediate
+  neighbour.
 - **Don't reproduce a Golden Core's sequence under new names.** If
   schema → contract → repository → service → controller is genuinely
   right, Phase 0 picked the wrong outcome.
@@ -209,6 +217,42 @@ file is written — a layer whose `scope` is a fixed path with no
 module-axis core. Name it for what it owns (e.g. `background-infra`),
 give it its own `verify` command, and record in `core-design.md` why no
 single module was made to own it.
+
+## Step 4b — declare each layer's verify radius
+
+For each layer, ask: does this layer's `verify` command only read files
+inside its own `scope`, or does it also read, or typecheck, a wider
+package or project? A test runner scoped by filename or filter token
+usually stays inside `scope`. A typecheck or build step often doesn't —
+`tsc` has no per-module isolation, so a command like `pnpm nx test db
+--testPathPattern={module}` typechecks the whole `packages/db` project on
+every run, regardless of which module's tests it filters to.
+
+Where the verify command reads wider than `scope`, declare that wider set
+as `verify_radius` explicitly. Where it truly only touches its own scope,
+leave `verify_radius` undeclared — it defaults to `scope` when unset
+(`conflict.mjs`'s `verifyRadius()`), which is the optimistic default:
+absent a declaration, the scheduler assumes a layer's verify command
+reads nothing outside what it writes.
+
+Get this wrong in either direction and the failure isn't symmetric. An
+over-wide radius is a performance bug: it needlessly serializes two tasks
+that could safely run together, since the scheduler treats any overlap in
+declared radius as a conflict — nothing breaks, work just runs slower
+than it has to. A too-narrow radius is a correctness bug: it tells the
+scheduler two tasks are safe to co-run when the verify command actually
+reads files outside its declared scope, which can produce a false pass or
+a flaky verify when a neighboring in-flight task's files get picked up
+mid-run.
+
+Worked example: a Drizzle schema layer scoped to
+`packages/db/src/schema/{module}/**` with `verify: "pnpm nx test db
+--testPathPattern={module}"` looks module-scoped by its test filter, but
+the command typechecks all of `packages/db`, not just that module's
+files. Its true verify radius is the whole package —
+`verify_radius: ["packages/db/**"]` — not just its own scope glob, so two
+modules' schema tasks correctly serialize against each other on that
+radius even though their scopes don't overlap.
 
 ## Step 5 — write `.hedgehog/core.yaml`
 

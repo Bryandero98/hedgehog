@@ -5,15 +5,15 @@ description: Use for every unit of work once a Hedgehog project is bootstrapped 
 
 # Hedgehog Loop
 
-The operating loop for a bootstrapped Hedgehog project: `hedgehog next`
-emits the packet for one ready layer, build it, `hedgehog verify` gates
-and commits it. The build graph (`.hedgehog/hedgehog.db`) is the live
-list — query it via `hedgehog status`/`hedgehog next`, never re-derive
-state from prose. The step tables below mirror
+The operating loop for a bootstrapped Hedgehog project: `hedgehog claim`
+reserves the packet(s) for ready layers, build them, `hedgehog verify`
+gates and commits each. The build graph (`.hedgehog/hedgehog.db`) is the
+live list — query it via `hedgehog status`/`hedgehog ready`, never
+re-derive state from prose. The step tables below mirror
 `src/golden-cores/full-stack-app/core.yaml`, already the source of truth
 for layer order, scope, and verify command per layer — read the tables
 for the human-readable shape, trust the YAML (and the packet `hedgehog
-next` emits from it) as the authoritative one if they ever seem to
+claim` emits from it) as the authoritative one if they ever seem to
 disagree.
 
 ## Determine phase
@@ -84,8 +84,8 @@ sequence.
 A horizontal pass across the whole backend — every module goes through
 these before any module gets a hook or screen. Each row is one compiled
 layer in `full-stack-app/core.yaml`; delegate each module's Phase A
-layers to the `backend-eng` agent, one `hedgehog next` packet at a time —
-it builds the layer, `hedgehog verify` gates and commits it.
+layers to the `backend-eng` agent, one claimed packet per dispatch — it
+builds the layer, `hedgehog verify` gates and commits it.
 
 | # | Layer | Lives in | Commit |
 |---|---|---|---|
@@ -95,7 +95,7 @@ it builds the layer, `hedgehog verify` gates and commits it.
 | 4 | `service` | `libs/<module>/service` (domain logic — imports only ports) | `feat(<module>): service` |
 | 5 | `controller` | `apps/api` (thin HTTP, wires contract → service; bundles Queue infra, see above, if that add-on is on and this module needs it) | `feat(<module>): api` |
 
-Repeat 1–5 per module in scope, via `hedgehog next`/`hedgehog verify`.
+Repeat 1–5 per module in scope, via `hedgehog claim`/`hedgehog verify`.
 The API is complete, typed, and callable (Postman/curl/contract tests)
 before frontend work starts.
 
@@ -110,7 +110,7 @@ before frontend work starts.
 Phase B starts once Phase A is done for the scope. The frontend is a pure
 consumer of an already-finished API. Delegate each module's Phase B
 layers to the `front-end-eng` agent, same reasoning as `backend-eng` for
-Phase A — one `hedgehog next` packet at a time, in its own context. Step
+Phase A — one claimed packet per dispatch, in its own context. Step
 6a is where "how it should feel" gets decided — once per module, after
 the `hook` layer's task is `complete` and before `front-end-eng` starts
 the `screen` layer — via `ux-planner`, starting from whatever `planner`
@@ -123,35 +123,55 @@ writes `docs/design/<module>.md`, not its own compiled layer — the
 
 ## The Loop (every unit of work)
 
-1. **Run `hedgehog next`.** It emits the task packet for one ready layer
-   (STATUS/WHY NOW/BLOCKED DOWNSTREAM/ALLOWED SCOPE/VERIFICATION) —
-   trust it: `hedgehog next` never emits a layer whose dependencies
-   aren't `complete`, so there's no separate gate check to run by hand.
-2. **Delegate the full packet** (not a step name) to `backend-eng`
-   (Phase A) or `front-end-eng` (Phase B) — one schema, one contract, one
-   repository, matching the packet's ALLOWED SCOPE.
-3. The agent **runs typecheck/lint/test on its own work** (mirrors
+1. **Run `hedgehog claim --count N --owner <owner>`.** `<owner>` is this
+   session (a stable id — session id or equivalent). Claim is atomic and
+   lease-based, safe for concurrent claimers, and is the entry point into
+   the loop — `hedgehog next` still exists as a read-only preview of the
+   single next task, but claim is what actually reserves work. `--count
+   N` is a maximum, not a promise: it returns however many tasks are
+   safe to run together right now (the conflict predicate already
+   filtered them against each other), which may be fewer than N, or
+   zero. `hedgehog ready` previews the same decision without claiming
+   anything — CLAIMABLE vs HELD BACK, with the reason for each holdback —
+   useful for understanding the scheduler before committing to a claim.
+2. **Dispatch each claimed packet to its own subagent** — `backend-eng`
+   (Phase A) or `front-end-eng` (Phase B), matching each packet's ALLOWED
+   SCOPE — in ONE message with parallel tool calls, not one agent call
+   after another. This is a Claude session orchestrating via the Agent
+   tool's parallel-call mechanism: N claimed tasks means N Agent calls in
+   the same message.
+3. Each agent **runs typecheck/lint/test on its own work** (mirrors
    lefthook, wired at bootstrap) as a sanity check before reporting
-   back — necessary, not sufficient. The agent reports the work as done;
-   it does not move the task and does not commit.
-4. **Run `hedgehog verify <task-id>`.** It checks the touched files
-   against the packet's ALLOWED SCOPE, runs the layer's VERIFICATION
-   command, and on a pass writes the commit (the exact Conventional
-   Commit message from the tables above, plus the updated build graph)
-   and unlocks the next layer. On a scope violation or a failing check,
-   the task stays `implemented`/`failed` and nothing downstream unlocks —
-   fix it and re-run `hedgehog verify <task-id>`, don't hand-commit
+   back — necessary, not sufficient. Per task, per agent: the agent
+   reports its work as done; it does not move the task and does not
+   commit.
+4. **As each report arrives, verify it — one at a time, serially.** Run
+   `hedgehog verify <task-id> --owner <owner>` (the same owner that
+   claimed it; verify requires the lease owner). Building happens in
+   parallel; verifying does not — verify writes a commit, and commits go
+   through one at a time. It checks the touched files against the
+   packet's ALLOWED SCOPE, runs the layer's VERIFICATION command, and on
+   a pass writes the commit (the exact Conventional Commit message from
+   the tables above, plus the updated build graph) and unlocks the next
+   layer. On a scope violation or a failing check, the task moves to
+   `blocked` with a `blocked_reason` of `scope_violation` or
+   `verification_failed`, and nothing downstream unlocks — fix it and
+   re-run `hedgehog verify <task-id> --owner <owner>`, don't hand-commit
    around it.
 
-   A stalled task is not pickable by `hedgehog next`, so both `hedgehog
-   next` and `hedgehog status` list it under NEEDS ATTENTION with the
-   task id to re-verify. If `hedgehog next` reports the graph blocked,
+   A `blocked` task is not pickable by `hedgehog claim`, so `hedgehog
+   status` lists it under NEEDS ATTENTION with the task id to re-verify.
+   If `hedgehog claim` returns nothing and the graph isn't actually done,
    fix that task — don't treat it as "nothing left to do."
-5. **Repeat** — `hedgehog next` again for the following layer.
+5. **Repeat** — `hedgehog claim --count N --owner <owner>` again for the
+   next batch.
 
 Each `hedgehog verify` call commits exactly one layer, built right for
 what's known now; a wrong layer is fixed forward later via the
-Correction Protocol.
+Correction Protocol. Valid task statuses are `planned`, `ready`,
+`building`, `verifying`, `complete`, and `blocked`; a task in `blocked`
+also carries a `blocked_reason` (`scope_violation`, `verification_failed`,
+or `lease_expired`).
 
 ## Intra-step conventions
 
@@ -206,8 +226,12 @@ reaches its Stop Condition.
 
 When a downstream step reveals an upstream step was wrong:
 
-1. Stop.
-2. Patch the upstream step directly, in place.
+1. **Quiesce.** Dispatch nothing new. Let in-flight tasks finish and
+   verify normally — do NOT kill running subagents. Release anything
+   claimed but not yet started (`hedgehog release <task-id> --owner
+   <owner>`).
+2. Once nothing is in flight (`hedgehog quiesce` exits 0), patch the
+   upstream step directly, in place.
 3. Fast-forward every dependent step that breaks, each its own small
    commit. If the patched step lives in a workspace package (e.g.
    `packages/hooks`, `packages/contracts`) that a running `web`/`mobile`
@@ -216,7 +240,14 @@ When a downstream step reveals an upstream step was wrong:
    not its `src/`, so an unbuilt patch looks unchanged to anything
    downstream even though the source is fixed.
 4. The commit messages are the explanation.
-5. Resume the loop.
+5. Resume — `hedgehog claim` again.
+
+Quiescing is correct, not a cautious fallback. The conflict predicate
+already guarantees a correction cannot collide with in-flight work: if
+the correction's scope conflicted with something currently building, the
+scheduler would not have co-scheduled it in the first place. Letting
+in-flight tasks finish and verify rather than killing them costs nothing
+and throws away no progress.
 
 The orchestrating session runs this protocol. A phase-owning agent that
 hits the problem reports it rather than correcting across steps: the
@@ -233,10 +264,10 @@ a `tweaker` session finds that something structural is wrong rather than
 something small (`tweaker` routes it here). Steps 2, 3, and 4 are
 unchanged. The two ends differ:
 
-- There is nothing to **stop** — no task is in flight. Start by naming
+- There is nothing to **quiesce** — no task is in flight. Start by naming
   which committed step was wrong and what revealed it.
 - There is no loop to **resume**: every task is already `complete`, so
-  `hedgehog next` has nothing to emit. Return to the `tweaker` session
+  `hedgehog claim` has nothing to claim. Return to the `tweaker` session
   instead.
 
 Every task the correction touches is already `complete` and stays that
@@ -266,8 +297,9 @@ the graph doesn't have a task for.
 
 - **Phase A closes before Phase B opens.** Every module in scope has a
   working, tested API before any hook or screen starts.
-- **Sequential within a phase.** A step starts once the one before it
-  compiles and passes tests.
+- **Concurrent within a phase, bounded by the scheduler.** Never assume
+  two tasks are safe to run together because they look independent — ask
+  `hedgehog ready`.
 - **Queue infra is conditional twice over** — only if the Queue add-on is
   on for this project at all (per `.hedgehog/addons.yaml`'s `queue.on`),
   and even then only when a given operation genuinely needs async
@@ -291,10 +323,18 @@ question and wait.
 
 On the former (a real build completion, not an ambiguity stop), offer a
 fresh-context handoff before doing anything else: tell the user the
-build is complete, and that clearing context now costs nothing (the
-build graph and the commit log hold everything). Nothing gets deleted at
-completion — `.hedgehog/hedgehog.db` stays committed as the permanent
-record, and it's what makes the next session cheap.
+build is complete, and that clearing context now costs nothing. The
+permanent record is the committed intents, friction log, `core.yaml`,
+and the commit history itself — not `.hedgehog/hedgehog.db`, which is
+gitignored and derived, rebuildable at any time via `hedgehog db
+rebuild`. That's what makes the next session cheap.
+
+Before offering that handoff, confirm nothing is still in flight — every
+task showing `complete` is not sufficient on its own, since a lease can
+be outstanding without a visible status change. Check `hedgehog
+status`'s IN FLIGHT section (or run `hedgehog quiesce`, which exits
+non-zero if anything is still claimed) and only declare the Stop
+Condition met once it's empty.
 
 Name **both** ways forward, because which one applies depends on what the
 user wants next:

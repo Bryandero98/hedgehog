@@ -357,7 +357,11 @@ rather than inheriting a prior run's count.
 - **Sequential except phases 5's two parallel inputs.** The Ingredient
   Director and Copywriter sub-steps inside `landing-systems` read the
   same sorted-adjectives input and can run together; every other phase
-  waits on the one before it.
+  waits on the one before it. This is design, not a gap to close: the
+  chain is a linear sequence (`src/golden-cores/landing-page/core.yaml`),
+  so `hedgehog claim --count N` always returns one task — there is no
+  scheduler fan-out to reason about here, and this core's docs stay free
+  of the conflict-predicate machinery that `full-stack-app` needs.
 - **A wrong phase gets fixed at its source** — the Correction Protocol,
   not a downstream workaround (e.g. don't patch the Builder's output to
   fix a token that's wrong at the Systems Designer level).

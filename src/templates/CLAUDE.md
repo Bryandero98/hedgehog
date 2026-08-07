@@ -41,7 +41,7 @@ The build is a loop of small, gated, committed steps. You never hold the
 whole plan in context — the plan lives in the structure:
 
 - **The build graph** (`.hedgehog/hedgehog.db`) is the live source of
-  truth for what's next. Query it via `hedgehog status`/`hedgehog next`
+  truth for what's next. Query it via `hedgehog status`/`hedgehog ready`
   at the start of every session — never re-derive state from prose.
 - **The commit log** is the record of what's built and why. Conventional
   commits are how progress is read, not a conversation summary.
@@ -64,21 +64,31 @@ context** below).
 
 ## Consuming the graph
 
-`.hedgehog/hedgehog.db`, committed to git, is the source of truth for
-what's next — never re-derive build state from prose. To work from it:
+`.hedgehog/hedgehog.db` is the source of truth for what's next — never
+re-derive build state from prose. To work from it:
 
-1. Run `hedgehog next`. It emits the task packet for one ready task
-   (STATUS/WHY NOW/BLOCKED DOWNSTREAM/ALLOWED SCOPE/VERIFICATION) —
-   trust it: a task is never emitted unless every dependency is
-   `complete`.
-2. Delegate the full packet to this core's loop skill (named in the
-   section above), which hands it to the owning agent.
-3. Once the agent reports the work done, run `hedgehog verify
-   <task-id>`. It checks the touched files against the packet's ALLOWED
-   SCOPE, runs the verification command, and on a pass writes the commit
-   and unlocks whatever the task was blocking. An agent reporting success
-   never moves the task — only a passing `hedgehog verify` exit code
-   does.
+1. Run `hedgehog claim --count N --owner <owner>`. It's atomic and
+   lease-based, and returns up to N tasks (each with its own STATUS/WHY
+   NOW/BLOCKED DOWNSTREAM/ALLOWED SCOPE/VERIFICATION packet) that the
+   scheduler has already verified are safe to run together right now —
+   scope and verify-radius disjoint. `--count` is a maximum, not a
+   promise: a call may return fewer than N, or zero. `hedgehog ready` is
+   a read-only preview of the claimable/held-back split (and why a task
+   is held back — conflict with another claimable task, or exclusivity)
+   before you claim.
+2. Delegate each claimed packet to this core's loop skill (named in the
+   section above), one dispatch per packet, running concurrently.
+3. As each agent reports its packet done, run `hedgehog verify
+   <task-id> --owner <owner>` **serially** — one at a time, even though
+   the building happened concurrently, because verify writes git commits
+   and those must land one at a time. It checks the touched files
+   against the packet's ALLOWED SCOPE, runs the verification command,
+   and on a pass writes the commit and unlocks whatever the task was
+   blocking. An agent reporting success never moves the task — only a
+   passing `hedgehog verify` exit code does.
+
+`hedgehog claim` hands out only tasks safe to run together. Never run
+two tasks it didn't hand you together.
 
 `planner` owns writing intents (`hedgehog intent add`) at planning
 intake; `hedgehog plan` compiles them into the task graph the loop
@@ -86,10 +96,16 @@ consumes. Nothing checks a box — there is no checklist, only queryable
 state.
 
 **When the build is done:** once `hedgehog status` shows every task
-`complete`, the build session is complete. Nothing gets deleted or
-cleaned up — the build graph and the commit log are the permanent record,
-and `.hedgehog/hedgehog.db` stays committed exactly as it is. That's what
-makes every later session cheap.
+`complete` and nothing in flight (see `hedgehog quiesce` below), the
+build session is complete. The permanent record is the committed
+intents (`.hedgehog/intents/*.json`), the friction log
+(`.hedgehog/friction/*.md`), `core.yaml`, and the git commit history
+itself — not the database. `.hedgehog/hedgehog.db` is gitignored: a
+derived index, rebuildable at any time via `hedgehog db rebuild`, which
+replays those committed sources against git history. That rebuild also
+runs automatically on a fresh clone when the DB is missing but
+`.hedgehog/intents/` exists. That's what makes every later session
+cheap.
 
 A completed build is **extendable, not sealed**. Offer the user a
 fresh-context handoff, and name both ways forward:
@@ -119,7 +135,7 @@ fresh-context handoff, and name both ways forward:
   planning archive as context and elicits only what's new, then adds
   intents and runs `hedgehog plan`. This is append-only: `plan` skips
   intents already compiled, so every `complete` task keeps its status and
-  its commits, and `hedgehog next` resumes at the first task of the new
+  its commits, and `hedgehog claim` resumes at the first tasks of the new
   work. Planning is not re-run from scratch, and the workspace is not
   re-scaffolded. (This core's own section above states where new scope
   goes if this core has no module axis to add an intent to.)
@@ -136,9 +152,12 @@ context small:
 - **Clear context at natural boundaries** — a module's Phase A, a
   landing page section, whatever this core's own unit boundary is — once
   that unit is done and committed. Clear the conversation and start
-  fresh, then run `hedgehog status`/`hedgehog next` and continue. Nothing
+  fresh, then run `hedgehog status`/`hedgehog claim` and continue. Nothing
   is lost, because the build graph, commits, and code hold all the state.
   Prefer this over letting one session accumulate the entire project.
+  Before clearing, run `hedgehog quiesce` and confirm it exits 0 —
+  nothing in flight — first. Clearing context while a lease is
+  outstanding orphans that lease until it expires.
 - **A cleared or new session recovers by running `hedgehog status` and
   reading the commit log**, never by needing the prior conversation.
 - **Delegate heavy work to agents.** Planning intake, scaffolding, and

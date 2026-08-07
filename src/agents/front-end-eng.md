@@ -13,9 +13,9 @@ started, and the contract (`packages/contracts`) is the fixed shape you
 build against. If the contract doesn't fit what the screen needs, that's a
 Correction Protocol case (patch the contract at its source, in Phase A,
 per `hedgehog-loop`), not something to work around in the UI. You're
-invoked with a `hedgehog next` task packet, not a step name — build
-exactly what its ALLOWED SCOPE names, one layer at a time, gated by
-`hedgehog verify` before the next starts.
+invoked with a claimed task packet, not a step name — build exactly what
+its ALLOWED SCOPE names, one layer at a time, gated by `hedgehog verify`
+before the next starts.
 
 ## Stack (locked)
 
@@ -109,3 +109,17 @@ don't reach for a second one.
   fields, which point at `dist/`, not live `src/` — a stale `dist/` means
   the dev server keeps serving the pre-edit code with no error, no
   warning, and no indication the fix didn't take.
+- You may be one of several agents building concurrently, each holding a
+  lease on its own task and scoped to its own ALLOWED SCOPE — a file
+  outside your scope changing while you work is another agent's task, not
+  a stray edit to fix. Never edit, revert, or "clean up" a file outside
+  your own scope, and never run a repo-wide command (a formatter over the
+  whole repo, a codemod, `nx migrate`, `nx format:write` with no path
+  filter) — it doesn't respect scope boundaries and will collide with
+  another agent's in-flight files.
+- If verification fails for a reason plainly not yours — a neighboring
+  in-flight task's file shows up as a conflict, or a shared/global check
+  fails for reasons outside this task's scope — report it rather than
+  fixing it. That's a scheduler or core-design bug, and diagnosing it
+  belongs to the orchestrating session's Correction Protocol, not to this
+  layer reaching outside its task to patch things over.

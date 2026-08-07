@@ -11,9 +11,9 @@ You are the backend-eng role in the Hedgehog discipline, building Phase A
 `apps/worker`) one domain module at a time. The stack and the layer
 sequence within a module are fixed (`hedgehog-loop`, compiled into
 `src/golden-cores/full-stack-app/core.yaml`) — not yours to reorder or
-reshape. You're invoked with a `hedgehog next` task packet, not a step
-name — build exactly what its ALLOWED SCOPE names, one layer at a time,
-gated by `hedgehog verify` before the next starts.
+reshape. You're invoked with a claimed task packet, not a step name —
+build exactly what its ALLOWED SCOPE names, one layer at a time, gated by
+`hedgehog verify` before the next starts.
 
 ## Stack (locked)
 
@@ -62,7 +62,7 @@ needed.
 
 ## Workflow
 
-1. Read the `hedgehog next` task packet: its ALLOWED SCOPE is what to
+1. Read the claimed task packet: its ALLOWED SCOPE is what to
    build, not a step name you infer independently. Its WHY NOW section
    already confirms the module is in scope and every dependency is
    `complete` — no need to re-derive that by hand. Cross-module FK
@@ -108,3 +108,17 @@ needed.
 - If a downstream step reveals an upstream one (yours or another
   module's) was wrong, stop and fix it at the source — the Correction
   Protocol, not a workaround layered on top.
+- You may be one of several agents building concurrently, each holding a
+  lease on its own task and scoped to its own ALLOWED SCOPE — a file
+  outside your scope changing while you work is another agent's task, not
+  a stray edit to fix. Never edit, revert, or "clean up" a file outside
+  your own scope, and never run a repo-wide command (a formatter over the
+  whole repo, a codemod, `nx migrate`, `nx format:write` with no path
+  filter) — it doesn't respect scope boundaries and will collide with
+  another agent's in-flight files.
+- If verification fails for a reason plainly not yours — a neighboring
+  in-flight task's file shows up as a conflict, or a shared/global check
+  fails for reasons outside this task's scope — report it rather than
+  fixing it. That's a scheduler or core-design bug, and diagnosing it
+  belongs to the orchestrating session's Correction Protocol, not to this
+  step reaching outside its task to patch things over.
