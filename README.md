@@ -60,6 +60,14 @@ npx @skyf0xx/hedgehog graph # show graph
 
 ![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.png)
 
+## Parallel by Default
+
+Every dependency is explicit, so Hedgehog knows which tasks can run in parallel.
+
+![Comparison](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/comparison.png)
+
+Agents fan out to give you great outcomes at **faster speeds**.
+
 ## What Hedgehog builds
 
 ### Full-stack applications
