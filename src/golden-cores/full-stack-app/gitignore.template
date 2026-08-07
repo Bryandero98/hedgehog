@@ -7,6 +7,9 @@ out-tsc
 *.log
 .DS_Store
 .hedgehog/graph-server.json
+.hedgehog/hedgehog.db
+.hedgehog/hedgehog.db-*
+.hedgehog/commit.lock
 
 .nx/cache
 .nx/workspace-data

@@ -48,6 +48,9 @@ function loadGraphJson() {
   // `hedgehog verify` committed its transaction.
   const db = new DatabaseSync(dbPath, { readOnly: true });
   try {
+    db.exec('PRAGMA foreign_keys = ON');
+    db.exec('PRAGMA busy_timeout = 10000');
+    db.exec('PRAGMA synchronous = NORMAL');
     return buildGraph(db);
   } finally {
     db.close();

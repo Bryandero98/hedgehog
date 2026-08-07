@@ -16,6 +16,10 @@
 //      complete — same check as the readiness SELECT in next.mjs).
 //      Nonzero: verifications row (failed, output retained) → failed,
 //      dependents stay blocked.
+//
+// No subprocess (git, verify_command) ever runs while a sqlite
+// transaction is open: every execSync call in this file happens before
+// BEGIN or after COMMIT, never between them.
 
 import { execSync } from 'node:child_process';
 import { DB_PATH } from './init.mjs';
@@ -29,44 +33,37 @@ function isEngineStatePath(path) {
   return path === DB_PATH || path.startsWith(`${DB_PATH}-`);
 }
 
-// Minimal glob → RegExp, no dependency: `**` matches any path segment
-// span (including zero), `*` matches within one segment, everything else
-// is literal. Matches the scope_globs shapes core.yaml produces, e.g.
-// `packages/db/src/schema/**`, `libs/{module}/repository/**`.
-function globToRegExp(glob) {
-  let pattern = '';
-  for (let i = 0; i < glob.length; i++) {
-    const c = glob[i];
-    if (c === '*' && glob[i + 1] === '*') {
-      pattern += '.*';
-      i++;
-      if (glob[i + 1] === '/') i++;
-    } else if (c === '*') {
-      pattern += '[^/]*';
-    } else if ('.+^${}()|[]\\'.includes(c)) {
-      pattern += `\\${c}`;
-    } else {
-      pattern += c;
-    }
-  }
-  return new RegExp(`^${pattern}$`);
+// Shell-safe quoting for paths interpolated into a git command line,
+// matching the JSON.stringify(path) convention used elsewhere in this
+// file for the same purpose.
+function quotePathspec(path) {
+  return JSON.stringify(path);
 }
 
-function matchesAnyGlob(path, globs) {
-  return globs.some((glob) => globToRegExp(glob).test(path));
-}
-
-// Working-tree diff (relative paths), covers modified, added, deleted,
-// and untracked files — everything the agent could have touched.
-function changedPaths() {
-  const tracked = execSync('git diff --name-only HEAD', { encoding: 'utf8' });
-  const untracked = execSync('git ls-files --others --exclude-standard', {
-    encoding: 'utf8',
-  });
+// Working-tree diff (relative paths), optionally restricted to `pathspecs`
+// via git's own pathspec matching (e.g. `:(glob)packages/db/src/schema/**`)
+// — covers modified, added, deleted, and untracked files, everything the
+// agent could have touched.
+function changedPaths(pathspecs) {
+  const scopeArgs = pathspecs ? ` -- ${pathspecs.map(quotePathspec).join(' ')}` : '';
+  const tracked = execSync(`git diff --name-only HEAD${scopeArgs}`, { encoding: 'utf8' });
+  const untracked = execSync(
+    `git ls-files --others --exclude-standard${scopeArgs}`,
+    { encoding: 'utf8' },
+  );
   const paths = new Set(
     [...tracked.split('\n'), ...untracked.split('\n')].map((p) => p.trim()).filter(Boolean),
   );
   return [...paths].filter((p) => !isEngineStatePath(p));
+}
+
+// Paths touched outside `scopeGlobs`: the full changed set minus the same
+// query re-run with the globs applied as git pathspec magic. Git's own
+// matcher handles `**` correctly, so no hand-rolled glob→regex is needed.
+function offendingPaths(touched, scopeGlobs) {
+  const pathspecs = scopeGlobs.map((glob) => `:(glob)${glob}`);
+  const inScope = new Set(changedPaths(pathspecs));
+  return touched.filter((path) => !inScope.has(path));
 }
 
 function loadTask(db, taskId) {
@@ -123,11 +120,14 @@ function hasNoIncompleteDependency(db, taskId) {
 }
 
 // Marks `taskId`'s direct dependents `ready` wherever every one of their
-// dependencies (not just this one) is now `complete`. Siblings with other
-// unmet dependencies are left untouched (still `planned`, still blocked).
+// dependencies (not just this one) is now `complete` — but only if the
+// dependent is still `planned`. A dependent already `failed` or
+// `implemented` is stalled, not blocked-on-deps, and must not be silently
+// cleared back to `ready` just because its deps happened to complete.
 function unlockReadyDependents(db, taskId) {
   const unlocked = [];
   for (const dependent of loadDirectDependents(db, taskId)) {
+    if (dependent.status !== 'planned') continue;
     if (hasNoIncompleteDependency(db, dependent.id)) {
       setTaskStatus(db, dependent.id, 'ready');
       unlocked.push(dependent.id);
@@ -166,6 +166,19 @@ function runVerifyCommand(command) {
   }
 }
 
+// Classifies each of `paths` as 'created' or 'modified' against HEAD with
+// a single `git ls-tree` call rather than one `git cat-file` subprocess
+// per path: anything ls-tree reports already existed in HEAD.
+function classifyArtifacts(paths) {
+  if (paths.length === 0) return new Map();
+  const quoted = paths.map(quotePathspec).join(' ');
+  const output = execSync(`git ls-tree -r --name-only HEAD -- ${quoted}`, {
+    encoding: 'utf8',
+  });
+  const existing = new Set(output.split('\n').map((p) => p.trim()).filter(Boolean));
+  return new Map(paths.map((path) => [path, existing.has(path) ? 'modified' : 'created']));
+}
+
 // Determines created vs modified against HEAD, then stages and commits
 // exactly the task's touched paths with commit_message. Returns the new
 // commit sha.
@@ -173,42 +186,15 @@ function runVerifyCommand(command) {
 // The build graph is committed in the same commit as the work it
 // describes. The spec's "SQLite as build state" requires the DB be
 // committed to git — that's what makes state survive `/clear`, machine
-// moves, and reclone. Committing it here (rather than leaving it dirty
-// for a later hand-commit) keeps the graph and the code it tracks
-// atomic: a checkout of any commit has a build graph that agrees with
-// the tree. The DB is excluded from the *scope check* (it's engine
-// state, not agent output — see isEngineStatePath) but still belongs in
-// the commit.
+// moves, and reclone. The DB is excluded from the *scope check* (it's
+// engine state, not agent output — see isEngineStatePath) but the commit
+// this function makes is the task's final commit; nothing amends it
+// afterward.
 function commitTouchedPaths(paths, commitMessage) {
-  const quoted = paths.map((p) => JSON.stringify(p)).join(' ');
+  const quoted = paths.map(quotePathspec).join(' ');
   execSync(`git add -- ${quoted}`, { stdio: 'pipe' });
   execSync(`git commit -m ${JSON.stringify(commitMessage)}`, { stdio: 'pipe' });
   return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-}
-
-// Amends the just-written commit to include the build graph. Run after
-// the DB transaction commits, so the file on disk already reflects this
-// task's completion — staging it earlier would capture a pre-commit
-// snapshot of the graph and defeat the point.
-function commitBuildGraph(commitSha) {
-  try {
-    execSync(`git add -- ${JSON.stringify(DB_PATH)}`, { stdio: 'pipe' });
-    execSync('git commit --amend --no-edit', { stdio: 'pipe' });
-    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-  } catch {
-    // The graph failing to commit must not undo verified work — the task
-    // is already complete and its code is already committed.
-    return commitSha;
-  }
-}
-
-function artifactKind(path) {
-  try {
-    execSync(`git cat-file -e HEAD:${JSON.stringify(path)}`, { stdio: 'pipe' });
-    return 'modified';
-  } catch {
-    return 'created';
-  }
 }
 
 // Runs the full verify flow for `taskId`. Returns a result object
@@ -222,7 +208,7 @@ export function verifyTask(db, taskId) {
 
   const scopeGlobs = JSON.parse(task.scope_globs);
   const touched = changedPaths();
-  const offending = touched.filter((path) => !matchesAnyGlob(path, scopeGlobs));
+  const offending = offendingPaths(touched, scopeGlobs);
 
   if (offending.length > 0) {
     setTaskStatus(db, task.id, 'implemented');
@@ -230,42 +216,40 @@ export function verifyTask(db, taskId) {
   }
 
   const { exitCode, output } = runVerifyCommand(task.verify_command);
-  const runInsertVerification = insertVerification(db);
 
   if (exitCode !== 0) {
-    db.exec('BEGIN');
+    db.exec('BEGIN IMMEDIATE');
     try {
-      runInsertVerification.run(task.id, task.verify_command, exitCode, output, 'failed');
+      insertVerification(db).run(task.id, task.verify_command, exitCode, output, 'failed');
       setTaskStatus(db, task.id, 'failed');
       db.exec('COMMIT');
     } catch (err) {
-      db.exec('ROLLBACK');
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // Rollback failing must not mask the original error.
+      }
       throw err;
     }
     return { outcome: 'failed', exitCode, output };
   }
 
-  db.exec('BEGIN');
-  let commitSha;
+  // Artifact classification and the git commit both run subprocesses, so
+  // both happen here, before the DB transaction opens — nothing inside
+  // BEGIN/COMMIT below is anything but a sqlite statement.
+  const kindByPath = classifyArtifacts(touched);
+  const commitSha = touched.length > 0 ? commitTouchedPaths(touched, task.commit_message) : null;
+
   let unlocked;
   let intentComplete;
+  db.exec('BEGIN IMMEDIATE');
   try {
-    runInsertVerification.run(task.id, task.verify_command, exitCode, output, 'passed');
+    insertVerification(db).run(task.id, task.verify_command, exitCode, output, 'passed');
     setTaskStatus(db, task.id, 'verified');
 
     const runInsertArtifact = insertArtifact(db);
     for (const path of touched) {
-      runInsertArtifact.run(task.id, path, artifactKind(path), null);
-    }
-
-    commitSha =
-      touched.length > 0 ? commitTouchedPaths(touched, task.commit_message) : null;
-
-    if (commitSha) {
-      db.prepare('UPDATE artifacts SET commit_sha = ? WHERE task_id = ?').run(
-        commitSha,
-        task.id,
-      );
+      runInsertArtifact.run(task.id, path, kindByPath.get(path), commitSha);
     }
 
     setTaskStatus(db, task.id, 'complete');
@@ -274,13 +258,13 @@ export function verifyTask(db, taskId) {
 
     db.exec('COMMIT');
   } catch (err) {
-    db.exec('ROLLBACK');
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Rollback failing must not mask the original error.
+    }
     throw err;
   }
-
-  // Only now does the DB file on disk reflect this task's completion, so
-  // this is the first point the graph can be committed truthfully.
-  if (commitSha) commitSha = commitBuildGraph(commitSha);
 
   return { outcome: 'complete', exitCode, output, commitSha, unlocked, intentComplete };
 }

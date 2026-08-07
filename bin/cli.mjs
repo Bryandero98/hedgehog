@@ -14,19 +14,19 @@
 
 import { cp, mkdir, access, readdir, stat, rm, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { dbInit, DB_PATH } from '../src/db/init.mjs';
+import { dbInit, DB_PATH, openDb } from '../src/db/init.mjs';
 import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
-import { addIntent } from '../src/db/intent.mjs';
+import { addIntent, INTENTS_DIR } from '../src/db/intent.mjs';
 import { nextTask, formatNext, stalledTasks } from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
+import { rebuildDb } from '../src/db/rebuild.mjs';
 import { HOSTS, HOST_FLAGS, DEFAULT_HOST, availableHosts } from '../src/hosts/index.mjs';
 import { recordHosts, installedHosts } from '../src/hosts/installed.mjs';
 
@@ -179,6 +179,42 @@ const exists = (p) =>
     () => false,
   );
 
+// Runs once at the top of every command that needs the build graph. A
+// fresh clone has no `.hedgehog/hedgehog.db` (it's a derived artifact,
+// not committed) but does have `.hedgehog/intents/*.json` — the committed
+// source of truth — so this reconstructs the DB automatically instead of
+// making every such command fail with "no build graph" on a repo that
+// only just lost the file it never should have needed committed. If
+// there's nothing to rebuild from either (a genuinely fresh project, no
+// intents yet), this no-ops and leaves the DB missing — the caller's own
+// existing "No build graph found" guard still fires for that case.
+async function ensureDb() {
+  if (await exists(DB_PATH)) return;
+
+  let intentFiles = [];
+  try {
+    intentFiles = (await readdir(INTENTS_DIR)).filter((name) => name.endsWith('.json'));
+  } catch {
+    // .hedgehog/intents/ doesn't exist yet — nothing to rebuild from.
+  }
+  if (intentFiles.length === 0) return;
+
+  const corePath = await resolveCorePath();
+  if (!corePath) return;
+
+  await dbInit(DB_PATH);
+  const db = openDb();
+  let result;
+  try {
+    result = await rebuildDb(db, { corePath });
+  } finally {
+    db.close();
+  }
+  console.log(
+    `${dim('DB missing — rebuilt from')} ${bold(INTENTS_DIR)}${dim(':')} ${dim(`${result.intentsReplayed} intent(s) replayed, ${result.tasksMarkedComplete} task(s) marked complete`)}\n`,
+  );
+}
+
 // Writes one planned file to disk — a straight copy, or for a `merge`
 // entry, the shell template with {{CORE_SECTION}} replaced by the
 // chosen core's include.
@@ -260,6 +296,7 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog init --force              overwrite existing files
   npx @skyf0xx/hedgehog update                    refresh the installed agents + skills
   npx @skyf0xx/hedgehog db init                   create .hedgehog/hedgehog.db if absent
+  npx @skyf0xx/hedgehog db rebuild                re-derive the build graph from committed intents + git history
   npx @skyf0xx/hedgehog plan                      compile pending intents into tasks + dependencies,
                                                    then open the build graph if anything compiled
   npx @skyf0xx/hedgehog intent add [flags]        add an intent (rules/requirements/dependencies)
@@ -460,10 +497,40 @@ async function update({ hosts }) {
   );
 }
 
+async function dbRebuildCommand() {
+  const corePath = await resolveCorePath();
+  if (!corePath) {
+    console.error(
+      `${red('No core definition found.')} Expected ${bold(AUTHORED_CORE_PATH)} or a root ${bold('core.yaml')} (from \`hedgehog init\`).\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  await dbInit(DB_PATH);
+  const db = openDb();
+  let result;
+  try {
+    result = await rebuildDb(db, { corePath });
+  } finally {
+    db.close();
+  }
+
+  console.log(
+    `${green('rebuilt')}  ${dim(`${result.intentsReplayed} intent(s) replayed, ${result.tasksMarkedComplete} task(s) marked complete`)}\n`,
+  );
+}
+
 async function dbCommand(args) {
   const sub = args[0];
+  if (sub === 'rebuild') {
+    await dbRebuildCommand();
+    return;
+  }
   if (sub !== 'init') {
-    console.error(`${red('Unknown db subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog db init\n`);
+    console.error(
+      `${red('Unknown db subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog db init\n   or: hedgehog db rebuild\n`,
+    );
     process.exitCode = 1;
     return;
   }
@@ -491,6 +558,8 @@ async function resolveCorePath() {
 }
 
 async function planCommand() {
+  await ensureDb();
+
   const corePath = await resolveCorePath();
   if (!corePath) {
     console.error(
@@ -507,10 +576,9 @@ async function planCommand() {
   }
 
   const core = await loadCore(corePath);
-  const db = new DatabaseSync(DB_PATH);
+  const db = openDb();
   let result;
   try {
-    db.exec('PRAGMA foreign_keys = ON;');
     result = planTasks(db, core);
   } finally {
     db.close();
@@ -600,6 +668,8 @@ async function parseIntentArgs(args) {
 }
 
 async function intentCommand(args) {
+  await ensureDb();
+
   const sub = args[0];
   if (sub !== 'add') {
     console.error(
@@ -624,11 +694,10 @@ async function intentCommand(args) {
     return;
   }
 
-  const db = new DatabaseSync(DB_PATH);
+  const db = openDb();
   let intent;
   try {
-    db.exec('PRAGMA foreign_keys = ON;');
-    intent = addIntent(db, record);
+    intent = await addIntent(db, record);
   } catch (err) {
     console.error(`${red('Failed to add intent:')} ${err.message}\n`);
     process.exitCode = 1;
@@ -642,17 +711,18 @@ async function intentCommand(args) {
 }
 
 async function nextCommand() {
+  await ensureDb();
+
   if (!(await exists(DB_PATH))) {
     console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
     process.exitCode = 1;
     return;
   }
 
-  const db = new DatabaseSync(DB_PATH);
+  const db = openDb();
   let packet;
   let stalled = [];
   try {
-    db.exec('PRAGMA foreign_keys = ON;');
     packet = nextTask(db);
     if (!packet) stalled = stalledTasks(db);
   } finally {
@@ -684,6 +754,8 @@ async function nextCommand() {
 }
 
 async function verifyCommand(args) {
+  await ensureDb();
+
   const taskId = args[0];
   if (!taskId) {
     console.error(`${red('Usage:')} hedgehog verify <task-id>\n`);
@@ -697,10 +769,9 @@ async function verifyCommand(args) {
     return;
   }
 
-  const db = new DatabaseSync(DB_PATH);
+  const db = openDb();
   let result;
   try {
-    db.exec('PRAGMA foreign_keys = ON;');
     result = verifyTask(db, taskId);
   } catch (err) {
     console.error(`${red('Verify failed:')} ${err.message}\n`);
@@ -739,16 +810,17 @@ async function verifyCommand(args) {
 }
 
 async function statusCommand() {
+  await ensureDb();
+
   if (!(await exists(DB_PATH))) {
     console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
     process.exitCode = 1;
     return;
   }
 
-  const db = new DatabaseSync(DB_PATH);
+  const db = openDb();
   let result;
   try {
-    db.exec('PRAGMA foreign_keys = ON;');
     result = graphStatus(db);
   } finally {
     db.close();
@@ -885,6 +957,8 @@ async function graphCommand(args) {
 }
 
 async function whyCommand(args) {
+  await ensureDb();
+
   const path = args[0];
   if (!path) {
     console.error(`${red('Usage:')} hedgehog why <path>\n`);
@@ -898,10 +972,9 @@ async function whyCommand(args) {
     return;
   }
 
-  const db = new DatabaseSync(DB_PATH);
+  const db = openDb();
   let chain;
   try {
-    db.exec('PRAGMA foreign_keys = ON;');
     chain = whyPath(db, path);
   } finally {
     db.close();
@@ -911,6 +984,8 @@ async function whyCommand(args) {
 }
 
 async function frictionCommand(args) {
+  await ensureDb();
+
   const sub = args[0];
 
   if (!(await exists(DB_PATH))) {
@@ -941,11 +1016,10 @@ async function frictionCommand(args) {
       return;
     }
 
-    const db = new DatabaseSync(DB_PATH);
+    const db = openDb();
     let entry;
     try {
-      db.exec('PRAGMA foreign_keys = ON;');
-      entry = addFriction(db, { note, taskId });
+      entry = await addFriction(db, { note, taskId });
     } catch (err) {
       console.error(`${red('Failed to log friction:')} ${err.message}\n`);
       process.exitCode = 1;
@@ -959,10 +1033,9 @@ async function frictionCommand(args) {
   }
 
   if (sub === 'list') {
-    const db = new DatabaseSync(DB_PATH);
+    const db = openDb();
     let entries;
     try {
-      db.exec('PRAGMA foreign_keys = ON;');
       entries = listFriction(db);
     } finally {
       db.close();

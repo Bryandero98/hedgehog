@@ -10,6 +10,15 @@
 // part of the flag surface (no natural repeatable-flag shape for two
 // distinct kinds) but are accepted from a JSON file via `constraints` /
 // `acceptance` arrays, alongside `rules`.
+//
+// Every intent is also written as its own committed JSON file under
+// INTENTS_DIR — the DB is a derived artifact (rebuildable via `hedgehog db
+// rebuild`), so the intent itself has to survive independently of it, as
+// plain text a PR can review and a fresh clone can replay.
+
+import { mkdir, writeFile } from 'node:fs/promises';
+
+export const INTENTS_DIR = '.hedgehog/intents';
 
 const REQUIREMENT_KIND_FIELDS = {
   rule: 'rules',
@@ -75,14 +84,20 @@ const insertIntentDependency = (db) =>
 // Writes a normalized intent (see normalizeIntent) to `db`: one `intents`
 // row, one `requirements` row per rule/constraint/acceptance item, one
 // `intent_dependencies` row per depends_on entry. All in one transaction.
-export function addIntent(db, record) {
+// Also writes the same normalized shape to INTENTS_DIR/<id>.json, ahead of
+// the DB transaction, so the intent is recoverable even if the DB write
+// fails after — belt and suspenders, not a two-phase commit.
+export async function addIntent(db, record) {
   const intent = normalizeIntent(record);
+
+  await mkdir(INTENTS_DIR, { recursive: true });
+  await writeFile(`${INTENTS_DIR}/${intent.id}.json`, JSON.stringify(intent, null, 2));
 
   const runInsertIntent = insertIntent(db);
   const runInsertRequirement = insertRequirement(db);
   const runInsertDependency = insertIntentDependency(db);
 
-  db.exec('BEGIN');
+  db.exec('BEGIN IMMEDIATE');
   try {
     runInsertIntent.run(intent.id, intent.goal, intent.outcome, intent.priority);
     for (const r of intent.requirements) {
@@ -93,7 +108,11 @@ export function addIntent(db, record) {
     }
     db.exec('COMMIT');
   } catch (err) {
-    db.exec('ROLLBACK');
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Rollback failing must not mask the original error.
+    }
     throw err;
   }
 

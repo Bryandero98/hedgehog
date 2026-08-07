@@ -8,3 +8,6 @@ dist
 .DS_Store
 .idea
 .hedgehog/graph-server.json
+.hedgehog/hedgehog.db
+.hedgehog/hedgehog.db-*
+.hedgehog/commit.lock

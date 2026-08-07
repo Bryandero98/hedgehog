@@ -168,7 +168,7 @@ export function planTasks(db, core) {
   const compiledIntentIds = [];
   const skippedIntentIds = [];
 
-  db.exec('BEGIN');
+  db.exec('BEGIN IMMEDIATE');
   try {
     for (const intent of ordered) {
       const firstTaskId = taskId(intent.id, firstLayerId);
@@ -214,7 +214,11 @@ export function planTasks(db, core) {
     }
     db.exec('COMMIT');
   } catch (err) {
-    db.exec('ROLLBACK');
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Rollback failing must not mask the original error.
+    }
     throw err;
   }
 
