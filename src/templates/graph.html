@@ -728,7 +728,6 @@
     const [selectedId, setSelectedId] = useState(null);
     const [chainRootId, setChainRootId] = useState(null);
     const [collapsedModules, setCollapsedModules] = useState(() => new Set());
-    const [autoCollapseApplied, setAutoCollapseApplied] = useState(false);
     // Tracks the last-rendered graph's JSON so a poll that returns
     // identical data (the common case — nothing changed since last
     // tick) skips relayout entirely instead of jittering node positions
@@ -765,10 +764,12 @@
     const isLargeGraph = !!raw && raw.nodes.length > LARGE_GRAPH_THRESHOLD;
 
     // The modules worth a first look — anything with a blocked task
-    // (needs a fix) or a ready task (actionable). Drives both which lanes
-    // start collapsed and, on first paint, which lanes fitView zooms to
-    // (see attentionModulesRef below) — a large graph should open on what
-    // needs attention, not zoomed out far enough to fit every idle lane.
+    // (needs a fix) or a ready task (actionable). Falls back to the first
+    // module alphabetically when nothing qualifies (a fresh build, every
+    // task still `planned`), so there's always a target. Drives which lane
+    // the initial viewport jump (below) lands on for a large graph — it
+    // should open on what needs attention, not zoomed out far enough to
+    // fit every idle lane.
     const attentionModules = useMemo(() => {
       if (!raw) return new Set();
       const byModule = new Map();
@@ -780,22 +781,14 @@
       for (const [moduleName, statuses] of byModule) {
         if (statuses.some((s) => s === 'blocked' || s === 'ready')) next.add(moduleName);
       }
+      if (next.size === 0 && byModule.size > 0) {
+        next.add([...byModule.keys()].sort((a, b) => a.localeCompare(b))[0]);
+      }
       return next;
     }, [raw]);
 
-    // Auto-collapse every lane except the ones in attentionModules, once,
-    // the first time a graph crosses the large-graph threshold. A user's
-    // own later clicks always win after that: this never re-collapses a
-    // lane the user chose to open.
-    useEffect(() => {
-      if (!raw || !isLargeGraph || autoCollapseApplied) return;
-      const next = new Set();
-      for (const n of raw.nodes) {
-        if (!attentionModules.has(n.module)) next.add(n.module);
-      }
-      setCollapsedModules(next);
-      setAutoCollapseApplied(true);
-    }, [raw, isLargeGraph, autoCollapseApplied, attentionModules]);
+    // Lanes always start open — collapsing is a choice the user makes by
+    // clicking a lane header (toggleLane), never applied on their behalf.
 
     const edgesBySource = useMemo(() => {
       const map = new Map();
@@ -897,19 +890,15 @@
     // corner of the first lane worth attention (or the first lane at all,
     // if none need attention) at a fixed, legible zoom — rather than
     // fitting/centering on a bounding box, which (see above) can leave
-    // the viewport scrolled past the top of the content it fit to. Gated
-    // on autoCollapseApplied (not just isLargeGraph) so this runs once
-    // `lanes` reflects the post-collapse layout, not the pre-collapse one
-    // — setting the viewport before collapse applies would target
-    // coordinates that shift out from under it a moment later.
+    // the viewport scrolled past the top of the content it fit to.
     useEffect(() => {
-      if (!isLargeGraph || !autoCollapseApplied || initialViewSetRef.current) return;
+      if (!isLargeGraph || initialViewSetRef.current) return;
       const instance = flowInstanceRef.current;
       if (!instance || lanes.length === 0) return;
       const targetLane = lanes.find((l) => attentionModules.has(l.module)) ?? lanes[0];
       instance.setViewport({ x: -targetLane.x + 40, y: -targetLane.y + 40, zoom: 1 });
       initialViewSetRef.current = true;
-    }, [isLargeGraph, autoCollapseApplied, lanes, attentionModules]);
+    }, [isLargeGraph, lanes, attentionModules]);
 
     if (!raw) {
       return h('div', { id: 'loading' }, 'Loading build graph…');
