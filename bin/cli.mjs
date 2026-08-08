@@ -42,6 +42,7 @@ import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { boundaryState, formatBoundary, formatPosition, formatHandoff } from '../src/db/boundary.mjs';
 import { commitGateStatus, formatCommitGate } from '../src/db/gate.mjs';
 import { detectDrift, recompileTasks, formatRecompile } from '../src/db/drift.mjs';
+import { coreMissingRequirements, missingBinaries } from '../src/db/requires.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
 import { addDebt, listDebt } from '../src/db/debt.mjs';
@@ -960,6 +961,40 @@ async function nextCommand() {
   console.log(formatNext(packet));
 }
 
+// The declared-binary gate for one task: resolves the task's layer in
+// the core definition and returns { layer, missing } when that layer's
+// `requires:` names binaries this environment can't find, or null when
+// there's nothing to say (no core, unknown task/layer, nothing missing).
+//
+// Runs ahead of verifyTask so the verify command is never handed to a
+// shell that will answer `exit 127` with no context. Deliberately makes
+// no state change: the task keeps its lease and its `building` status,
+// so installing the binary and re-running `hedgehog verify` is the whole
+// fix — no unblocking step, and no failed verification recorded for
+// something that never ran.
+async function missingBinariesForTask(db, taskId) {
+  const row = db.prepare('SELECT layer FROM tasks WHERE id = ?').get(taskId);
+  if (row === undefined) return null;
+
+  const corePath = await resolveCorePath();
+  if (!corePath) return null;
+
+  let core;
+  try {
+    core = await loadCore(corePath);
+  } catch {
+    // An unloadable core.yaml is `plan`'s error to report; don't turn it
+    // into a confusing failure of an unrelated verify.
+    return null;
+  }
+
+  const layer = core.layers.find((l) => l.id === row.layer);
+  if (!layer) return null;
+
+  const missing = missingBinaries(layer.requires);
+  return missing.length === 0 ? null : { layer: layer.id, missing };
+}
+
 async function verifyCommand(args) {
   await ensureDb();
 
@@ -982,6 +1017,22 @@ async function verifyCommand(args) {
   const db = openDb();
   let result;
   try {
+    const blockers = await missingBinariesForTask(db, taskId);
+    if (blockers) {
+      const list = blockers.missing.map((b) => bold(b)).join(', ');
+      console.error(
+        `${red(bold('Missing required binaries.'))} Task ${bold(taskId)} (layer ${bold(blockers.layer)}) was not verified.\n`,
+      );
+      console.error(`Not found on PATH: ${list}`);
+      console.error(
+        `${dim(`Declared by layer "${blockers.layer}" in core.yaml (requires:). The verify command was not run.`)}`,
+      );
+      console.error(
+        `${dim('Install them, or put them on the PATH of the shell running hedgehog — an interactive login shell may see binaries a non-interactive one does not — then re-run this command.')}\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
     result = verifyTask(db, taskId, owner);
   } catch (err) {
     console.error(`${red('Verify failed:')} ${err.message}\n`);
@@ -1430,6 +1481,15 @@ async function statusCommand() {
   } finally {
     db.close();
   }
+
+  // Declared-binary check (core.yaml's `requires:`) rides on `status`
+  // because status is what a fresh session runs first — that's the point
+  // at which "this core needs terraform" is a setup fact rather than an
+  // opaque exit 127 twenty minutes into the build. Reuses the `core`
+  // already loaded above for drift — a project with no core definition
+  // yet, or one that failed to parse (reported above already), has
+  // nothing to check and reports nothing here either.
+  if (core) result.missingRequirements = coreMissingRequirements(core);
 
   console.log(formatStatus(result));
 

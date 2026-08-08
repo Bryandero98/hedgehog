@@ -12,6 +12,7 @@
 // would pick.
 
 import { detectDrift, formatDrift } from './drift.mjs';
+import { formatMissingRequirements } from './requires.mjs';
 
 // The task lifecycle in order, matching the tasks CHECK constraint in
 // schema.mjs exactly — every status the engine can write, and no others.
@@ -108,9 +109,25 @@ const BLOCKED_REASON_LABELS = {
 };
 
 // Renders a graphStatus() result into a plain-text overview: counts by
-// status (only non-zero ones, in lifecycle order), the ready list, tasks
-// currently in flight, and anything needing attention.
-export function formatStatus({ counts, ready, inFlight, attention, drift, total }) {
+// status (only non-zero ones, in lifecycle order), any declared binary
+// this environment can't resolve, the ready list, tasks currently in
+// flight, anything needing attention, and core.yaml drift.
+//
+// `missingRequirements` comes from the core definition rather than the
+// database (src/db/requires.mjs#coreMissingRequirements), so the caller
+// passes it in — status.mjs stays a pure function of the graph. It
+// prints above READY, not at the bottom with NEEDS ATTENTION, because a
+// missing binary invalidates everything below it: those tasks look
+// perfectly ready and cannot possibly verify.
+export function formatStatus({
+  counts,
+  ready,
+  inFlight,
+  attention,
+  drift,
+  total,
+  missingRequirements,
+}) {
   const lines = [];
   lines.push(`TASKS  ${total}`);
   lines.push('');
@@ -119,6 +136,11 @@ export function formatStatus({ counts, ready, inFlight, attention, drift, total 
     lines.push(`  ${status.padEnd(12)} ${counts[status]}`);
   }
   lines.push('');
+  const missingLines = formatMissingRequirements(missingRequirements);
+  if (missingLines.length > 0) {
+    lines.push(...missingLines);
+    lines.push('');
+  }
   lines.push('READY');
   if (ready.length === 0) {
     lines.push('  (none)');

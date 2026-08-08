@@ -191,6 +191,7 @@ function indentOf(line) {
 //       exclusive: <bool>             # optional, default false
 //       once: <bool>                  # optional, default false
 //       verify_radius: [<scalar>, ...] # optional, default null (falls back to scope)
+//       requires: [<scalar>, ...]     # optional, default [] — binaries `verify` needs
 export function parseCoreYaml(text) {
   const rawLines = text.split('\n');
   const lines = [];
@@ -254,6 +255,12 @@ export function parseCoreYaml(text) {
         layer.verify_radius !== undefined
           ? parseInlineList(layer.verify_radius)
           : null,
+      // Binaries `verify` needs on PATH (src/db/requires.mjs). [] — not
+      // null — because "declares nothing" and "declares an empty list"
+      // mean the same thing here, unlike verify_radius, and every core
+      // written before this field existed lands in that case.
+      requires:
+        layer.requires !== undefined ? parseInlineList(layer.requires) : [],
     });
   }
 
@@ -514,6 +521,21 @@ export function validateCore(core) {
           throw new Error(
             `layer "${layer.id}" declares verify_radius [${layer.verify_radius.join(', ')}], which does not cover its own scope glob "${glob}" — a declared radius replaces scope on the verify axis (conflict.mjs), so anything in scope but outside the radius is a file this layer writes while the scheduler believes no one is reading it`,
           );
+        }
+      }
+    }
+
+    // `requires` is optional by design — every core.yaml written before
+    // it existed omits it and must stay valid, so absence is never an
+    // error. Only a malformed declaration is rejected, and only when the
+    // key is actually present.
+    if (layer.requires !== undefined && layer.requires !== null) {
+      if (!Array.isArray(layer.requires)) {
+        throw new Error(`layer "${layer.id}" has a non-list requires`);
+      }
+      for (const binary of layer.requires) {
+        if (typeof binary !== 'string' || binary.trim() === '') {
+          throw new Error(`layer "${layer.id}" has an empty entry in requires`);
         }
       }
     }
