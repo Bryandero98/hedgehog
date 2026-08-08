@@ -23,13 +23,13 @@ id: full-stack-app
 layers:
   - id: schema
     scope: ["packages/db/src/schema/{module}/**"]
-    verify: "pnpm nx test db --testPathPattern={module}"
+    verify: "pnpm nx test db -- src/schema/{module}/"
     verify_radius: ["packages/db/**"]
     commit: "feat({module}): schema"
   - id: contract
     depends_on: schema
     scope: ["packages/contracts/src/{module}/**"]
-    verify: "pnpm nx test contracts --testPathPattern={module}"
+    verify: "pnpm nx test contracts -- src/{module}/"
     commit: "feat({module}): contract"
   - id: repository
     depends_on: contract
@@ -44,22 +44,22 @@ layers:
   - id: controller
     depends_on: service
     scope: ["apps/api/src/app/{module}/**"]
-    verify: "pnpm nx test api --testPathPattern={module}"
+    verify: "pnpm nx test api -- src/app/{module}/"
     commit: "feat({module}): api"
   - id: hook
     depends_on: controller
     scope: ["packages/hooks/src/{module}/**"]
-    verify: "pnpm nx test hooks --testPathPattern={module}"
+    verify: "pnpm nx test hooks -- src/{module}/"
     verify_radius: ["packages/hooks/**"]
     commit: "feat({module}): hooks"
   - id: screen
     depends_on: hook
     scope: ["apps/web/src/app/{module}/**", "apps/mobile/src/{module}/**"]
-    verify: "pnpm nx test web --testPathPattern={module} && pnpm nx test mobile --testPathPattern={module}"
+    verify: "pnpm nx test web -- src/app/{module}/ && pnpm nx test mobile -- src/{module}/"
     commit: "feat({module}): screen-web"
   - id: join
     depends_on: screen
     scope: ["**"]
-    verify: "pnpm typecheck && pnpm nx run-many -t test"
+    verify: "pnpm nx run-many -t typecheck && pnpm nx run-many -t test"
     exclusive: true
     commit: "chore({module}): join"
