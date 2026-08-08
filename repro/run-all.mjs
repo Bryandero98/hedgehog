@@ -2,10 +2,6 @@
 // non-zero if any of them fails.
 //
 //   node --experimental-sqlite repro/run-all.mjs
-//
-// 01-04, 06 and 07 are expected to FAIL against the pre-cardinality tree
-// — that is what makes them reproductions. 05 is a control and must pass
-// on both sides of the change.
 
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -15,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 const scripts = readdirSync(HERE)
-  .filter((f) => /^\d\d-.*\.mjs$/.test(f))
+  .filter((f) => /^\d+-.*\.mjs$/.test(f))
   .sort();
 
 const failed = [];
