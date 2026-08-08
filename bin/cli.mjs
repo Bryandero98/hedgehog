@@ -17,13 +17,26 @@ import { constants } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-import { dbInit, DB_PATH, openDb } from '../src/db/init.mjs';
+import { dbInit, DB_PATH, dbAbsPath, openDb } from '../src/db/init.mjs';
 import { loadCore } from '../src/db/core.mjs';
 import { planTasks } from '../src/db/plan.mjs';
 import { addIntent, INTENTS_DIR } from '../src/db/intent.mjs';
-import { nextTask, formatNext, stalledTasks } from '../src/db/next.mjs';
+import {
+  nextTask,
+  formatNext,
+  formatPacket,
+  stalledTasks,
+  taskPacket,
+  taskStatusLine,
+} from '../src/db/next.mjs';
 import { verifyTask } from '../src/db/verify.mjs';
-import { claimTasks, releaseTask, renewLease } from '../src/db/claim.mjs';
+import {
+  claimTasks,
+  claimTask,
+  releaseTask,
+  renewLease,
+  retryTask,
+} from '../src/db/claim.mjs';
 import { readyTasks, formatReady } from '../src/db/ready.mjs';
 import { graphStatus, formatStatus } from '../src/db/status.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
@@ -187,6 +200,17 @@ const exists = (p) =>
     () => false,
   );
 
+// Printed by every command that writes to the build graph, before it
+// writes. DB_PATH is relative (`.hedgehog/hedgehog.db`), so which
+// database a command actually opens depends entirely on the directory it
+// was run from — a recovery command run one directory up silently opens
+// (or creates) a different database, matches nothing, and reports
+// success. Naming the absolute path on every write makes that visible in
+// the output instead of only in the outcome.
+function printDbTarget() {
+  console.log(`  ${dim('db')}      ${dbAbsPath()}`);
+}
+
 // Runs once at the top of every command that needs the build graph. A
 // fresh clone has no `.hedgehog/hedgehog.db` (it's a derived artifact,
 // not committed) but does have `.hedgehog/intents/*.json` — the committed
@@ -326,6 +350,11 @@ ${bold('Usage')}
 
 Available cores: ${cores.join(', ')}
 Available hosts: ${availableHosts().join(', ')} (default: ${DEFAULT_HOST})
+
+Every command that writes to the build graph prints the absolute path of
+the database it opened, and exits non-zero when it matched no task —
+which database a relative path resolves to depends on the directory you
+ran from.
 
 After it runs, commit the payload, open your coding agent, and describe
 what you want to build — the planner agent runs planning intake, then
@@ -520,6 +549,7 @@ async function dbRebuildCommand() {
     return;
   }
 
+  printDbTarget();
   await dbInit(DB_PATH);
   const db = openDb();
   let result;
@@ -547,6 +577,7 @@ async function dbCommand(args) {
     process.exitCode = 1;
     return;
   }
+  printDbTarget();
   const { created, path } = await dbInit(DB_PATH);
   console.log(
     created
@@ -588,6 +619,7 @@ async function planCommand() {
     return;
   }
 
+  printDbTarget();
   const core = await loadCore(corePath);
   const db = openDb();
   let result;
@@ -715,6 +747,7 @@ async function intentCommand(args) {
     return;
   }
 
+  printDbTarget();
   const db = openDb();
   let intent;
   try {
@@ -791,6 +824,7 @@ async function verifyCommand(args) {
     return;
   }
 
+  printDbTarget();
   const db = openDb();
   let result;
   try {
@@ -908,8 +942,19 @@ async function releaseCommand(args) {
   }
 
   if (!result.released) {
-    console.error(`${red('Not released.')} Task ${bold(taskId)} is not leased to ${bold(owner)} as ${bold('building')}.\n`);
     process.exitCode = 1;
+    if (result.reason === 'no_such_task') {
+      console.error(`${red('No such task:')} ${bold(taskId)}${dim(` (in ${dbAbsPath()})`)}\n`);
+      return;
+    }
+    console.error(
+      `${red('Not released.')} Task ${bold(taskId)} is ${bold(result.task.status)}${
+        result.task.lease_owner ? `, leased to ${bold(result.task.lease_owner)}` : ''
+      } — not ${bold('building')} under ${bold(owner)}.\n` +
+        (result.task.status === 'blocked'
+          ? `\nReturn a blocked task to the queue with: ${bold(`hedgehog retry ${taskId}`)}\n`
+          : ''),
+    );
     return;
   }
 
@@ -947,8 +992,16 @@ async function renewCommand(args) {
   }
 
   if (!result.renewed) {
-    console.error(`${red('Not renewed.')} Task ${bold(taskId)} is not leased to ${bold(owner)}.\n`);
     process.exitCode = 1;
+    if (result.reason === 'no_such_task') {
+      console.error(`${red('No such task:')} ${bold(taskId)}${dim(` (in ${dbAbsPath()})`)}\n`);
+      return;
+    }
+    console.error(
+      `${red('Not renewed.')} Task ${bold(taskId)} is ${bold(result.task.status)}${
+        result.task.lease_owner ? `, leased to ${bold(result.task.lease_owner)}` : ''
+      } — not leased to ${bold(owner)}.\n`,
+    );
     return;
   }
 
@@ -963,6 +1016,8 @@ async function statusCommand() {
     process.exitCode = 1;
     return;
   }
+
+  printDbTarget();
 
   const db = openDb();
   let result;
@@ -986,6 +1041,8 @@ async function readyCommand() {
     process.exitCode = 1;
     return;
   }
+
+  printDbTarget();
 
   const db = openDb();
   let result;
@@ -1218,6 +1275,8 @@ async function frictionCommand(args) {
       process.exitCode = 1;
       return;
     }
+
+    printDbTarget();
 
     const db = openDb();
     let entry;
