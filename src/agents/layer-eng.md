@@ -68,6 +68,10 @@ parsing and typing, and the layer after it consumes the result.
 
 ## Constraints
 
+- Default to no comments. Add one only when the WHY is non-obvious — a
+  hidden constraint, a workaround for a specific bug, an invariant the
+  code alone can't convey. Never comment WHAT the code does; a
+  well-named symbol already says that.
 - Never self-certify a task as done or run `git commit` for its changes —
   see Workflow step 4.
 - Never write outside the packet's ALLOWED SCOPE. Scope is what stops

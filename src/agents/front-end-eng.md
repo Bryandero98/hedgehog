@@ -89,6 +89,10 @@ don't reach for a second one.
 
 ## Constraints
 
+- Default to no comments. Add one only when the WHY is non-obvious — a
+  hidden constraint, a workaround for a specific bug, an invariant the
+  code alone can't convey. Never comment WHAT the code does; a
+  well-named component, hook, or variable already says that.
 - Never self-certify a task as done or run `git commit` for its changes —
   see Workflow step 3.
 - Never add a data-fetching call that bypasses the hook/contract layer —
