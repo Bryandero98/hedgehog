@@ -234,9 +234,38 @@ export function taskStatusLine(task) {
   return task.status.toUpperCase();
 }
 
+// The standing honesty requirement, appended to every packet.
+//
+// Every other section is task-specific — this one is constant, which is
+// exactly why it lives in the renderer rather than in the graph. The
+// build's mechanical gate can only ask "did the verify command exit 0",
+// so a layer that stubs a dependency permissively, returns 0 where it
+// meant "unknown", or invents a decision the requirements never made
+// passes the gate and fails later, somewhere else. The defensive
+// behaviour that catches those — a stub that throws by name, a value
+// surfaced as unavailable, an undecided question reported instead of
+// answered — only ever happened when a human wrote the instruction into
+// the dispatch by hand. Generating it into the packet makes it standing
+// rather than remembered.
+//
+// Kept to ten lines on purpose: an agent reads this on every task, and
+// a section long enough to skim is a section that isn't read.
+const HONESTY = [
+  'HONESTY',
+  "  Build what this layer can; make what it can't obvious.",
+  '  - A stub or placeholder throws a named error at first use — never',
+  '    returns empty, null, or success from something unbuilt.',
+  '  - A value that cannot be computed is surfaced as unavailable — never',
+  '    replaced by 0, "", or a plausible default.',
+  "  - A decision RELEVANT RULES doesn't make is reported, not invented.",
+  '  - A scope that turns out to be wrong is reported, not widened.',
+  '  Reporting one of these is a successful outcome. Papering over it is',
+  '  the failure VERIFICATION cannot catch.',
+];
+
 // Renders a packet into the STATUS / INTENT / RELEVANT RULES /
 // INHERITED DEBT / WHY NOW / BLOCKED DOWNSTREAM / ALLOWED SCOPE /
-// VERIFICATION format. The spec
+// VERIFICATION / HONESTY format. The spec
 // splits this across two examples — the `hedgehog next` display and "The
 // task packet" (which carries the intent and its rules) — but an agent
 // receives one thing, so the packet is one thing: everything the worker
@@ -245,6 +274,10 @@ export function taskStatusLine(task) {
 // `statusLine` is what goes on the STATUS row. `next` passes READY
 // literally, as it always has; `show` passes taskStatusLine(task), which
 // names the task's real state.
+//
+// HONESTY is last deliberately: it's the one section that qualifies the
+// gate above it, so it reads as the answer to "and what if I can't clear
+// VERIFICATION honestly" rather than as preamble.
 export function formatPacket(packet, statusLine) {
   const { task, intent, requirements, dependents, incompleteDeps = [], inheritedDebt = [] } = packet;
   const scopeGlobs = JSON.parse(task.scope_globs);
@@ -315,6 +348,8 @@ export function formatPacket(packet, statusLine) {
   lines.push('');
   lines.push('VERIFICATION');
   lines.push(`  ${task.verify_command}`);
+  lines.push('');
+  lines.push(...HONESTY);
 
   return lines.join('\n');
 }
