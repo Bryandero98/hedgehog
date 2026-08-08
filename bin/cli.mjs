@@ -943,8 +943,13 @@ async function claimCommand(args) {
 
   const db = openDb();
   let claimed;
+  let packets = [];
   try {
     claimed = claimTasks(db, { owner, count });
+    // Assembled on the same open handle, right after the claim: the
+    // packet is what the caller dispatches, so it has to come back from
+    // the same call that handed out the lease.
+    packets = claimed.map((task) => assemblePacket(db, task));
   } finally {
     db.close();
   }

@@ -208,9 +208,15 @@ export function formatPacket(packet, statusLine) {
   lines.push('');
   lines.push(`STATUS   ${statusLine}`);
   lines.push('');
+  // The intent's goal and outcome are what this task's layer is a part
+  // of — labelled rather than left as two bare lines, because the
+  // layer's own `objective` ("domain-service for card") says what to
+  // build a layer of, and only these say what the work is *for*. A layer
+  // can otherwise pass its own verify green while covering half of what
+  // the intent asked for.
   lines.push('INTENT');
-  lines.push(`  ${intent.goal}`);
-  lines.push(`  ${intent.outcome}`);
+  lines.push(`  GOAL     ${intent.goal}`);
+  lines.push(`  OUTCOME  ${intent.outcome}`);
   lines.push('');
   lines.push('RELEVANT RULES');
   if (requirements.length === 0) {
