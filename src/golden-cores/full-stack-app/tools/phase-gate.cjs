@@ -12,11 +12,17 @@
  * and `require`/`module.exports` below would fail with "require is not
  * defined".
  */
-const { execSync } = require('node:child_process');
+const { execFileSync } = require('node:child_process');
 
+// git without a shell: `base` comes from the environment
+// (GITHUB_BASE_REF is set from the pull request's branch name, which a
+// fork controls), so the range reaches git as one literal argument
+// rather than as text a shell reparses.
 function getCommitSubjects(base) {
   const range = base ? `${base}..HEAD` : 'HEAD';
-  const out = execSync(`git log --format=%s ${range}`, { encoding: 'utf8' });
+  const out = execFileSync('git', ['log', '--format=%s', range], {
+    encoding: 'utf8',
+  });
   return out.split('\n').filter(Boolean);
 }
 

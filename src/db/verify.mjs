@@ -44,10 +44,16 @@
 // it.
 //
 // No subprocess (git, verify_command) ever runs while a sqlite
-// transaction is open: every execSync call in this file happens before
+// transaction is open: every subprocess call in this file happens before
 // BEGIN or after COMMIT, never between them.
+//
+// Every git call goes through `git()` — execFileSync with an argv array,
+// no shell. Paths and core.yaml fields reach git as literal arguments,
+// so `$(…)`, backticks and the rest are inert data. The one deliberate
+// shell in this file is runVerifyCommand, which runs a core-authored
+// verify_command that is a shell command by definition.
 
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { DB_PATH } from './init.mjs';
 import { withCommitLock, LOCK_PATH } from './commitLock.mjs';
 import { reapExpiredLeases } from './claim.mjs';
@@ -62,11 +68,13 @@ function isEngineStatePath(path) {
   return path === DB_PATH || path.startsWith(`${DB_PATH}-`) || path === LOCK_PATH;
 }
 
-// Shell-safe quoting for paths interpolated into a git command line,
-// matching the JSON.stringify(path) convention used elsewhere in this
-// file for the same purpose.
-function quotePathspec(path) {
-  return JSON.stringify(path);
+// Runs git with an argv array and no shell, so every element of `args`
+// reaches git as one literal argument. Paths, pathspec globs and commit
+// messages all pass through here verbatim: git's own pathspec magic
+// (`:(glob)…`) still works, while shell metacharacters in a file name or
+// a core.yaml field are just characters.
+function git(args, options = {}) {
+  return execFileSync('git', args, { encoding: 'utf8', ...options });
 }
 
 // Working-tree diff (relative paths), optionally restricted to `pathspecs`
@@ -74,12 +82,9 @@ function quotePathspec(path) {
 // — covers modified, added, deleted, and untracked files, everything the
 // agent could have touched.
 function changedPaths(pathspecs) {
-  const scopeArgs = pathspecs ? ` -- ${pathspecs.map(quotePathspec).join(' ')}` : '';
-  const tracked = execSync(`git diff --name-only HEAD${scopeArgs}`, { encoding: 'utf8' });
-  const untracked = execSync(
-    `git ls-files --others --exclude-standard${scopeArgs}`,
-    { encoding: 'utf8' },
-  );
+  const scopeArgs = pathspecs ? ['--', ...pathspecs] : [];
+  const tracked = git(['diff', '--name-only', 'HEAD', ...scopeArgs]);
+  const untracked = git(['ls-files', '--others', '--exclude-standard', ...scopeArgs]);
   const paths = new Set(
     [...tracked.split('\n'), ...untracked.split('\n')].map((p) => p.trim()).filter(Boolean),
   );
@@ -246,10 +251,7 @@ function runVerifyCommand(command) {
 // per path: anything ls-tree reports already existed in HEAD.
 function classifyArtifacts(paths) {
   if (paths.length === 0) return new Map();
-  const quoted = paths.map(quotePathspec).join(' ');
-  const output = execSync(`git ls-tree -r --name-only HEAD -- ${quoted}`, {
-    encoding: 'utf8',
-  });
+  const output = git(['ls-tree', '-r', '--name-only', 'HEAD', '--', ...paths]);
   const existing = new Set(output.split('\n').map((p) => p.trim()).filter(Boolean));
   return new Map(paths.map((path) => [path, existing.has(path) ? 'modified' : 'created']));
 }
@@ -266,10 +268,9 @@ function classifyArtifacts(paths) {
 // this function makes is the task's final commit; nothing amends it
 // afterward.
 function commitTouchedPaths(paths, commitMessage) {
-  const quoted = paths.map(quotePathspec).join(' ');
-  execSync(`git add -- ${quoted}`, { stdio: 'pipe' });
-  execSync(`git commit -m ${JSON.stringify(commitMessage)}`, { stdio: 'pipe' });
-  return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  git(['add', '--', ...paths], { stdio: 'pipe' });
+  git(['commit', '-m', commitMessage], { stdio: 'pipe' });
+  return git(['rev-parse', 'HEAD']).trim();
 }
 
 // Phase 0: reap expired leases, load `taskId`, assert it's `building` and
