@@ -18,13 +18,13 @@
 // graph holds. Without it such a layer compiles once per intent and
 // every copy but the first is a replay of the same command.
 
-function fillModule(template, module) {
+export function fillModule(template, module) {
   return template.replaceAll('{module}', module);
 }
 
 // Deterministic, human-legible task id: <INTENT>-<LAYER>, upper-cased.
 // Stable across repeated `hedgehog plan` runs on the same intent/layer.
-function taskId(intentId, layerId) {
+export function taskId(intentId, layerId) {
   return `${intentId}-${layerId}`.toUpperCase();
 }
 
@@ -32,8 +32,25 @@ function taskId(intentId, layerId) {
 // prefix, because there is no intent it belongs to. The missing prefix
 // is the signal: `DEPLOY` is the build's one deploy, `ORDERS-DEPLOY`
 // would be one of several.
-function onceTaskId(layerId) {
+export function onceTaskId(layerId) {
   return layerId.toUpperCase();
+}
+
+// The once-layer counterpart to layerTaskFields: what a once: true
+// layer contributes to its single task row. No {module} substitution —
+// a once-layer has no module to substitute (core.mjs's validateCore
+// rejects one that names {module}) — so this can't share
+// layerTaskFields's body, only its role as the one place drift.mjs and
+// the compiler both read from.
+export function onceLayerTaskFields(layer) {
+  return {
+    objective: `${layer.id} for the whole build`,
+    scope_globs: JSON.stringify(layer.scope),
+    verify_command: layer.verify,
+    commit_message: layer.commit,
+    exclusive: layer.exclusive ? 1 : 0,
+    verify_radius: layer.verify_radius === null ? null : JSON.stringify(layer.verify_radius),
+  };
 }
 
 // `tasks.intent_id` is NOT NULL and a foreign key into `intents`, so a
@@ -89,14 +106,8 @@ function compileOnceTasks(core) {
     intent_id: CORE_INTENT_ID,
     module: CORE_MODULE,
     layer: layer.id,
-    objective: `${layer.id} for the whole build`,
-    scope_globs: JSON.stringify(layer.scope),
-    verify_command: layer.verify,
-    commit_message: layer.commit,
     priority: CORE_INTENT_PRIORITY,
-    exclusive: layer.exclusive ? 1 : 0,
-    verify_radius:
-      layer.verify_radius === null ? null : JSON.stringify(layer.verify_radius),
+    ...onceLayerTaskFields(layer),
   }));
 
   const dependencies = [];
@@ -129,6 +140,41 @@ function compileOnceTasks(core) {
 //                             layer runs after every module has landed
 // The fourth (once → once) is compileOnceTasks's, since it has no
 // per-intent multiplicity.
+
+// The `tasks` columns whose value is derived purely from the core
+// definition's layer (plus the module it's being instantiated for) —
+// i.e. everything `plan` copies out of core.yaml and that a later
+// core.yaml edit therefore leaves stale. Named once here so drift.mjs
+// checks exactly the set layerTaskFields() writes, and the two can't
+// silently diverge. `priority` is deliberately absent: it comes from the
+// intent, not the layer.
+export const LAYER_DERIVED_FIELDS = [
+  'objective',
+  'scope_globs',
+  'verify_command',
+  'commit_message',
+  'exclusive',
+  'verify_radius',
+];
+
+// The single definition of "what a layer contributes to a task row",
+// shared by the compiler (below) and the drift check (drift.mjs).
+export function layerTaskFields(layer, module) {
+  return {
+    objective: `${layer.id} for ${module}`,
+    scope_globs: JSON.stringify(layer.scope.map((g) => fillModule(g, module))),
+    verify_command: fillModule(layer.verify, module),
+    commit_message: fillModule(layer.commit, module),
+    exclusive: layer.exclusive ? 1 : 0,
+    verify_radius:
+      layer.verify_radius === null
+        ? null
+        : JSON.stringify(layer.verify_radius.map((g) => fillModule(g, module))),
+  };
+}
+
+// Compiles one intent's tasks + intra-intent dependencies (mirroring the
+// core definition's layer order) without touching the database.
 function compileIntentTasks(intent, core) {
   const module = intent.id;
   const byId = layerById(core);
@@ -139,16 +185,8 @@ function compileIntentTasks(intent, core) {
     intent_id: intent.id,
     module,
     layer: layer.id,
-    objective: `${layer.id} for ${module}`,
-    scope_globs: JSON.stringify(layer.scope.map((g) => fillModule(g, module))),
-    verify_command: fillModule(layer.verify, module),
-    commit_message: fillModule(layer.commit, module),
     priority: intent.priority,
-    exclusive: layer.exclusive ? 1 : 0,
-    verify_radius:
-      layer.verify_radius === null
-        ? null
-        : JSON.stringify(layer.verify_radius.map((g) => fillModule(g, module))),
+    ...layerTaskFields(layer, module),
   }));
 
   const dependencies = [];
