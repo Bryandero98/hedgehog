@@ -263,8 +263,10 @@ accounts get added where there were none).
    own archival planning output (`.hedgehog/BMAD/` or `.hedgehog/chain/`,
    first run only), the authored core's `.hedgehog/core.yaml` and
    `.hedgehog/core-design.md` if step 4 ran, and root `CLAUDE.md`'s filled
-   placeholders (first run only). This is planning intake's own unit of
-   work, landed before `bootstrap` touches anything.
+   placeholders (first run only). Write these with the `no-history-in-output`
+   skill: current state only, no narration of the intake conversation.
+   This is planning intake's own unit of work, landed before `bootstrap`
+   touches anything.
 9. **First run only — hand off to the `bootstrap` agent** once the
    commit lands. It scaffolds the chosen core's workspace (and, for
    full-stack-app, whichever add-ons are on) before any build step
