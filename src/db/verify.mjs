@@ -274,9 +274,7 @@ function commitTouchedPaths(paths, commitMessage) {
 }
 
 // Second paragraph of the no-op layer's commit, so the empty commit reads
-// as a deliberate record rather than a stray `--allow-empty`. Deliberately
-// free of backticks: this string is interpolated into a shell command
-// below, where a backtick would be command substitution, not punctuation.
+// as a deliberate record rather than a stray `--allow-empty`.
 const NO_OP_COMMIT_NOTE =
   'Verified no-op: this layer had nothing left to change. Recorded as an ' +
   'empty commit so one layer still means one commit, and so the completion ' +
@@ -292,15 +290,14 @@ const NO_OP_COMMIT_NOTE =
 // `hedgehog db rebuild` — which replays the committed sources against git
 // history — has nothing to replay and reports the layer as never built.
 // `--allow-empty` is what makes the record exist at all; git refuses an
-// empty commit otherwise.
+// empty commit otherwise. Uses the argv-based git() helper like
+// commitTouchedPaths, not a shell string: commitMessage comes from
+// core.yaml's layer.commit, untrusted input that must never reach a shell.
 function commitNoOpLayer(commitMessage) {
-  execSync(
-    `git commit --allow-empty -m ${JSON.stringify(commitMessage)} -m ${JSON.stringify(
-      NO_OP_COMMIT_NOTE,
-    )}`,
-    { stdio: 'pipe' },
-  );
-  return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  git(['commit', '--allow-empty', '-m', commitMessage, '-m', NO_OP_COMMIT_NOTE], {
+    stdio: 'pipe',
+  });
+  return git(['rev-parse', 'HEAD']).trim();
 }
 
 // Puts `taskId` back to `building` under the lease it already holds.
