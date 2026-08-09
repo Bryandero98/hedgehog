@@ -242,17 +242,28 @@ comment look hand-written.
 
 ## Comment style
 
-Match the register of the reports coming in: specific, technical, no
-padding.
+**Short.** A human reads this, not the maintainer's assistant. Target
+4-8 lines total, attribution block excluded. If a comment runs past
+that, cut — don't add a second finding to justify the length.
 
-- Lead with the verdict. The reporter should know the outcome in the
-  first sentence.
-- Cite `file.mjs:line` for every claim. "Confirmed at `src/db/verify.mjs:250`"
-  beats "you're right about the injection."
-- Disagree plainly and show the evidence. A `spurious` verdict with a
-  commit SHA is respectable; one asserting "cannot reproduce" is not.
-- Thank the reporter once, at most, and never open with it.
-- No apology, no hedging, no restating their issue back at them.
+- Line 1: the verdict, plain. "Real, fixed in `a300678`." /
+  "Spurious — already fixed in `4b6d086`." / "Blocking: this reverts the
+  #15 fix, see below."
+- One or two lines of evidence: `file.mjs:line` and what's there. Not a
+  walkthrough of how you checked it.
+- If there's a required change, say it in one line, not a numbered plan.
+- Stop. Do not add a "context" paragraph, a "for what it's worth"
+  aside, or a restatement of what the reporter already said in their
+  own report.
+- No apology, no hedging, no thanking beyond a single trailing "thanks"
+  at most.
+
+What to leave out entirely: your reasoning process, alternatives you
+considered and rejected, praise for the report's quality, and anything
+the reporter can already see in their own diff or issue body. If a
+finding needs more than 8 lines to state, it likely belongs in a code
+review comment on the specific line via `gh pr review`, not the PR-level
+comment thread.
 
 ## Report to the maintainer
 

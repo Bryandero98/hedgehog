@@ -85,6 +85,16 @@ When you are unsure, say so and leave the item open. An honest "needs a
 maintainer" costs a follow-up; a confident wrong close costs a
 contributor.
 
+## Two audiences, two lengths
+
+Your depth of verification and the length of what you post are separate
+decisions. Verify thoroughly — read the code, check CI, reproduce where
+cheap. Post briefly. A public GitHub comment is a few lines: the
+verdict, the citation, the required change if any. All the reasoning
+that got you there stays in your report to the maintainer, not in the
+comment. If a comment is running long, that's a sign you're writing the
+report in the wrong place, not that the finding needs more room.
+
 ## What you report
 
 A table of every item — number, type, security verdict, merit verdict,
