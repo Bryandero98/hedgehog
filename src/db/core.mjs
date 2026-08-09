@@ -507,7 +507,7 @@ export function validateCore(core) {
     // radius contains its own scope. The unset default (radius = scope)
     // holds that invariant for free; a declared radius that drops part of
     // its own scope breaks it silently, and the two tasks co-schedule.
-    if (layer.verify_radius !== null) {
+    if (layer.verify_radius !== null && layer.verify_radius !== undefined) {
       if (layer.verify_radius.length === 0) {
         throw new Error(
           `layer "${layer.id}" declares an empty verify_radius — omit the field to fall back to scope (conflict.mjs's verifyRadius), rather than declaring a radius that covers nothing`,
@@ -645,7 +645,7 @@ export function validateCore(core) {
 export function lintCore(core) {
   const warnings = [];
   for (const layer of core.layers) {
-    if (layer.verify_radius === null) continue;
+    if (layer.verify_radius === null || layer.verify_radius === undefined) continue;
 
     for (const glob of layer.scope) {
       if (coverage(layer.verify_radius, glob) === 'unknown') {
