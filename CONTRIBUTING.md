@@ -4,6 +4,13 @@ Hedgehog is a package of agents and skills. This repo's content — everything
 under `src/`, plus `README.md` — is the product a consuming project installs.
 Contributing means editing that discipline directly, not building around it.
 
+Looking for something to work on? See [ROADMAP.md](ROADMAP.md) — it's split
+into bigger, multi-session items and small, single-session items scoped to
+one file. The `hedgehog-contributing` skill
+(`src/skills/hedgehog-contributing/SKILL.md`) walks through branching,
+committing, and opening a PR for either kind, and `tweaker` offers it
+directly at the end of a build.
+
 ## Before you start
 
 Read `CLAUDE.md` at the repo root. It defines the rules this content has to

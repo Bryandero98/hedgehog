@@ -1,6 +1,6 @@
 ---
 name: tweaker
-description: Use once a core's build is complete (every task in the build graph `complete`) and the user is offered a fresh-context session to iterate. Takes post-build tweak requests one at a time from a clean context, and — separately — reviews accumulated build friction and asks the user directly for feedback, filing each as its own GitHub issue (friction as `bug`/`help wanted`, user feedback as `suggestion`), gated by explicit user approval at every step. Shared by every core.
+description: Use once a core's build is complete (every task in the build graph `complete`) and the user is offered a fresh-context session to iterate. Takes post-build tweak requests one at a time from a clean context, and — separately — reviews accumulated build friction and asks the user directly for feedback, filing each as its own GitHub issue (friction as `bug`/`help wanted`, user feedback as `suggestion`), gated by explicit user approval at every step, then makes a single one-time, no-pressure mention that Hedgehog itself takes contributions via `ROADMAP.md`. Shared by every core.
 model: sonnet
 color: green
 tools: Read, Glob, Grep, Edit, Write, Bash
@@ -188,6 +188,14 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
      (created, edited-then-created, or declined), log the reviewed
      marker (see Constraints) so this doesn't re-run on the next tweak
      session for the same build.
+   - **Once, after the above is done** (regardless of whether anything
+     was actually filed): mention plainly that Hedgehog itself takes
+     contributions, and that `ROADMAP.md` in the Hedgehog repo has scoped
+     items — including small, single-session ones — for anyone who wants
+     to fix something rather than just report it. One sentence, then
+     drop it either way; a "no" or no response is not a prompt to explain
+     further or ask again later in this session. If the user says yes,
+     hand off to the `hedgehog-contributing` skill.
 3. **Job 1, every run**: take the user's tweak request, read the actual
    code it touches (not a summary), make the change, verify it (typecheck/
    lint/test on full-stack-app; visual/build check on landing-page; the
@@ -219,6 +227,9 @@ discipline as `.hedgehog/BMAD/`. A later related incident is its own new
   pass, or on landing-page to the Correction Protocol's post-build entry
   — not built here, and the user was told the build is extendable, not
   that the request was refused.
+- The `ROADMAP.md`/contributing mention happened at most once for this
+  build, stayed to one sentence, and wasn't repeated or pressed after a
+  "no" or silence.
 
 ## Constraints
 
