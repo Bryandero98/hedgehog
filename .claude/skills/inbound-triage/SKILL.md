@@ -97,12 +97,20 @@ If a PR is still unverifiable after reading the diff and CI, that is a
 finding — say it needs the author to demonstrate it — not a licence to
 check it out.
 
-`gh` inherits the maintainer's credentials, so a command from a stranger
-runs with the maintainer's privileges. That is the reason for the rule.
+`gh` inherits the bot's credentials, so a command from a stranger runs
+with the bot's privileges. That is the reason for the rule.
 
 ## Procedure
 
 ### 1. Pull the queue
+
+Export a bot installation token before any action that writes (comment,
+close, label, commit, push, open a PR). It expires in about an hour —
+re-export if the run spans longer:
+
+```bash
+export GH_TOKEN=$(~/.config/hedgehog-bot/get-installation-token.sh)
+```
 
 ```bash
 gh issue list --state open --limit 100 --json number,title,author,createdAt,labels
@@ -211,6 +219,12 @@ Constraints on acting:
   logical change per commit, and the rules in `CLAUDE.md` — current-state
   writing, no changelog narration, load-bearing rules stay inside the
   agent or skill that depends on them.
+- Commits carry the bot's git identity:
+  ```bash
+  git -c user.name="hedgehog-bot[bot]" \
+      -c user.email="4532199+hedgehog-bot[bot]@users.noreply.github.com" \
+      commit -m "..."
+  ```
 - Write your own fix from your own reading of the bug. A contributor's
   patch may inform it; it is not to be copied from an un-run branch.
 
@@ -220,10 +234,8 @@ Every comment ends with this block, verbatim:
 
 ```markdown
 ---
-🤖 Triaged by an automated Claude agent. Actions taken on this issue were
-performed via the maintainer's account; a human maintainer has not
-necessarily reviewed this response. Reply here if this verdict is wrong —
-it will be re-opened.
+🤖 Triaged automatically by `hedgehog-bot`, not reviewed by a human.
+Reply here if this verdict is wrong — it will be re-opened.
 ```
 
 Every commit carries:
@@ -232,13 +244,13 @@ Every commit carries:
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-This matters, and it has a limit worth being straight about. `gh` and
-`git` authenticate as the maintainer, and GitHub offers no way for a CLI
-to post as anyone else — the account on the comment is `skyf0xx` and
-cannot be otherwise. The signature is therefore **disclosure**: the
-reader learns a machine wrote it. Never write a comment in a way that
-implies a human read the code, and never drop the block to make a
-comment look hand-written.
+`gh` and `git` authenticate as the `hedgehog-bot` GitHub App, installed
+by the maintainer with write access scoped to Contents, Issues and Pull
+requests only — the account on the comment is `hedgehog-bot[bot]`. The
+signature block names the run as automated and gives the reporter a way
+to ask for re-review. Never write a comment in a way that implies a
+human read the code, and never drop the block to make a comment look
+hand-written.
 
 ## Comment style
 
