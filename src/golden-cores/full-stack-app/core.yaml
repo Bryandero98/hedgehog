@@ -8,23 +8,19 @@
 # construction, so two modules' tasks never touch the same file
 # (src/db/core.mjs's validateCore enforces this: a module-axis core
 # rejects any non-exclusive layer whose scope omits {module}). schema and
-# hook declare a verify_radius wider than their scope: `nx test
-# db`/`nx test hooks` typecheck the whole package's tsconfig.lib.json
-# regardless of test filter (tsc has no per-module isolation — confirmed
-# against a real Nx run), so two modules' schema tasks correctly
-# serialize against each other on that radius while a schema task and an
-# unrelated module's repository task still run together. join is
-# exclusive: true and scoped to everything — the declared escape hatch
-# for irreducibly global work, and the honest admission that cross-module
-# type/integration breakage isn't caught at the task that caused it once
-# schema/hook run per-module; join catches it once, after every module's
-# layers land, in exchange for those layers running in parallel.
+# hook run Vitest anchored to their own module's directory (`nx test db
+# -- src/schema/{module}/`), a distinct Nx target from typecheck under
+# this workspace's target inference (nx.json), so the command's real
+# radius is exactly its scope — no wider declaration to make. Cross-module
+# type/integration breakage isn't caught at the task that caused it; join
+# is exclusive: true and scoped to everything, running full typecheck and
+# every test once after every module's layers land, in exchange for those
+# layers running in parallel.
 id: full-stack-app
 layers:
   - id: schema
     scope: ["packages/db/src/schema/{module}/**"]
     verify: "pnpm nx test db -- src/schema/{module}/"
-    verify_radius: ["packages/db/**"]
     commit: "feat({module}): schema"
   - id: contract
     depends_on: schema
@@ -50,7 +46,6 @@ layers:
     depends_on: controller
     scope: ["packages/hooks/src/{module}/**"]
     verify: "pnpm nx test hooks -- src/{module}/"
-    verify_radius: ["packages/hooks/**"]
     commit: "feat({module}): hooks"
   - id: screen
     depends_on: hook
