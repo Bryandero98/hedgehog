@@ -45,6 +45,18 @@ following the same one-commit-per-step pattern the existing three use. Each
 add-on is roughly its own small item once the pattern is followed — see
 `src/skills/hedgehog-bootstrap/SKILL.md` for the shape an add-on step takes.
 
+### A public landing page, hosted on GitHub Pages
+
+Hedgehog has no public-facing site — `README.md` is the only front door
+right now. A landing page would pitch the discipline (what it is, the
+stance in `README.md`, install instructions) to someone who hasn't cloned
+the repo yet. Scope: a static site (the `landing-page` Golden Core's own
+Astro + Tailwind v4 workspace is the natural build tool for this, eating
+Hedgehog's own dog food) living outside `src/` — e.g. `site/` — plus a
+GitHub Actions workflow that builds and deploys it to GitHub Pages on
+push to `master`. Not part of the payload any consuming project copies;
+this only serves the project's own public presence.
+
 ## Small items (single session, good first contribution)
 
 ### New core-design blueprints
