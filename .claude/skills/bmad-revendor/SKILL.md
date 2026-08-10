@@ -5,7 +5,7 @@ description: Maintainer-only. Use when re-vendoring vendor-skills/BMAD/ against 
 
 # Re-vendoring BMAD-METHOD
 
-`vendor-skills/BMAD/` is a pinned, manually-updated vendor copy of seven skills
+`vendor-skills/BMAD/` is a pinned, manually-updated vendor copy of eight skills
 from `bmad-code-org/BMAD-METHOD`'s `bmm` module (see
 `vendor-skills/BMAD/ATTRIBUTION.md` for the current pin). It is never
 auto-updated — re-vendoring is a deliberate act, run only when this
@@ -13,44 +13,70 @@ skill is invoked by name or the user explicitly asks to update BMAD.
 
 ## What's vendored, and why these specific paths
 
-Seven skill directories plus two shared scripts they all depend on:
+Eight skill directories plus two shared scripts they all depend on:
 
+- `src/core-skills/bmad-forge-idea` — pressure-tests an idea before any
+  artifact gets written; runs first in the shelf, ahead of
+  `bmad-brainstorming`. Carries its own script, `resolve_personas.py`
+  (not shared with the other skills — vendored inside this skill's own
+  `scripts/`, not in the shared `vendor-skills/BMAD/scripts/`).
 - `src/core-skills/bmad-brainstorming`
 - `src/core-skills/bmad-advanced-elicitation`
 - `src/core-skills/bmad-deep-recon`
-- `src/bmm-skills/1-analysis/bmad-product-brief`
-- `src/bmm-skills/1-analysis/bmad-prfaq`
-- `src/bmm-skills/2-plan-workflows/bmad-prd`
-- `src/bmm-skills/2-plan-workflows/bmad-ux`
+- `src/bmm-skills/plan/bmad-product-brief`
+- `src/bmm-skills/plan/bmad-prfaq`
+- `src/bmm-skills/plan/bmad-prd`
+- `src/bmm-skills/plan/bmad-ux`
 - `src/scripts/memlog.py`, `src/scripts/resolve_customization.py` — shared
-  utilities every one of the seven skills calls. Not inside any single
+  utilities every one of the eight skills calls. Not inside any single
   skill directory upstream; vendored separately into `vendor-skills/BMAD/scripts/`.
 
-`bmad-deep-recon` is the one skill in this set that, as of the last vendor
-pass, existed only on BMAD-METHOD's `main` branch — not in any tagged
-release. If that's still true, pin to `main` at a specific commit SHA
-rather than a release tag (see "Pinning," below); if BMAD-METHOD has since
-tagged a release containing it, prefer that tag instead.
+Upstream keeps the four `bmm-skills` above under a single flat
+`bmm-skills/plan/` directory as of the `v6.11.0` vendor pass — it used to
+be split across numbered `1-analysis/` and `2-plan-workflows/`
+directories. If upstream has moved them again since, update these paths
+to match rather than leaving a stale layout here.
+
+`bmad-deep-recon` was, before the `v6.11.0` pass, the one skill in this
+set that existed only on BMAD-METHOD's `main` branch — not in any tagged
+release; it is now in `v6.11.0`. If a *newer* addition to this set is
+ever unreleased, pin to `main` at a specific commit SHA rather than a
+release tag (see "Pinning," below) instead of silently dropping it; ask
+the user how to resolve the conflict if it's not obvious (this came up
+during the original vendor pass — see git history on
+`vendor-skills/BMAD/`).
+
+Not vendored, deliberately: `bmad-party-mode` (BMAD-METHOD's multi-agent
+roster skill) and the `bmm-skills/agents/bmad-agent-*` persona skills it
+needs for a real roster. `bmad-forge-idea` can optionally draw on
+party-mode's roster but degrades gracefully without it — its
+`resolve_personas.py` returns an empty roster and the skill falls back to
+generating personas on the fly, which is its documented normal path.
+Vendoring party-mode for real would mean also vendoring the five
+`bmad-agent-*` skills, a parallel persona system to Hedgehog's own
+`src/agents/` that's out of scope for the planning shelf. Don't add it
+without raising this tradeoff to the user again.
 
 ## Procedure
 
 1. **Find the ref to vendor against.** Check `gh repo view
    bmad-code-org/BMAD-METHOD --json defaultBranchRef` and `gh api
    repos/bmad-code-org/BMAD-METHOD/tags` for available release tags. If
-   every one of the seven skills above exists in the newest tag, pin to
-   that tag. If `bmad-deep-recon` (or any other of the seven) is
-   unreleased, pin to `main` at its current commit SHA instead — get it
-   via `gh api repos/bmad-code-org/BMAD-METHOD/commits/main --jq '.sha'`.
-   Don't silently drop a skill just because it's unreleased; ask the user
-   how to resolve the conflict if it's not obvious (this came up during
-   the original vendor pass — see git history on `vendor-skills/BMAD/`).
+   every one of the eight skills above exists in the newest tag, pin to
+   that tag. If any of them is unreleased, pin to `main` at its current
+   commit SHA instead — get it via `gh api
+   repos/bmad-code-org/BMAD-METHOD/commits/main --jq '.sha'`. Don't
+   silently drop a skill just because it's unreleased; ask the user how
+   to resolve the conflict if it's not obvious (this came up during the
+   original vendor pass — see git history on `vendor-skills/BMAD/`).
 
-2. **List the file tree at that ref**, scoped to the seven skill
-   directories plus `src/scripts/`:
+2. **List the file tree at that ref**, scoped to the eight skill
+   directories plus `src/scripts/` (adjust the path segments below if
+   upstream has moved any of them again since the last pass):
    ```bash
    gh api "repos/bmad-code-org/BMAD-METHOD/git/trees/<ref>?recursive=true" \
      --jq '.tree[] | select(.type=="blob") | .path' \
-     | grep -E "^src/(core-skills/(bmad-brainstorming|bmad-advanced-elicitation|bmad-deep-recon)|bmm-skills/1-analysis/(bmad-product-brief|bmad-prfaq)|bmm-skills/2-plan-workflows/(bmad-prd|bmad-ux)|scripts)/"
+     | grep -E "^src/(core-skills/(bmad-forge-idea|bmad-brainstorming|bmad-advanced-elicitation|bmad-deep-recon)|bmm-skills/plan/(bmad-product-brief|bmad-prfaq|bmad-prd|bmad-ux)|scripts)/"
    ```
    Diff this against the current file list in `vendor-skills/BMAD/` (excluding
    `LICENSE`, `ATTRIBUTION.md`, and any files this skill's step 4 strips)
@@ -125,7 +151,7 @@ tagged a release containing it, prefer that tag instead.
 - If BMAD-METHOD has restructured upstream (skill renamed, moved to a
   different module, split into multiple skills) since the last vendor
   pass, don't force a mechanical file-for-file replace — read the new
-  shape and decide whether Hedgehog's list of seven skills still makes
+  shape and decide whether Hedgehog's list of eight skills still makes
   sense, or whether `src/agents/planner.md`'s shelf-invocation list
   (Section "Planning intake" in that file) itself needs updating to
   match. Surface this to the user rather than silently adapting.

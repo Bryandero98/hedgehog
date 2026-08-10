@@ -57,17 +57,21 @@ State the BMAD attribution, then run the vendored shelf in full
 sequence — on a first run there is no per-project skip logic and no
 reduced default set:
 
-1. `bmad-brainstorming` (`vendor-skills/BMAD/core-skills/bmad-brainstorming`) —
+1. `bmad-forge-idea` (`vendor-skills/BMAD/core-skills/bmad-forge-idea`) —
+   pressure-test the idea through persona-driven interrogation before
+   diverging on it; strengthens, rejects, or clarifies it, optionally
+   writing `forged-idea.md` as input to the skills below.
+2. `bmad-brainstorming` (`vendor-skills/BMAD/core-skills/bmad-brainstorming`) —
    diverge on the idea before locking anything.
-2. `bmad-product-brief` (`vendor-skills/BMAD/bmm-skills/plan/bmad-product-brief`)
+3. `bmad-product-brief` (`vendor-skills/BMAD/bmm-skills/plan/bmad-product-brief`)
    — the product brief.
-3. `bmad-prfaq` (`vendor-skills/BMAD/bmm-skills/plan/bmad-prfaq`) — vets
+4. `bmad-prfaq` (`vendor-skills/BMAD/bmm-skills/plan/bmad-prfaq`) — vets
    the idea press-release-style.
-4. `bmad-prd` (`vendor-skills/BMAD/bmm-skills/plan/bmad-prd`) — the
+5. `bmad-prd` (`vendor-skills/BMAD/bmm-skills/plan/bmad-prd`) — the
    PRD, including its Glossary (entities, relationships, cardinality).
-5. `bmad-ux` (`vendor-skills/BMAD/bmm-skills/plan/bmad-ux`) — the UX
+6. `bmad-ux` (`vendor-skills/BMAD/bmm-skills/plan/bmad-ux`) — the UX
    spec, `DESIGN.md` + `EXPERIENCE.md`.
-6. `bmad-deep-recon` (`vendor-skills/BMAD/core-skills/bmad-deep-recon`) —
+7. `bmad-deep-recon` (`vendor-skills/BMAD/core-skills/bmad-deep-recon`) —
    market/competitive/user-voice research.
 
 Any skill may itself invoke `bmad-advanced-elicitation`

@@ -11,9 +11,10 @@ for the full license text.
 
 ## What's vendored
 
-Seven skills from BMAD-METHOD's planning shelf, plus the two shared scripts
+Eight skills from BMAD-METHOD's planning shelf, plus the two shared scripts
 they depend on:
 
+- `core-skills/bmad-forge-idea`
 - `core-skills/bmad-brainstorming`
 - `core-skills/bmad-advanced-elicitation`
 - `core-skills/bmad-deep-recon`
@@ -31,6 +32,19 @@ Upstream collapsed the four `bmm-skills` above out of numbered
 unchanged. `bmad-deep-recon` is now included in a tagged release
 (previously only on `main`), so this pass pins to the `v6.11.0` tag
 instead of a `main` commit SHA.
+
+`bmad-forge-idea` is new upstream as of this pass: a persona-driven
+interrogation skill that pressure-tests an idea before any artifact gets
+written, added ahead of `bmad-brainstorming` as the shelf's first step.
+It carries its own script, `scripts/resolve_personas.py`, vendored
+alongside it (not shared — only this skill calls it). Its upstream
+counterpart `bmad-party-mode` (the multi-agent roster it can optionally
+draw on) is not vendored, since a real roster needs BMAD's own
+`bmm-skills/agents/bmad-agent-*` persona skills too — a parallel system
+to Hedgehog's own `src/agents/`, out of scope here. `bmad-forge-idea`
+degrades gracefully without it: `resolve_personas.py` returns an empty
+roster and the skill falls back to generating personas on the fly, which
+is its documented normal path, not a degraded one.
 
 Each skill directory carries its own templates, reference files, and
 scripts as vendored, unmodified except where noted below.
