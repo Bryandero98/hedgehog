@@ -34,7 +34,7 @@ draft becomes the first draft of `.hedgehog/chain/00-brief.md`, shown
 back at Confirm & Lock for the user to accept or correct.
 
 1. **Run `hedgehog-planning-intake`'s Phase 0 in full**: state the BMAD
-   attribution it states, then run `bmad-brainstorming`,
+   attribution it states, then run `bmad-forge-idea`, `bmad-brainstorming`,
    `bmad-product-brief`, `bmad-prfaq`, `bmad-prd`, `bmad-ux`,
    `bmad-deep-recon`, archived to `.hedgehog/BMAD/` with the fixed layout
    and `00-manifest.md` attribution header that skill's Phase 0 defines.
