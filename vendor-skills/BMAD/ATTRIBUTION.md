@@ -5,8 +5,8 @@ This directory vendors a subset of [BMAD-METHOD](https://github.com/bmad-code-or
 for the full license text.
 
 - **Source repo:** https://github.com/bmad-code-org/BMAD-METHOD
-- **Vendored from:** `main` branch, commit `bb45db4aa4496c69239f9c0629c290fd1b072fc9`
-- **Vendored on:** 2026-07-23
+- **Vendored from:** tag `v6.11.0`, commit `890fcda760bade4d6080f5fa09aa8f658bc4a4a5`
+- **Vendored on:** 2026-08-11
 - **Module:** `bmm` (BMAD Method Module)
 
 ## What's vendored
@@ -17,13 +17,20 @@ they depend on:
 - `core-skills/bmad-brainstorming`
 - `core-skills/bmad-advanced-elicitation`
 - `core-skills/bmad-deep-recon`
-- `bmm-skills/1-analysis/bmad-product-brief`
-- `bmm-skills/1-analysis/bmad-prfaq`
-- `bmm-skills/2-plan-workflows/bmad-prd`
-- `bmm-skills/2-plan-workflows/bmad-ux`
+- `bmm-skills/plan/bmad-product-brief`
+- `bmm-skills/plan/bmad-prfaq`
+- `bmm-skills/plan/bmad-prd`
+- `bmm-skills/plan/bmad-ux`
 - `scripts/memlog.py`, `scripts/resolve_customization.py` (shared utilities
   every vendored skill calls, originally at `src/scripts/` in the source
   repo)
+
+Upstream collapsed the four `bmm-skills` above out of numbered
+`1-analysis/` and `2-plan-workflows/` directories into a single flat
+`plan/` directory as of this vendor pass; their content is otherwise
+unchanged. `bmad-deep-recon` is now included in a tagged release
+(previously only on `main`), so this pass pins to the `v6.11.0` tag
+instead of a `main` commit SHA.
 
 Each skill directory carries its own templates, reference files, and
 scripts as vendored, unmodified except where noted below.

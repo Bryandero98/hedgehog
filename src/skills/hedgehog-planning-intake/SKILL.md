@@ -59,13 +59,13 @@ reduced default set:
 
 1. `bmad-brainstorming` (`vendor-skills/BMAD/core-skills/bmad-brainstorming`) —
    diverge on the idea before locking anything.
-2. `bmad-product-brief` (`vendor-skills/BMAD/bmm-skills/1-analysis/bmad-product-brief`)
+2. `bmad-product-brief` (`vendor-skills/BMAD/bmm-skills/plan/bmad-product-brief`)
    — the product brief.
-3. `bmad-prfaq` (`vendor-skills/BMAD/bmm-skills/1-analysis/bmad-prfaq`) — vets
+3. `bmad-prfaq` (`vendor-skills/BMAD/bmm-skills/plan/bmad-prfaq`) — vets
    the idea press-release-style.
-4. `bmad-prd` (`vendor-skills/BMAD/bmm-skills/2-plan-workflows/bmad-prd`) — the
+4. `bmad-prd` (`vendor-skills/BMAD/bmm-skills/plan/bmad-prd`) — the
    PRD, including its Glossary (entities, relationships, cardinality).
-5. `bmad-ux` (`vendor-skills/BMAD/bmm-skills/2-plan-workflows/bmad-ux`) — the UX
+5. `bmad-ux` (`vendor-skills/BMAD/bmm-skills/plan/bmad-ux`) — the UX
    spec, `DESIGN.md` + `EXPERIENCE.md`.
 6. `bmad-deep-recon` (`vendor-skills/BMAD/core-skills/bmad-deep-recon`) —
    market/competitive/user-voice research.
