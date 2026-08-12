@@ -27,6 +27,32 @@ jobs:
             exit 1
           fi
 
+      - name: Scale badge to 40px height
+        run: |
+          python3 - <<'PY'
+          import re
+
+          path = "badges/npm-downloads.svg"
+          with open(path) as f:
+              svg = f.read()
+
+          m = re.search(r'width="([\d.]+)" height="([\d.]+)"', svg)
+          orig_w, orig_h = float(m.group(1)), float(m.group(2))
+
+          target_h = 40
+          scale = target_h / orig_h
+          new_w = round(orig_w * scale, 2)
+
+          svg = svg.replace(
+              f'width="{m.group(1)}" height="{m.group(2)}"',
+              f'width="{new_w}" height="{target_h}" viewBox="0 0 {orig_w:g} {orig_h:g}"',
+              1,
+          )
+
+          with open(path, "w") as f:
+              f.write(svg)
+          PY
+
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"

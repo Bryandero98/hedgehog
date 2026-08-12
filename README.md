@@ -1,6 +1,6 @@
 # Turn AI from a code generator into a reliable software engineer ⭐
 
-[<img alt="Total downloads" src="https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg" height="80">](https://www.npmjs.com/package/@skyf0xx/hedgehog)
+[![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 
 AI can write code in seconds.
 
