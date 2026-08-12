@@ -1,0 +1,40 @@
+name: Refresh badges
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch npm downloads badge
+        run: |
+          mkdir -p badges
+          curl -fsSL "https://img.shields.io/npm/dt/%40skyf0xx%2Fhedgehog?style=for-the-badge" -o badges/npm-downloads.svg
+
+      - name: Validate SVG
+        run: |
+          if ! grep -q "<svg" badges/npm-downloads.svg; then
+            echo "Fetched file is not an SVG, aborting" >&2
+            cat badges/npm-downloads.svg >&2
+            exit 1
+          fi
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- badges/npm-downloads.svg; then
+            git add badges/npm-downloads.svg
+            git commit -m "chore: refresh npm downloads badge"
+            git push
+          else
+            echo "No change in badge, skipping commit"
+          fi
