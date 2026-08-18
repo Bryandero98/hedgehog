@@ -16,7 +16,7 @@
 // stays silent the moment either {module} or a path argument shows up,
 // stays silent on a layer that declares verify_radius (that's a
 // different, already-checked claim — see verify-covers-radius.mjs), and
-// reports nothing on either shipped core.
+// reports nothing on any shipped core.
 //
 // No build graph, no sqlite — this is a core-definition-level defect.
 // Run: node repro/verify-has-module-token.mjs
@@ -157,8 +157,8 @@ for (const [label, text] of [
   }
 }
 
-// ── 8. No false alarms on either shipped core. ──────────────────────────
-for (const name of ['full-stack-app', 'landing-page']) {
+// ── 8. No false alarms on any shipped core. ──────────────────────────────
+for (const name of ['full-stack-app', 'landing-page', 'pwa-app']) {
   const core = await loadCore(join(ROOT, 'repro/fixtures/cores', `${name}.core.yaml`));
   const warnings = lintCore(core);
   if (warnings.length !== 0) {
@@ -176,5 +176,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  'verify-has-module-token: ok — no-evidence deploy layer warned, module-token/path-argument/radius/once/exclusive/linear cases silent, both shipped cores clean',
+  'verify-has-module-token: ok — no-evidence deploy layer warned, module-token/path-argument/radius/once/exclusive/linear cases silent, every shipped core clean',
 );

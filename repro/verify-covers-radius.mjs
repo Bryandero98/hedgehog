@@ -145,11 +145,14 @@ for (const [label, text] of [
   }
 }
 
-// ── 5. No false alarms on either shipped core. full-stack-app's schema
+// ── 5. No false alarms on any shipped core. full-stack-app's schema
 //    and hook layers both declare a package-wide radius; their commands
 //    narrow by flag (`--testPathPattern={module}`), not by path, which
-//    is not evidence the check can read — it abstains. ────────────────
-for (const name of ['full-stack-app', 'landing-page']) {
+//    is not evidence the check can read — it abstains. pwa-app declares
+//    no verify_radius anywhere (every non-join layer's radius defaults
+//    to its own scope, and join is workspace-wide by declared scope), so
+//    there is no gap for this check to find. ───────────────────────────
+for (const name of ['full-stack-app', 'landing-page', 'pwa-app']) {
   const core = await loadCore(join(ROOT, 'repro/fixtures/cores', `${name}.core.yaml`));
   const warnings = lintCore(core);
   if (warnings.length !== 0) {
@@ -167,5 +170,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  'verify-covers-radius: ok — anchored commands warned (2), whole-suite/ancestor/no-radius silent, both shipped cores clean',
+  'verify-covers-radius: ok — anchored commands warned (2), whole-suite/ancestor/no-radius silent, every shipped core clean',
 );

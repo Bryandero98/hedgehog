@@ -4,15 +4,15 @@
 //
 // The failure this guards against is the obvious way to implement the
 // declaration — making `requires` a validated field — which would reject
-// every core.yaml written before it existed, including both shipped
-// shipped cores. It also pins the shape the rest of the fix relies on:
+// every core.yaml written before it existed, including every shipped
+// core. It also pins the shape the rest of the fix relies on:
 // an omitted `requires` parses to [] (not undefined), so consumers never
 // need a null check and a core that declares nothing can never report a
 // missing binary.
 //
 // Asserts:
-//   1. both shipped cores (repro/fixtures/cores/*.core.yaml) load and
-//      validate, with every other field unchanged;
+//   1. every shipped core (repro/fixtures/cores/*.core.yaml) loads and
+//      validates, with every other field unchanged;
 //   2. every layer of them exposes requires === [] — declaring nothing;
 //   3. a hand-written core.yaml with no requires: plans, and `hedgehog
 //      status` reports no missing binaries for it;
@@ -28,7 +28,7 @@ import { loadCore, validateCore } from '../src/db/core.mjs';
 console.log('repro: core-without-requires');
 
 // ── 1-2. shipped cores ────────────────────────────────────────────────
-for (const name of ['full-stack-app', 'landing-page']) {
+for (const name of ['full-stack-app', 'landing-page', 'pwa-app']) {
   const path = join(REPO_ROOT, 'repro/fixtures/cores', `${name}.core.yaml`);
   let core;
   try {

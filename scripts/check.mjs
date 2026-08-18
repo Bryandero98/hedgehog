@@ -181,13 +181,13 @@ for (const { label, text } of allEntries) {
   }
 }
 
-// ── 5. Both shipped core.yaml files load, validate, and lint cleanly.
+// ── 5. Every shipped core.yaml file loads, validates, and lints cleanly.
 //    The lint (core.mjs's lintCore) is heuristic and only warns in a
 //    project, but a shipped core is the worked example every authored
 //    core is written against, so a warning on one is a release blocker
 //    here — and a shipped core tripping it is also the evidence that the
 //    heuristic cries wolf. ────────────────────────────────────────────
-for (const core of ['full-stack-app', 'landing-page']) {
+for (const core of ['full-stack-app', 'landing-page', 'pwa-app']) {
   const path = join(ROOT, `repro/fixtures/cores/${core}.core.yaml`);
   try {
     const loaded = await loadCore(path);

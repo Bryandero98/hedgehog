@@ -201,4 +201,33 @@ console.log('repro: plan re-raises the singular module-id check\n');
   }
 }
 
+// --- D. the advisory fires on every module-axis core, not just
+//        full-stack-app's particular layer set -------------------------
+
+{
+  // pwa-app is module-axis too (every non-join layer's scope carries
+  // {module}), but its layer set (schema/repository/hook/screen/join)
+  // and file shapes are entirely different from full-stack-app's — this
+  // proves the check keys on "has {module} in scope", not on anything
+  // specific to full-stack-app's own layers.
+  const dir = makeProject(shippedCore('pwa-app'));
+  try {
+    const file = join(dir, 'task-input.json');
+    writeFileSync(
+      file,
+      `${JSON.stringify({ id: 'task', goal: 'build task', outcome: 'task works', acceptance: ['it works'] })}\n`,
+    );
+    const r = cli(dir, ['intent', 'add', '--file', file]);
+    if (r.status !== 0) throw new Error(`intent add --file task failed: ${r.stderr}`);
+
+    const planned = cli(dir, ['plan']);
+    check('D1. plan succeeds on pwa-app', 0, planned.status);
+    checkContains('D2. plan catches the singular id on pwa-app too', planned.stdout, 'Module id looks singular');
+    checkContains('D3. it names task', planned.stdout, 'task');
+    checkContains('D4. it points at db rebuild to re-derive', planned.stdout, 'hedgehog db rebuild');
+  } finally {
+    cleanup(dir);
+  }
+}
+
 report('plan re-raises the singular module-id advisory on every route');

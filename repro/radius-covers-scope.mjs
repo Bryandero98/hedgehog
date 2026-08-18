@@ -11,8 +11,8 @@
 // A radius that drops part of its scope silently deletes that detection
 // and the two tasks co-schedule.
 //
-// Expected after the fix: loadCore/validateCore rejects it, both shipped
-// cores still load, and a radius that does contain its scope still loads.
+// Expected after the fix: loadCore/validateCore rejects it, every shipped
+// core still loads, and a radius that does contain its scope still loads.
 //
 // No build graph, no sqlite — this is a core-definition-level defect.
 // Run: node repro/radius-covers-scope.mjs
@@ -56,6 +56,14 @@ const CONTAINMENT = {
     { scope: ['packages/db/src/schema/{module}/**'], radius: ['packages/db/**'], why: 'full-stack-app schema' },
     { scope: ['packages/hooks/src/{module}/**'], radius: ['packages/hooks/**'], why: 'full-stack-app hook' },
     { scope: ['apps/api/src/{module}/http/**', 'apps/api/src/app.module.ts'], radius: ['apps/api/**'], why: 'authored api layer' },
+    // pwa-app's join layer: scope is everything, declared radius is
+    // everything — the degenerate case of a workspace-wide, exclusive
+    // layer, not a narrower claim than its own scope.
+    { scope: ['**'], radius: ['**'], why: 'pwa-app join' },
+    // pwa-app's schema layer lists three files/globs in scope (two
+    // module-scoped, one shared barrel) with no declared radius at all —
+    // covered separately below (NO_RADIUS_MULTI_SCOPE), since that's an
+    // omitted-radius case, not a containment case.
     // The union covers it even though no single glob does — must not be
     // a hard failure, because rejecting it would be rejecting a core that
     // is actually fine.
@@ -103,6 +111,20 @@ layers:
     verify: "pnpm --filter api exec vitest run"
     verify_radius: ["apps/api/**"]
     commit: "feat({module}): api"
+`;
+
+// pwa-app's real schema layer shape: three scope globs (two
+// module-scoped, one shared src/db/schema.ts barrel every module's
+// schema layer appends to), no verify_radius declared at all. An
+// omitted radius falls back to scope itself, so this must load clean —
+// there is nothing narrower than scope for it to be narrower than.
+const PWA_SCHEMA_NO_RADIUS = `
+id: repro-pwa-schema
+layers:
+  - id: schema
+    scope: ["src/features/{module}/data/{module}.schema.ts", "src/db/tables/{module}.table.ts", "src/db/schema.ts"]
+    verify: "pnpm vitest run src/features/{module}/data/{module}.schema"
+    commit: "feat({module}): schema"
 `;
 
 async function loadYaml(dir, name, text) {
@@ -157,6 +179,17 @@ try {
     );
   }
 
+  // ── 3b. No false alarm: pwa-app's real multi-glob schema scope with
+  //    no declared radius (an omitted radius defaults to scope). ───────
+  const pwaSchema = await loadYaml(dir, 'pwa-schema', PWA_SCHEMA_NO_RADIUS);
+  if (!pwaSchema.ok) {
+    failures.push(
+      'repro-pwa-schema: pwa-app schema shape, multi-glob scope, no verify_radius\n' +
+        '      expected: loads clean — an omitted radius defaults to scope\n' +
+        `      actual:   rejected — ${pwaSchema.message}`,
+    );
+  }
+
   // ── 4. Containment, both directions. A radius sharing a literal
   //    prefix with the scope is not thereby covering it; and a radius
   //    that genuinely covers must still load. ─────────────────────────
@@ -202,9 +235,9 @@ try {
     }
   }
 
-  // ── 6. No false alarm: both shipped cores still load, and neither
+  // ── 6. No false alarm: every shipped core still loads, and none
   //    trips the "cannot prove" warning. ──────────────────────────────
-  for (const core of ['full-stack-app', 'landing-page']) {
+  for (const core of ['full-stack-app', 'landing-page', 'pwa-app']) {
     const path = join(ROOT, 'repro/fixtures/cores', `${core}.core.yaml`);
     try {
       const loaded = await loadCore(path);
@@ -235,5 +268,5 @@ if (failures.length > 0) {
 }
 console.log(
   `radius-covers-scope: ok — narrow/empty radii rejected, ${CONTAINMENT.reject.length} non-covering radii rejected, ` +
-    `${CONTAINMENT.accept.length} covering radii accepted, unprovable containment warned not thrown, both shipped cores clean`,
+    `${CONTAINMENT.accept.length} covering radii accepted, unprovable containment warned not thrown, every shipped core clean`,
 );

@@ -4,7 +4,7 @@
 // dependency rows, same requirement links, same intents table.
 //
 // The baseline in fixtures/shipped-cores-baseline.json is the compiled
-// graph both shipped cores are expected to produce. Regenerate it with:
+// graph every shipped core is expected to produce. Regenerate it with:
 //   node --experimental-sqlite repro/05-shipped-cores-unchanged.mjs --write-baseline
 // only after a deliberate edit to a shipped core.yaml, and only once the
 // printed diff has been read line by line — the baseline is what proves an
@@ -59,6 +59,7 @@ function compileShippedCore(coreName) {
 const actual = {
   'full-stack-app': compileShippedCore('full-stack-app'),
   'landing-page': compileShippedCore('landing-page'),
+  'pwa-app': compileShippedCore('pwa-app'),
 };
 
 if (WRITE) {
