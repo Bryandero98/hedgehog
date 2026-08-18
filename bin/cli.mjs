@@ -686,7 +686,11 @@ async function init({ force, core, host = DEFAULT_HOST, hostOnly = false }) {
     dim(
       `     Read ${bold(`${agents}/planner.md`)} and follow it — it runs planning\n` +
         `     intake (${skills}/hedgehog-planning-intake/SKILL.md), then hands\n` +
-        `     off to ${agents}/bootstrap.md.`,
+        `     off to ${agents}/bootstrap.md.\n` +
+        `     Some hosts register agents/skills once, at session start: if a\n` +
+        `     later dispatch by name reports one of these as not found, read\n` +
+        `     its file directly instead — it becomes dispatchable by name after\n` +
+        `     a session restart or a fresh context.`,
     ),
   );
   console.log();
@@ -809,6 +813,14 @@ async function update({ hosts }) {
       `${bootstraps}, the build graph, the core workspace, and the\n` +
         'vendored shelves are untouched — those carry project-specific or\n' +
         'write-once content.',
+    ),
+  );
+  console.log(
+    dim(
+      'Some hosts register agents/skills once, at session start: a renamed or\n' +
+        'newly-added one may not be dispatchable by name until this session\n' +
+        'restarts or a fresh context starts — read its file directly if a\n' +
+        'name-based dispatch reports it as not found.',
     ),
   );
 }
