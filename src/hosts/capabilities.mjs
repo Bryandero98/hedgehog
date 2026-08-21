@@ -14,6 +14,7 @@ export const AGENT_CAPABILITY = {
   'backend-eng': 'full',
   bootstrap: 'full',
   'front-end-eng': 'full',
+  'harness-eng': 'full',
   'landing-builder': 'full',
   'landing-copywriter': 'full',
   'landing-executor': 'full',
