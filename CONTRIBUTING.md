@@ -78,6 +78,14 @@ engine's own `src/`. `hedgehog-core-full-stack-app`'s
 layer) is the concrete, running example to model new scaffolding
 against — for a fix in a core repo, not this one.
 
+## Improving a core
+
+A core's own workspace, agents, and skills live in that core's own repo,
+not this one — see [`src/registry/cores.json`](src/registry/cores.json)
+for the full list and each core's `repository` link. To fix or improve a
+core, open a PR against that core's repo directly, then link the PR in
+an issue on this repo so it's discoverable from here too.
+
 ## Commit style
 
 This repo follows Conventional Commits — see the `conventional-commits`
