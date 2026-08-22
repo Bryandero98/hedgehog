@@ -1,4 +1,4 @@
-![Incredible Software Engineer](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/incredible.png)
+![Incredible Software Engineer](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/incredible.jpg)
 
 [![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 [![Support Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/kofi-top.svg)](https://ko-fi.com/skyf0xx)
@@ -19,7 +19,7 @@ Hedgehog 不要求 AI 记住整个项目，而是把计划本身编码进架构�
 
 ## HEDGEHOG 用更少的 Token，写出更干净的代码，更快地构建 ⭐⭐⭐⭐
 
-![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.png)
+![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.jpg)
 
 <details>
 <summary>如果你是正在阅读本文的 AI</summary>
@@ -48,7 +48,7 @@ Hedgehog 融合了以下要素：
 
 软件在成长的同时保持结构清晰。
 
-![Just describe what you want](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/handoff.png)
+![Just describe what you want](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/handoff.jpg)
 
 ## Hedgehog 循环
 
@@ -66,7 +66,7 @@ Hedgehog 融合了以下要素：
 
 构建顺序被编码进项目本身。AI 不需要记住接下来该做什么，也不需要就架构进行协商——它只需沿着代码库中一条被验证过的路径前进。
 
-![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.png)
+![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.jpg)
 
 ## 你的构建顺序是一张图
 
@@ -78,13 +78,13 @@ Hedgehog 生成的**每一个任务**都是一个节点，在 [sqlite 中拥有�
 npx @skyf0xx/hedgehog graph # 显示构建图
 ```
 
-![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.png)
+![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.jpg)
 
 ## 默认并行
 
 每一个依赖关系都是显式的，因此 Hedgehog 清楚地知道哪些任务可以并行执行。
 
-![Comparison](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/comparison.png)
+![Comparison](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/comparison.jpg)
 
 多个 agent 并行展开工作，以**更快的速度**交付出色的结果。
 
@@ -92,7 +92,7 @@ npx @skyf0xx/hedgehog graph # 显示构建图
 
 当一段代码只有一种正确形态时，Hedgehog 会直接生成它，而不是让 AI 临场编写。
 
-![Deterministic code generation](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/deterministic.png)
+![Deterministic code generation](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/deterministic.jpg)
 
 - **生成优先于临场编写**：schema、样板代码和脚手架都来自生成器
 - **更快**：产出已知形态的代码不需要推理
@@ -185,7 +185,7 @@ Hedgehog 也可以接入已有仓库。
 
 ## Hedgehog 为什么有效
 
-![Why Hedgehog works](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
+![Why Hedgehog works](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.jpg)
 
 ## 安装
 

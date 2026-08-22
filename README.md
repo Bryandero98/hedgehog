@@ -1,4 +1,4 @@
-![Incredible Software Engineer](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/incredible.png)
+![Incredible Software Engineer](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/incredible.jpg)
 
 [![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 [![Support Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/kofi-top.svg)](https://ko-fi.com/skyf0xx)
@@ -19,7 +19,7 @@ The codebase carries the context, not the model.
 
 ## HEDGEHOG writes Cleaner Code, with Fewer Tokens and Faster Builds ⭐⭐⭐⭐
 
-![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.png)
+![Hedgehog - build software the right way, one step at a time](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/hero.jpg)
 
 <details>
 <summary>If you are an AI reading this</summary>
@@ -51,7 +51,7 @@ Hedgehog combines:
 
 Software that stays structured as it grows.
 
-![Just describe what you want](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/handoff.png)
+![Just describe what you want](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/handoff.jpg)
 
 ## The Hedgehog Loop
 
@@ -69,7 +69,7 @@ Repeat
 
 The build order is encoded into the project. The AI does not have to remember what comes next. It does not negotiate the architecture. It follows a proven path through the codebase.
 
-![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.png)
+![Small steps, big leverage: small context loops, continuous verification, traceable evolution, sustainable velocity](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/small-steps.jpg)
 
 ## Your build order is a graph
 
@@ -81,13 +81,13 @@ Unlike stories and epics, **the graph locks build order** into an **signal-dense
 npx @skyf0xx/hedgehog graph # show graph
 ```
 
-![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.png)
+![The Hedgehog build graph](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/graph.jpg)
 
 ## Parallel by Default
 
 Every dependency is explicit, so Hedgehog knows which tasks can run in parallel.
 
-![Comparison](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/comparison.png)
+![Comparison](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/comparison.jpg)
 
 Agents fan out to give you great outcomes at **faster speeds**.
 
@@ -95,7 +95,7 @@ Agents fan out to give you great outcomes at **faster speeds**.
 
 Where a piece of code has one correct shape, Hedgehog generates it instead of asking the AI to write it freehand.
 
-![Deterministic code generation](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/deterministic.png)
+![Deterministic code generation](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/deterministic.jpg)
 
 - **Generators over freehand**: schemas, boilerplate, and scaffolding come from generators that create the code
 - **Faster**: no reasoning required to produce a known shape
@@ -188,7 +188,7 @@ It scans the repo's shape and is able to create new changes with the same scoped
 
 ## Why Hedgehog Works
 
-![Why Hedgehog works](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.png)
+![Why Hedgehog works](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/why.jpg)
 
 ## Install
 
