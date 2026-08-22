@@ -59,6 +59,45 @@ following the same one-commit-per-step pattern the existing three use. Each
 add-on is roughly its own small item once the pattern is followed — see
 `src/skills/hedgehog-bootstrap/SKILL.md` for the shape an add-on step takes.
 
+### Foreign cores — installing a core Hedgehog didn't ship
+
+Every core today is a maintainer-curated entry in
+`src/registry/cores.json`: a fixed table of npm packages this project
+publishes and vouches for. There's no path for a project or organization
+to maintain its own core — a workspace shape, agent set, generators, and skill set
+tailored to their own stack — and have Hedgehog install it on request
+without that core ever entering this repo's registry. `HEDGEHOG_CORE_SOURCE`
+(`src/registry/fetch.mjs`) is the closest existing mechanism, but it's a
+local-checkout escape hatch for developing a core before publishing it
+upstream, not a supported end-user install path: it still requires the
+core's `name` to match a `cores.json` entry (`fetch.mjs`'s
+`readManifest`), so it can substitute the source of an existing registry
+entry but can't add a wholly new one.
+
+The gap is trust, not mechanics: `fetchCore` already resolves an npm
+spec, extracts it, and checks its `hedgehog-core.yaml` manifest
+(`engine` range, required keys) — none of that is registry-specific.
+What's missing is a way to point `init`/`update` at a core package
+outside the table (an npm package under a different scope, a git
+URL, a package published by the project/DAO that maintains it) plus a
+verification step before any of that core's agents or skills are trusted
+enough to write into a project — since unlike the five shipped cores,
+nobody here has read a foreign core's content. "Verify" could mean a few
+different things depending on what provenance guarantee is wanted:
+a signed manifest checked against a publisher key, a content hash pinned
+by the project and checked on every fetch, or a hash anchored on a
+public/blockchain ledger the way the user's own PermaBrain setup anchors
+content on Arweave — any of these would slot into `fetchCore` as a check
+between extraction and `readManifest` trusting the manifest. Scope for a
+first version: one foreign-core source type (npm package outside the
+table is the smallest addition, reusing `packAndExtract` almost as-is),
+one verification mechanism, a `hedgehog cores add <source>` or `init
+--core <source>` entry point that bypasses `cores.json` lookup, and the
+same manifest/engine checks `fetchCore` already runs. Explicitly out of
+scope for a first version: the shipped-core update/staleness machinery
+in `installed.mjs`, which assumes a `cores.json`-registered core and
+would need its own design for a foreign one.
+
 ### A public landing page, hosted on GitHub Pages
 
 Hedgehog has no public-facing site — `README.md` is the only front door
