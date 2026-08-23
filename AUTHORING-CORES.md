@@ -58,6 +58,19 @@ At the package root:
   the shape `src/db/core.mjs` loads for an authored core. This is what
   turns the core's build order into something `hedgehog verify` can gate
   on mechanically, rather than a convention an agent is asked to follow.
+  A layer may also carry `requires: [<binary>, ...]`, naming a system
+  binary its `verify` command needs beyond what the workspace's own
+  package manager installs — Docker, Terraform, a database CLI, a
+  specific compiler toolchain. Ordinary JS/TS toolchain binaries the
+  workspace's `package.json` already installs (vitest, tsc, eslint, nx,
+  …) don't need it; `requires:` is for what `npm install` can't provide,
+  a binary that has to already exist in the environment running the
+  agent. `hedgehog status` and `hedgehog verify` both check it — see
+  [`src/db/requires.mjs`](src/db/requires.mjs)'s header comment for the
+  resolution semantics and full rationale. For example, a layer whose
+  verify command runs `docker compose up -d && pnpm test:integration`
+  needs `requires: [docker]` — `docker compose` is a subcommand of the
+  `docker` binary, not a separate `docker-compose` executable.
 
 ## Registering the core
 
