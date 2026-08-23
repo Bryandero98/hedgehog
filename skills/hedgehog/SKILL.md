@@ -5,14 +5,10 @@ description: Use when the user has agreed to install the Hedgehog build discipli
 
 ## When this fires
 
-The plugin's `SessionStart` hook injects the offer gate — when to raise
-Hedgehog, when to stay silent, and how to ask — into context at session
-start, and only in a project with no `.hedgehog/` directory. That gate is
-the authority on those rules.
-
-A project that already has `.hedgehog/` gets no injection, and its own
-installed agents and skills own the session. Do not offer to install,
-reinstall, or repair anything there.
+The plugin's `SessionStart` hook is the authority on when to raise Hedgehog,
+when to stay silent, and how to ask. Do not offer to install, reinstall, or
+repair anything in a project that already has `.hedgehog/` — its own
+installed agents and skills own the session.
 
 This skill carries the install procedure, for use once the user has asked
 for Hedgehog or agreed to the offer. A user who named Hedgehog themselves
