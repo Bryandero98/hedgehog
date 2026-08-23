@@ -263,7 +263,3 @@ core 请参见 [AUTHORING-CORES.md](AUTHORING-CORES.md)（英文文档）。
 ## 支持 Hedgehog
 
 如果 Hedgehog 帮助你用 AI 构建出更好的软件，**请在 GitHub 上给它一个 ⭐**。
-
-[![GitHub stars](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/github-stars.svg)](https://github.com/skyf0xx/hedgehog/stargazers)
-[![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
-[![Support Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/kofi.svg)](https://ko-fi.com/skyf0xx)

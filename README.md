@@ -268,7 +268,3 @@ new one.
 ## Support Hedgehog
 
 If Hedgehog helps you build better software with AI, **give it a ⭐ on GitHub**.
-
-[![GitHub stars](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/github-stars.svg)](https://github.com/skyf0xx/hedgehog/stargazers)
-[![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
-[![Support Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/kofi.svg)](https://ko-fi.com/skyf0xx)

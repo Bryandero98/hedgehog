@@ -51,13 +51,12 @@ jobs:
           mkdir -p badges
           total_formatted=$(python3 -c "print(f'{${{ steps.downloads.outputs.total }}:,}')")
           curl -fsSL "https://img.shields.io/badge/downloads-${total_formatted}-blue?style=for-the-badge" -o badges/npm-downloads.svg
-          curl -fsSL "https://img.shields.io/badge/-Support%20Hedgehog-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" -o badges/kofi.svg
           curl -fsSL "https://img.shields.io/badge/-Support%20Hedgehog-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" -o badges/kofi-top.svg
           curl -fsSL "https://img.shields.io/github/stars/skyf0xx/hedgehog?style=for-the-badge&color=24292f&label=%E2%AD%90%20Star%20Us%20on%20GitHub&logo=github&logoColor=white" -o badges/github-stars-cta.svg
 
       - name: Validate SVGs
         run: |
-          for f in badges/npm-downloads.svg badges/kofi.svg badges/kofi-top.svg badges/github-stars-cta.svg; do
+          for f in badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg; do
             if ! grep -q "<svg" "$f"; then
               echo "Fetched file $f is not an SVG, aborting" >&2
               cat "$f" >&2
@@ -70,7 +69,7 @@ jobs:
           python3 - <<'PY'
           import re
 
-          for path in ["badges/npm-downloads.svg", "badges/kofi.svg", "badges/kofi-top.svg", "badges/github-stars-cta.svg"]:
+          for path in ["badges/npm-downloads.svg", "badges/kofi-top.svg", "badges/github-stars-cta.svg"]:
               with open(path) as f:
                   svg = f.read()
 
@@ -95,8 +94,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- badges/npm-downloads.svg badges/kofi.svg badges/kofi-top.svg badges/github-stars-cta.svg; then
-            git add badges/npm-downloads.svg badges/kofi.svg badges/kofi-top.svg badges/github-stars-cta.svg
+          if ! git diff --quiet -- badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg; then
+            git add badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg
             git commit -m "chore: refresh badges"
             git push
           else
