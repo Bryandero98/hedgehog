@@ -7,6 +7,12 @@
 
 # H E D G E H O G
 
+[![GitHub stars](https://img.shields.io/github/stars/skyf0xx/hedgehog?color=gold)](https://github.com/skyf0xx/hedgehog/stargazers)
+[![npm version](https://img.shields.io/npm/v/%40skyf0xx%2Fhedgehog)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/skyf0xx/hedgehog/codeql.yml?branch=master&label=CodeQL)](https://github.com/skyf0xx/hedgehog/actions/workflows/codeql.yml)
+[![Check](https://img.shields.io/github/actions/workflow/status/skyf0xx/hedgehog/check.yml?branch=master&label=Check)](https://github.com/skyf0xx/hedgehog/actions/workflows/check.yml)
+
 AI 能在几秒钟内写出代码。
 
 但随着项目变大，上下文被占满，**架构开始漂移**，每一个新功能都变得更难安全地修改。
