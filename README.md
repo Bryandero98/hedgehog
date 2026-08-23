@@ -2,6 +2,7 @@
 
 [![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
 [![Support Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/kofi-top.svg)](https://ko-fi.com/skyf0xx)
+[![Star on GitHub](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/github-stars-cta.svg)](https://github.com/skyf0xx/hedgehog)
 
 English | [简体中文](README.zh-CN.md)
 
@@ -12,8 +13,6 @@ English | [简体中文](README.zh-CN.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/skyf0xx/hedgehog/codeql.yml?branch=master&label=CodeQL)](https://github.com/skyf0xx/hedgehog/actions/workflows/codeql.yml)
 [![Check](https://img.shields.io/github/actions/workflow/status/skyf0xx/hedgehog/check.yml?branch=master&label=Check)](https://github.com/skyf0xx/hedgehog/actions/workflows/check.yml)
-
-⭐ [Star us on GitHub](https://github.com/skyf0xx/hedgehog) - it motivates us a lot!
 
 AI can write code in seconds.
 
