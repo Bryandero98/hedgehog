@@ -20,6 +20,7 @@ jobs:
         id: downloads
         run: |
           total=0
+          summary_rows=""
           packages=$(python3 -c "
           import json
           data = json.load(open('src/registry/cores.json'))
@@ -42,9 +43,46 @@ jobs:
               print(0)
           ")
             echo "$pkg: $count"
+            summary_rows="${summary_rows}${pkg}|${count}"$'\n'
             total=$((total + count))
           done <<< "$packages"
           echo "total=$total" >> "$GITHUB_OUTPUT"
+          echo "$summary_rows" > /tmp/download_rows.txt
+
+      - name: Write DOWNLOADS.md
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+
+          rows = []
+          with open('/tmp/download_rows.txt') as f:
+              for line in f:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  pkg, count = line.split('|')
+                  rows.append((pkg, int(count)))
+
+          rows.sort(key=lambda r: r[1], reverse=True)
+          total = sum(count for _, count in rows)
+          generated = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+
+          lines = [
+              "# Downloads",
+              "",
+              f"Total downloads across every published Hedgehog package, refreshed daily. Last updated {generated}.",
+              "",
+              "| Package | Downloads |",
+              "| --- | ---: |",
+          ]
+          for pkg, count in rows:
+              lines.append(f"| [`{pkg}`](https://www.npmjs.com/package/{pkg}) | {count:,} |")
+          lines.append(f"| **Total** | **{total:,}** |")
+          lines.append("")
+
+          with open('DOWNLOADS.md', 'w') as f:
+              f.write('\n'.join(lines))
+          PY
 
       - name: Fetch badges
         run: |
@@ -94,8 +132,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg; then
-            git add badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg
+          if ! git diff --quiet -- badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg DOWNLOADS.md; then
+            git add badges/npm-downloads.svg badges/kofi-top.svg badges/github-stars-cta.svg DOWNLOADS.md
             git commit -m "chore: refresh badges"
             git push
           else

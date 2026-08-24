@@ -1,6 +1,6 @@
 ![Incredible Software Engineer](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/docs/images/incredible.jpg)
 
-[![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://www.npmjs.com/package/@skyf0xx/hedgehog)
+[![Total downloads](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/npm-downloads.svg)](https://github.com/skyf0xx/hedgehog/blob/master/DOWNLOADS.md)
 [![Support Hedgehog](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/kofi-top.svg)](https://ko-fi.com/skyf0xx)
 [![Star Us on GitHub](https://raw.githubusercontent.com/skyf0xx/hedgehog/master/badges/github-stars-cta.svg)](https://github.com/skyf0xx/hedgehog)
 
