@@ -48,7 +48,7 @@ the cost of a pre-built workspace.
    native build tooling carry enough real decisions that a
    `hedgehog-core-design` blueprint alone won't lock them down. High
    demand, but the heaviest of the six: expect a full blueprint's worth
-   of decisions before this is buildable as a core.
+   of decisions before this is buildable as a core. Perhaps this should be inside the full-stak-app core
 
 ### Add-ons beyond Auth, Queue, and Mobile
 
