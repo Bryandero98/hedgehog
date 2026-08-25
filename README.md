@@ -223,7 +223,7 @@ Mention `Hedgehog` whenever you want to build something with it.
 2. Check Python >=3.10 is installed — it runs [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext), the code index every project uses.
 3. Check CodeGraphContext is installed and configured.
 4. If anything is missing, offer to set it up with the `hedgehog-code-intelligence-setup` skill — `init` stops without it.
-5. Run the install commands above.
+5. Run the install commands below.
 
 </details>
 
