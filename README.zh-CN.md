@@ -204,7 +204,7 @@ CLI、库、浏览器扩展、数据管道等，都会拥有各自的构建顺�
 
 Hedgehog 也可以接入已有仓库。
 
-它会扫描仓库的既有结构，并以同样受限、可验证、可提交的循环方式在其上创建新的改动。
+Hedgehog 也可以接入它并未参与构建的仓库。它会读取该仓库，并提出一条构建层次链，用仓库自身的 test/lint/build 命令来验证。
 
 ## Hedgehog 为什么有效
 
@@ -287,6 +287,8 @@ core 请参见 [AUTHORING-CORES.md](AUTHORING-CORES.md)（英文文档）。
 - Nx skills 改编自 [nx-ai-agents-config](https://github.com/nrwl/nx-ai-agents-config)。
 
 - 动画 skills vendored 自 [gsap-skills](https://github.com/greensock/gsap-skills)。
+
+- Hedgehog 使用 [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext) 为你的代码库建立索引。
 
 ## 支持 Hedgehog
 
