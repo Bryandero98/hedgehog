@@ -93,7 +93,7 @@ Every dependency is explicit, so Hedgehog knows which tasks can run in parallel.
 
 Agents fan out to give you great outcomes at **faster speeds**.
 
-## Your Code is a Graph
+## Live Dependency Awareness
 
 Hedgehog reaches for your editor's own Language Server Protocol integration to see what depends on what.
 
@@ -104,10 +104,9 @@ flowchart TD
     C --> D[Hedgehog]
 ```
 
-- **No index to go stale**: the language server's view of the code is always current
-- **No time spent hunting through the codebase for context**: find references and callers directly
-- **No more surprise breakage**: every task can check what depends on it before it edits
-- **Tests cover what changed**: verification that misses affected code gets caught
+- **Lower token cost**: a targeted symbol lookup replaces reading or grepping whole files for context
+- **Impact known before editing**: every task checks what depends on it before it changes anything
+- **Verification matches the real surface**: tests target what actually changed
 
 ## Deterministic Code Generation
 
