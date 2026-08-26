@@ -1,7 +1,7 @@
 {
   "name": "hedgehog",
   "description": "Offers to set up the Hedgehog build discipline in any project you open",
-  "version": "5.1.14",
+  "version": "5.1.15",
   "author": {
     "name": "skyf0xx"
   },
@@ -9,8 +9,7 @@
   "repository": "https://github.com/skyf0xx/hedgehog",
   "license": "MIT",
   "skills": [
-    "./skills/",
-    "./src/skills/hedgehog-code-intelligence-setup"
+    "./skills/"
   ],
   "hooks": "./hooks/hooks-cursor.json"
 }
