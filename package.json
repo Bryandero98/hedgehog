@@ -1,6 +1,6 @@
 {
   "name": "@skyf0xx/hedgehog",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "description": "Install the Hedgehog build discipline (agents + skills) into a repo, for Claude Code, Cursor, or Gemini CLI.",
   "type": "module",
   "repository": {
@@ -30,8 +30,7 @@
     "vendor-skills/BMAD"
   ],
   "engines": {
-    "node": ">=22.5.0",
-    "python": ">=3.10.0"
+    "node": ">=22.5.0"
   },
   "keywords": [
     "claude",
