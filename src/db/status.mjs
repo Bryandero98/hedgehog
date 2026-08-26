@@ -11,10 +11,9 @@
 // every task meeting that condition, not just the one `hedgehog next`
 // would pick.
 
-import { radiusGaps } from './code-intelligence.mjs';
 import { listDebt } from './debt.mjs';
 import { detectDrift, formatDrift } from './drift.mjs';
-import { frictionByModule, listFriction } from './friction.mjs';
+import { listFriction } from './friction.mjs';
 import { orphanedOverrides } from './overrides.mjs';
 import { formatMissingRequirements } from './requires.mjs';
 import { readyTasks, heldBackReason } from './ready.mjs';
@@ -103,33 +102,6 @@ function loadDebtByTask(db) {
     .sort((a, b) => a.taskId.localeCompare(b.taskId));
 }
 
-// Advisory radius suggestions: for every task whose context was resolved
-// against a code-intelligence index (context_files non-NULL), the files
-// its computed blast radius reaches that no verify_radius/scope_globs
-// glob covers (code-intelligence.mjs#radiusGaps). Skips every task with
-// no resolved context outright, which is what a task planned without a
-// working index leaves behind — the same NULL a broken or removed CGC
-// install produces, not a state `status` distinguishes from an
-// intentionally unindexed run.
-//
-// Wrapped the way countFriction is: `status` reads through a read-only
-// handle, which never migrates, so on a graph predating the context
-// columns this SELECT throws on a column that isn't there yet. An
-// unmigrated graph reads as no suggestions, not as a failed `status`.
-function loadRadiusSuggestions(db) {
-  try {
-    const tasks = db.prepare('SELECT * FROM tasks WHERE context_files IS NOT NULL').all();
-    const suggestions = [];
-    for (const task of tasks) {
-      const gaps = radiusGaps(task);
-      if (gaps.length > 0) suggestions.push({ taskId: task.id, files: gaps });
-    }
-    return suggestions;
-  } catch {
-    return [];
-  }
-}
-
 // The friction row count, or 0. `listFriction` reads the table
 // unguarded, so a build graph predating it throws here where `listDebt`
 // would return [] — caught rather than propagated for the same reason
@@ -145,8 +117,7 @@ function countFriction(db) {
 }
 
 // Returns { counts, ready, heldBack, inFlight, attention, drift,
-// orphanedOverrides, debt, frictionCount, frictionHotspots,
-// radiusSuggestions, total } —
+// orphanedOverrides, debt, frictionCount, total } —
 // counts keyed by every status in the tasks CHECK constraint (present
 // even at zero), ready the full list of currently-pickable tasks,
 // heldBack the subset of those that `hedgehog claim` would skip over
@@ -189,20 +160,6 @@ function countFriction(db) {
 // only the existence signal: `debt list` needs a task id the operator
 // has no way to guess, and `friction list` needs the operator to
 // already suspect there is something to read.
-//
-// `frictionHotspots` (friction.mjs#frictionByModule) is the one reading
-// of friction that isn't a count: the files the friction-carrying tasks
-// reach, ranked. It rides along here because it is a read of `friction`
-// joined to `tasks` and needs nothing else passed in. On a project whose
-// tasks carry no resolved context it is an empty hotspot list and a full
-// `uncorrelated` count, which is the same signal `frictionCount` alone
-// already gave.
-//
-// `radiusSuggestions` (code-intelligence.mjs#radiusGaps) is advisory,
-// never enforcement: files a task's computed blast radius reaches that
-// its declared verify_radius/scope_globs doesn't cover. Computed only
-// for tasks with a resolved context_files, same gate as the hotspots
-// read — a project with no index attached contributes nothing here.
 export function graphStatus(db, { core = null, overrides = new Map() } = {}) {
   const counts = countTasksByStatus(db);
   const ready = loadReadyTasks(db);
@@ -213,8 +170,6 @@ export function graphStatus(db, { core = null, overrides = new Map() } = {}) {
   const orphaned = orphanedOverrides(db, overrides);
   const debt = loadDebtByTask(db);
   const frictionCount = countFriction(db);
-  const frictionHotspots = frictionByModule(db);
-  const radiusSuggestions = loadRadiusSuggestions(db);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   return {
     counts,
@@ -226,8 +181,6 @@ export function graphStatus(db, { core = null, overrides = new Map() } = {}) {
     orphanedOverrides: orphaned,
     debt,
     frictionCount,
-    frictionHotspots,
-    radiusSuggestions,
     total,
   };
 }
@@ -261,15 +214,8 @@ export function formatStatus({
   orphanedOverrides = [],
   debt = [],
   frictionCount = 0,
-  frictionHotspots = { hotspots: [], uncorrelated: 0 },
-  radiusSuggestions = [],
   total,
   missingRequirements,
-  // Rendered lines from formatIndexStaleness, or [] when the index is
-  // fresh or absent. Passed in rather than computed: this module reads
-  // the graph, and index provenance lives on disk and in git, which is
-  // the CLI's side of the line.
-  indexStaleness = [],
 }) {
   const lines = [];
   lines.push(`TASKS  ${total}`);
@@ -345,35 +291,6 @@ export function formatStatus({
     lines.push('  Each widens nothing until the id matches a real task. See: hedgehog override list');
   }
 
-  // Advisory, never a defect count: verify_radius/scope_globs is what
-  // actually gates `hedgehog verify`, and stays the sole authority on
-  // that whether or not this prints. This only names what a
-  // code-intelligence index thinks a task's blast radius reaches beyond
-  // its declared radius — a widening the operator may or may not want.
-  if (radiusSuggestions.length > 0) {
-    lines.push('');
-    lines.push('RADIUS SUGGESTIONS');
-    for (const { taskId, files } of radiusSuggestions) {
-      lines.push(`  ${taskId}   verify_radius may be missing:`);
-      for (const file of files) lines.push(`    ${file}`);
-    }
-    lines.push('');
-    lines.push(
-      indexStaleness.length > 0
-        ? '  Sourced from a code-intelligence index that is out of date (below). Widen with: hedgehog plan --recompile'
-        : '  Sourced from a code-intelligence index. Widen with: hedgehog plan --recompile',
-    );
-  }
-
-  // Below the suggestions it qualifies, and printed whether or not any
-  // were raised: an index that has drifted from HEAD also under-reports,
-  // so an empty RADIUS SUGGESTIONS section is exactly when a reader most
-  // needs to know the index is stale rather than the code clean.
-  if (indexStaleness.length > 0) {
-    lines.push('');
-    lines.push(...indexStaleness);
-  }
-
   // Bottom, below every condition above, and two sections rather than
   // one. Everything above is something wrong — work stalled, a graph
   // that disagrees with its core, an override doing nothing. These two
@@ -404,21 +321,6 @@ export function formatStatus({
   if (frictionCount > 0) {
     lines.push('');
     lines.push(`FRICTION LOGGED  ${frictionCount}`);
-    // The top three only: this is a lead for tweaker's grouping pass, not
-    // a listing, and a ranked tail nobody acts on costs the whole block
-    // its readability. The uncorrelated count prints whenever it's
-    // non-zero — including with no hotspots at all, which is how a
-    // project whose tasks carry no resolved context reads.
-    const { hotspots = [], uncorrelated = 0 } = frictionHotspots ?? {};
-    if (hotspots.length > 0 || uncorrelated > 0) {
-      lines.push('');
-      for (const { path, frictionCount: n } of hotspots.slice(0, 3)) {
-        lines.push(`  ${path}   ${n} note${n === 1 ? '' : 's'}`);
-      }
-      if (uncorrelated > 0) {
-        lines.push(`  ${uncorrelated} note${uncorrelated === 1 ? '' : 's'} not correlated to any file`);
-      }
-    }
     lines.push('');
     lines.push('  Reviewed as a batch at the end of a build. See: hedgehog friction list');
   }

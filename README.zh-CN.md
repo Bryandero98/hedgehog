@@ -95,20 +95,18 @@ npx @skyf0xx/hedgehog graph # 显示构建图
 
 ## 你的代码是一张图
 
-Hedgehog 使用 [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext) 为你的代码库建立索引。
+Hedgehog 借助你编辑器自带的 Language Server Protocol 集成来查看代码间的依赖关系。
 
 ```mermaid
 flowchart TD
-    A[代码仓库] --> B[Tree-sitter / SCIP 索引]
-    B --> C[知识图谱]
-    C --> D[图数据库]
-    D --> E[MCP 服务器]
-    E --> F[Hedgehog]
+    A[代码仓库] --> B[Language Server]
+    B --> C[符号与引用]
+    C --> D[Hedgehog]
 ```
 
-- **更省 Token**：任务开始时就已知道该读什么，无需四处搜索
-- **构建更快**：不必在代码库中翻找上下文
-- **不再意外改坏**：每个任务在动手前就知道有哪些代码依赖它
+- **索引永不过期**：语言服务器看到的代码状态始终是最新的
+- **不必在代码库中翻找上下文**：直接查找引用和调用方
+- **不再意外改坏**：每个任务在动手前都能查一查有哪些代码依赖它
 - **测试覆盖改动**：遗漏受影响代码的验证会被发现
 
 ## 确定性代码生成
@@ -220,10 +218,7 @@ Hedgehog 也可以接入它并未参与构建的仓库。它会读取该仓库�
 <summary>给 AI Agent 的操作说明</summary>
 
 1. 检查已安装 Node >=22.5.0。
-2. 检查已安装 Python >=3.10 —— 它负责运行 [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext)，即每个项目都会用到的代码索引。
-3. 检查 CodeGraphContext 已安装并完成配置。
-4. 如有缺失，主动提出使用 `hedgehog-code-intelligence-setup` skill 完成配置 —— 否则 `init` 会中止。
-5. 运行上方的安装命令。
+2. 运行上方的安装命令。
 
 </details>
 
@@ -287,8 +282,6 @@ core 请参见 [AUTHORING-CORES.md](AUTHORING-CORES.md)（英文文档）。
 - Nx skills 改编自 [nx-ai-agents-config](https://github.com/nrwl/nx-ai-agents-config)。
 
 - 动画 skills vendored 自 [gsap-skills](https://github.com/greensock/gsap-skills)。
-
-- Hedgehog 使用 [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext) 为你的代码库建立索引。
 
 ## 支持 Hedgehog
 

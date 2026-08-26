@@ -16,20 +16,11 @@
 import { cp, mkdir, access, readdir, stat, rm, readFile, writeFile } from 'node:fs/promises';
 import { constants, existsSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
-import { createInterface } from 'node:readline/promises';
 import { dbInit, DB_PATH, dbAbsPath, openDb } from '../src/db/init.mjs';
 import { loadCore, lintCore, isModuleAxis } from '../src/db/core.mjs';
-import {
-  planTasks,
-  CORE_INTENT_ID,
-  taskId,
-  onceTaskId,
-  layerTaskFields,
-  onceLayerTaskFields,
-} from '../src/db/plan.mjs';
-import { radiusGaps, resolveTaskContext } from '../src/db/code-intelligence.mjs';
+import { planTasks, CORE_INTENT_ID } from '../src/db/plan.mjs';
 import { addIntent, INTENTS_DIR } from '../src/db/intent.mjs';
 import {
   nextTask,
@@ -59,12 +50,6 @@ import {
   missingBinaries,
   formatMissingRequirements,
 } from '../src/db/requires.mjs';
-import {
-  checkCodeIntelligence,
-  checkIndexFreshness,
-  formatCodeIntelligenceGap,
-  formatIndexStaleness,
-} from '../src/db/code-intelligence-requires.mjs';
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
 import { addDebt, listDebt } from '../src/db/debt.mjs';
@@ -72,8 +57,6 @@ import {
   shouldPromptForStar,
   recordStarAnswer,
   formatStarPrompt,
-  shouldNoteCodeIntelligence,
-  recordCodeIntelligenceNotice,
   REPO_URL,
 } from '../src/db/community.mjs';
 import { rebuildDb } from '../src/db/rebuild.mjs';
@@ -92,15 +75,6 @@ import { fetchCore, cachedCore, cachedVersions, cachedEngine } from '../src/regi
 import { recordCore, installedCore, ADOPTED_CORE_NAME } from '../src/registry/installed.mjs';
 
 const AUTHORED_CORE_PATH = '.hedgehog/core.yaml';
-const CODE_INTELLIGENCE_CONFIG_PATH = '.hedgehog/code-intelligence.json';
-
-// Same pending-intent filter plan.mjs's loadPendingIntents applies —
-// duplicated here (not imported: it's module-private to plan.mjs)
-// because the provider has to be pre-resolved for the tasks a plan run
-// is about to compile, before planTasks itself runs. Kept as a literal
-// rather than a shared export because it names two fixed status strings,
-// not behavior that could drift on its own.
-const PENDING_INTENT_STATUSES = ['proposed', 'planned'];
 
 const BLOCKED_REASON_LABELS = {
   verification_failed: 'verification failed',
@@ -669,116 +643,22 @@ function ensureGitRepo() {
   console.log(dim('  (no git repository found here — ran `git init`, since every later step commits)'));
 }
 
-// Code intelligence is a precondition of the install, not a feature of it,
-// so this runs before anything is resolved or written. Thin orchestration
-// over src/db/code-intelligence-requires.mjs: that module only looks and
-// reports, and this owns the printing and the exit code, the same division
-// ensureGitRepo() draws for its own external-tool precondition.
-//
-// Returns true to continue, false to abort. On a false return the caller
-// returns immediately, having written nothing — a half-installed
-// .hedgehog/ is worse than no install at all.
-//
-// The offer is a question, not a notice, so it needs an answerable stdin.
-// Without one (CI, piped input, an agent-driven run) asking would hang,
-// which is strictly worse than saying the useful thing outright: the
-// non-interactive path takes the accepted-path message directly, since an
-// agent reading it is exactly what can act on it. HEDGEHOG_FORCE_INTERACTIVE
-// forces the prompt on without a pty, for the repro suite's use; not a
-// documented user-facing flag.
-async function ensureCodeIntelligence() {
-  const result = await checkCodeIntelligence({ cwd: DEST_ROOT });
-  if (result.ok) return true;
-
-  const gap = formatCodeIntelligenceGap(result);
-  console.error(`\n${red(bold(gap[0]))}`);
-  console.error(gap.slice(1).join('\n'));
-
-  const interactive = Boolean(process.env.HEDGEHOG_FORCE_INTERACTIVE) || process.stdin.isTTY;
-  const accepted = interactive ? await confirm('Set it up now?') : true;
-
-  if (accepted) {
-    console.error(
-      `\nRun the ${bold('hedgehog-code-intelligence-setup')} skill, then re-run ` +
-        `${bold('hedgehog init')} — the install continues from there.\n`,
-    );
-  } else {
-    console.error(
-      `\nNothing was installed. Re-run ${bold('hedgehog init')} once code ` +
-        `intelligence is set up and the install continues from there.\n`,
-    );
-  }
-
-  process.exitCode = 1;
-  return false;
-}
-
-// A yes/no question on stdin, defaulting to yes — bare Enter accepts.
-// Only ever called with an answerable stdin; see ensureCodeIntelligence.
-async function confirm(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  try {
-    const answer = (await rl.question(`\n${question} ${dim('[Y/n]')} `)).trim().toLowerCase();
-    return answer !== 'n' && answer !== 'no';
-  } finally {
-    rl.close();
-  }
-}
-
-// The two trees Hedgehog itself puts in a project that are not project
-// code: `.hedgehog/` (generated state, and the home of the CodeGraphContext
-// virtualenv the setup skill builds) and `vendor-skills/` (the vendored
-// BMAD planning shelf installed just above). CGC's own default `.cgcignore`
-// covers the usual dependency directories and neither of these, so left
-// alone the index walks several thousand files of CGC's dependency tree and
-// of vendored shelf content — which then outrank the project's real symbols
-// in lookups, and are what pre-read context and verify_radius gaps get
-// computed against.
-//
-// Written at `init`, before any index exists, because `cgc index .` skips a
-// repository that is already indexed: an exclusion added after the first
-// index buys nothing until someone re-runs with `--force`.
-//
-// Appends only, and only what is missing: a project's own entries are its
-// own, and this is the one file here Hedgehog shares with the user.
-const CGCIGNORE_ENTRIES = ['.hedgehog/', 'vendor-skills/'];
-
-async function ensureCgcignore(root = DEST_ROOT) {
-  const path = join(root, '.cgcignore');
-  let existing = '';
-  try {
-    existing = await readFile(path, 'utf8');
-  } catch {
-    // No file yet — the whole set gets written below.
-  }
-
-  const lines = existing.split('\n').map((l) => l.trim());
-  const missing = CGCIGNORE_ENTRIES.filter((e) => !lines.includes(e));
-  if (missing.length === 0) return { path, added: [] };
-
-  const prefix = existing === '' || existing.endsWith('\n') ? '' : '\n';
-  await writeFile(path, `${existing}${prefix}${missing.join('\n')}\n`);
-  return { path, added: missing };
-}
-
 // The build graph and its sidecars are derived state, rebuildable from
 // committed intents and git history via `hedgehog db rebuild`, and the
 // CLAUDE.md this installer writes says so. `init`'s own closing step tells
 // the user to `git add -A`, so anything not ignored by then gets committed.
 //
 // A core's own `gitignore.template` carries these lines, but a deferred
-// install copies no core, and the CGC virtualenv is the engine's to ignore
-// on every install — so the engine owns this block rather than leaving it
-// to whichever core arrives later.
+// install copies no core — so the engine owns this block rather than
+// leaving it to whichever core arrives later.
 //
-// Appends only, and only what is missing, for the same reason `.cgcignore`
-// does: the project's `.gitignore` is the project's.
+// Appends only, and only what is missing: the project's `.gitignore` is
+// the project's.
 const GITIGNORE_ENTRIES = [
   '.hedgehog/graph-server.json',
   '.hedgehog/hedgehog.db',
   '.hedgehog/hedgehog.db-*',
   '.hedgehog/commit.lock',
-  '.hedgehog/code-intelligence/',
 ];
 
 async function ensureGitignore(root = DEST_ROOT) {
@@ -802,8 +682,6 @@ async function ensureGitignore(root = DEST_ROOT) {
 // `core` is the fetched core — `{ manifest, root, version }` — or null on
 // a deferred install, where planner picks one later.
 async function init({ force, core, host = DEFAULT_HOST, hostOnly = false, globalInstall = null }) {
-  if (!(await ensureCodeIntelligence())) return;
-
   ensureGitRepo();
 
   // Resolve the full list of writes up front so we can detect conflicts
@@ -861,11 +739,6 @@ async function init({ force, core, host = DEFAULT_HOST, hostOnly = false, global
   const { created: dbCreated, path: dbPath } = await dbInit(DB_PATH);
   console.log(`  ${dbCreated ? green('create') : dim('exists')}  ${dbPath}`);
   if (dbCreated) written++;
-
-  const cgcignore = await ensureCgcignore();
-  if (cgcignore.added.length) {
-    console.log(`  ${green('update')}  ${relative(DEST_ROOT, cgcignore.path)} ${dim(`(${cgcignore.added.join(', ')})`)}`);
-  }
 
   const gitignore = await ensureGitignore();
   if (gitignore.added.length) {
@@ -1045,15 +918,6 @@ async function update({ hosts }) {
     }
   }
 
-  // Backfills a project installed before these entries existed. Cheap and
-  // idempotent, and the index is only rebuilt on the next refresh anyway,
-  // so this is the moment the exclusions cost nothing to add.
-  const cgcignore = await ensureCgcignore();
-  if (cgcignore.added.length) {
-    written++;
-    console.log(`  ${green('update')}  ${relative(DEST_ROOT, cgcignore.path)} ${dim(`(${cgcignore.added.join(', ')})`)}`);
-  }
-
   const gitignore = await ensureGitignore();
   if (gitignore.added.length) {
     written++;
@@ -1102,12 +966,6 @@ async function update({ hosts }) {
         'name-based dispatch reports it as not found.',
     ),
   );
-
-  // Last, after the refresh has fully landed and reported itself. The
-  // notice never gates the update: a project that predates the check
-  // updates exactly as it always did and hears about the gap while it
-  // does.
-  await noteCodeIntelligenceGap();
 }
 
 // Returned by resolveInstalledCore when the project has a core but its
@@ -1407,205 +1265,6 @@ async function planRecompileCommand(args, { core, corePath }) {
   if (strict && result.skipped.length > 0) process.exitCode = 1;
 }
 
-// Reads .hedgehog/code-intelligence.json. Absent, unreadable, or
-// unparseable all mean the same thing: no config, no provider — every
-// existing project (no such file) takes this branch and plan behaves
-// exactly as it did before this feature existed.
-async function loadCodeIntelligenceConfig() {
-  try {
-    const raw = await readFile(CODE_INTELLIGENCE_CONFIG_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (typeof parsed.command !== 'string' || parsed.command === '') return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-// The re-index command to print in a staleness notice, using the binary
-// this project actually configured rather than a bare `cgc` the user may
-// not have on PATH — setup installs into a project-owned environment
-// precisely so PATH stays untouched, so a generic hint would be wrong for
-// exactly the installs Hedgehog creates.
-//
-// `cgc index . --force` is the refresh path: a bare `cgc index .` skips
-// with "already indexed" and exit 0 once a repository has been indexed
-// once, which is exactly the situation a staleness notice is printed in,
-// so the flag is what makes the printed command actually do the thing
-// the notice asks for.
-// Relativized only when the binary actually sits inside the project (the
-// isolated install this setup creates), since that is the form a user
-// would type. A path outside it stays absolute: `../../../usr/local/bin/cgc`
-// is technically correct and useless to read.
-async function indexCommandHint() {
-  const config = await loadCodeIntelligenceConfig();
-  const command = config?.command;
-  if (typeof command !== 'string' || command === '') return 'cgc index . --force';
-
-  const rel = relative(process.cwd(), command);
-  const inProject = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-  return `${inProject ? rel : command} index . --force`;
-}
-
-// A minimal MCP stdio client: spawns the server the config names, speaks
-// just enough JSON-RPC to initialize and call a tool by name. This is
-// the only piece that knows the wire protocol — resolveTaskContext
-// (code-intelligence.mjs) only ever calls the two methods below.
-//
-// No SDK dependency: the package carries none, and the two calls this
-// needs are a handful of JSON-RPC messages over stdio, not a reason to
-// add one.
-function startMcpClient(config) {
-  const child = spawn(config.command, config.args ?? [], {
-    stdio: ['pipe', 'pipe', 'ignore'],
-    env: { ...process.env, ...(config.env ?? {}) },
-  });
-  child.unref?.();
-
-  let buffer = '';
-  let nextId = 1;
-  const pending = new Map();
-  // 'error'/'exit' each fire at most once in a child's lifecycle — a
-  // spawn failure (bad command, ENOENT) fires 'error' for whatever is
-  // pending at that moment and then never again, so a call placed after
-  // that point would otherwise sit unrejected until code-intelligence.mjs's
-  // own per-task timeout finally gives up on it. Recording the failure
-  // here lets every later call reject immediately instead.
-  let dead = null;
-
-  child.stdout.setEncoding('utf8');
-  child.stdout.on('data', (chunk) => {
-    buffer += chunk;
-    let newlineAt;
-    while ((newlineAt = buffer.indexOf('\n')) !== -1) {
-      const line = buffer.slice(0, newlineAt);
-      buffer = buffer.slice(newlineAt + 1);
-      if (!line.trim()) continue;
-      let message;
-      try {
-        message = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      const waiter = pending.get(message.id);
-      if (!waiter) continue;
-      pending.delete(message.id);
-      if (message.error) waiter.reject(new Error(message.error.message ?? 'MCP error'));
-      else waiter.resolve(message.result);
-    }
-  });
-  child.on('error', (err) => {
-    dead = err;
-    for (const { reject } of pending.values()) reject(err);
-    pending.clear();
-  });
-  // A dead server's stdin emits EPIPE on the socket, not on the child,
-  // and an 'error' event with no listener is fatal to the process. The
-  // write below is guarded, but a socket reports EPIPE asynchronously,
-  // so the throw never reaches that try/catch. Without this handler a
-  // server that exits mid-session takes the whole command down; with it
-  // the pending calls reject and the caller degrades as it would for any
-  // other provider failure.
-  child.stdin.on('error', (err) => {
-    dead ??= err;
-    for (const { reject } of pending.values()) reject(dead);
-    pending.clear();
-  });
-  child.on('exit', () => {
-    dead ??= new Error('code-intelligence server exited');
-    for (const { reject } of pending.values()) reject(dead);
-    pending.clear();
-  });
-
-  function call(method, params) {
-    if (dead) return Promise.reject(dead);
-    return new Promise((resolve, reject) => {
-      const id = nextId++;
-      pending.set(id, { resolve, reject });
-      try {
-        child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
-      } catch (err) {
-        pending.delete(id);
-        reject(err);
-      }
-    });
-  }
-
-  function callTool(name, args) {
-    return call('tools/call', { name, arguments: args }).then((result) => result?.structuredContent ?? result);
-  }
-
-  return {
-    close: () => child.kill(),
-    execute_cypher_query: (args) => callTool('execute_cypher_query', args),
-    analyze_code_relationships: (args) => callTool('analyze_code_relationships', args),
-  };
-}
-
-// Every task about to be compiled by the plan run that's about to
-// happen, shaped down to what resolveTaskContext actually reads
-// (task.id, task.scope_globs). Mirrors compileIntentTasks/
-// compileOnceTasks (plan.mjs) using their own exported field
-// functions — taskId/onceTaskId/layerTaskFields/onceLayerTaskFields —
-// rather than reimplementing them, so this can't compute a scope
-// differently than plan.mjs itself will. Not filtered by taskExists:
-// a task that turns out already-compiled just resolves an entry
-// nobody looks up, which costs nothing.
-function candidateTasks(db, core, overrides) {
-  const candidates = [];
-
-  for (const layer of core.layers.filter((l) => l.once)) {
-    const fields = onceLayerTaskFields(layer, overrides);
-    candidates.push({ id: onceTaskId(layer.id), scope_globs: fields.scope_globs });
-  }
-
-  const placeholders = PENDING_INTENT_STATUSES.map(() => '?').join(',');
-  const pendingIntents = db
-    .prepare(`SELECT id FROM intents WHERE status IN (${placeholders})`)
-    .all(...PENDING_INTENT_STATUSES);
-  const perIntentLayers = core.layers.filter((l) => !l.once);
-  for (const { id: intentId } of pendingIntents) {
-    for (const layer of perIntentLayers) {
-      const fields = layerTaskFields(layer, intentId, overrides);
-      candidates.push({ id: taskId(intentId, layer.id), scope_globs: fields.scope_globs });
-    }
-  }
-
-  return candidates;
-}
-
-// Builds the provider planTasks receives: a synchronous
-// resolveTaskContext(task) that looks up a Map populated by awaiting
-// code-intelligence.mjs's own async resolveTaskContext for every
-// candidate task, ahead of time. planTasks (plan.mjs) calls this
-// synchronously inside a BEGIN IMMEDIATE transaction and must stay
-// synchronous itself — so all the awaiting happens here, before that
-// transaction opens, never inside it.
-//
-// Returns { provider } — null when there's no config, the server can't
-// be reached, or anything about the walk fails; a plan run degrades to
-// the no-provider path rather than failing.
-async function buildCodeIntelligenceProvider(db, core, overrides) {
-  const config = await loadCodeIntelligenceConfig();
-  if (!config) return { provider: null };
-
-  const client = startMcpClient(config);
-  const results = new Map();
-  try {
-    for (const task of candidateTasks(db, core, overrides)) {
-      const context = await resolveTaskContext(task, client);
-      results.set(task.id, context);
-    }
-  } catch {
-    return { provider: null };
-  } finally {
-    client.close();
-  }
-
-  return { provider: { resolveTaskContext: (task) => results.get(task.id) ?? null } };
-}
-
 // `hedgehog plan [--open|--no-open]` — compiles pending intents.
 //
 // Starting the live graph server is opt-in (`--open`), not automatic.
@@ -1662,36 +1321,10 @@ async function planCommand(args = []) {
 
   const overrides = await loadOverrides();
 
-  // Plan is the one command whose output is actually drawn from the index
-  // — pre-read context and radius suggestions both — so it is where a
-  // stale index stops being trivia and starts being wrong answers. Said
-  // before the walk rather than after, so the caveat arrives ahead of the
-  // results it qualifies. Advisory: a stale index still plans, because a
-  // refusal here would strand a project mid-build behind a re-index.
-  const freshness = await checkIndexFreshness({ cwd: process.cwd() });
-  const staleness = formatIndexStaleness(freshness, {
-    indexCommand: await indexCommandHint(),
-  });
-  if (staleness.length > 0) {
-    console.log(`\n${yellow(bold(staleness[0]))}`);
-    console.log(staleness.slice(1).join('\n'));
-    console.log('');
-  }
-
-  // Pre-resolved read-only, before the write handle below opens
-  // planTasks's BEGIN IMMEDIATE — see buildCodeIntelligenceProvider.
-  const readDb = openDb({ readOnly: true });
-  let codeIntelligence;
-  try {
-    codeIntelligence = await buildCodeIntelligenceProvider(readDb, core, overrides);
-  } finally {
-    readDb.close();
-  }
-
   const db = openDb();
   let result;
   try {
-    result = planTasks(db, core, overrides, { provider: codeIntelligence.provider });
+    result = planTasks(db, core, overrides);
   } finally {
     db.close();
   }
@@ -1706,30 +1339,6 @@ async function planCommand(args = []) {
       `  ${bold('reopened')}  ${id} ${dim('(once — new scope landed under it; it must run again)')}`,
     );
   }
-  // One line per task actually inserted this run, naming whether the
-  // pre-resolve found context for it. Silent when there's no provider —
-  // an absent config file must print nothing extra at all.
-  //
-  // result.once already holds task ids; result.compiled holds intent
-  // ids, so each expands to that intent's per-layer task ids the same
-  // way taskId(intentId, layer.id) names them everywhere else.
-  if (codeIntelligence.provider) {
-    const perIntentLayers = core.layers.filter((l) => !l.once);
-    const compiledTaskIds = [
-      ...result.once,
-      ...result.compiled.flatMap((intentId) =>
-        perIntentLayers.map((layer) => taskId(intentId, layer.id)),
-      ),
-    ];
-    for (const id of compiledTaskIds) {
-      const resolved = Boolean(codeIntelligence.provider.resolveTaskContext({ id }));
-      console.log(
-        resolved
-          ? `  ${dim('context')}     ${id} ${dim('resolved against the code-intelligence index')}`
-          : `  ${dim('context')}     ${id} ${dim('no context resolved')}`,
-      );
-    }
-  }
   console.log(
     `\n${green(bold('Plan complete.'))} ${dim(`${result.compiled.length} intent(s) compiled, ${result.skipped.length} skipped`)}\n`,
   );
@@ -1740,29 +1349,9 @@ async function planCommand(args = []) {
   // letting the run report "0 compiled" and look like a no-op.
   const driftDb = openDb({ readOnly: true });
   let drifted;
-  let radiusSuggestions = [];
   try {
     warnSingularModuleIdsAtPlan(core, driftDb);
     drifted = detectDrift(driftDb, core, { overrides });
-    // Advisory only, same handle as the drift check above — a suggestion
-    // sourced from a code-intelligence index that may be stale, never a
-    // reason to fail this command. Skipped entirely for a task with no
-    // resolved context_files, same as every other radiusGaps caller.
-    // The read is guarded on its own: this handle is read-only and so
-    // never migrates, and a graph predating the context columns throws
-    // here on a column that isn't there. A plan run that compiled fine
-    // must not fail on an advisory read.
-    try {
-      radiusSuggestions = driftDb
-        .prepare('SELECT * FROM tasks WHERE context_files IS NOT NULL')
-        .all()
-        .flatMap((task) => {
-          const files = radiusGaps(task);
-          return files.length > 0 ? [{ taskId: task.id, files }] : [];
-        });
-    } catch {
-      radiusSuggestions = [];
-    }
   } finally {
     driftDb.close();
   }
@@ -1771,12 +1360,6 @@ async function planCommand(args = []) {
       `${yellow(bold('Core drift.'))} ${drifted.length} already-compiled task(s) no longer match ${bold(corePath)}.\n` +
         `Compiling does not revisit them. Run ${bold('hedgehog status')} to see the divergence,\n` +
         `or ${bold('hedgehog plan --recompile')} to rewrite the not-started ones.\n`,
-    );
-  }
-  if (radiusSuggestions.length > 0) {
-    console.log(
-      `${dim('Radius suggestions.')} ${radiusSuggestions.length} task(s) reach files outside their verify_radius, per the code-intelligence index.\n` +
-        `Advisory only — verify still gates on verify_radius/scope_globs alone. Run ${bold('hedgehog status')} to see them.\n`,
     );
   }
 
@@ -2050,54 +1633,6 @@ async function noteAvailableUpdate() {
     }
   } catch {
     // Advisory only — a failed check is never worth failing a command over.
-  }
-}
-
-// The upgrade path for a project that predates the `init`-time check —
-// which is every project installed before code intelligence became a
-// precondition, and the larger population by far. `init` guarantees a
-// project set up from this version onward has it; nothing retroactively
-// requires it of a project already building.
-//
-// So this is advisory, and that is the whole point: it prints after the
-// calling command's own work has finished and returns without ever
-// touching `process.exitCode`. A project whose check fails keeps
-// updating and keeps reporting status exactly as it did before, and
-// hears what it is missing while it does. Blocking here would strand
-// working projects on old payloads, which costs more than the gap it
-// would be enforcing.
-//
-// Renders the gap from formatCodeIntelligenceGap so the CLI, the setup
-// skill, and the README all say the same thing, and prints to stderr
-// after the command's real output, matching noteAvailableUpdate's own
-// contract. Never throws: the whole body is wrapped, since a check that
-// errors is never worth failing a command over.
-//
-// `once` gates on `.hedgehog/community.json` — used by `status`, which
-// runs at the start of every session and would otherwise nag. `update`
-// passes it off: `update` is run deliberately and rarely, and is the
-// command whose whole job is bringing a project current, so the gap
-// belongs in its output every time.
-//
-// Returns whether a gap was actually printed, so a caller that wants to
-// say the opposite — `status` with no build graph, which is where the
-// setup skill verifies — can tell silence-because-fine from
-// silence-because-`once`.
-async function noteCodeIntelligenceGap({ once = false } = {}) {
-  try {
-    const result = await checkCodeIntelligence({ cwd: DEST_ROOT });
-    if (result.ok) return false;
-    if (once && !(await shouldNoteCodeIntelligence(DEST_ROOT))) return false;
-
-    const gap = formatCodeIntelligenceGap(result);
-    console.error(`\n${yellow(bold(gap[0]))}`);
-    console.error(gap.slice(1).join('\n'));
-
-    if (once) await recordCodeIntelligenceNotice(DEST_ROOT);
-    return true;
-  } catch {
-    // Advisory only — a failed check is never worth failing a command over.
-    return false;
   }
 }
 
@@ -2916,19 +2451,7 @@ async function statusCommand() {
   await ensureDb();
 
   if (!(await exists(DB_PATH))) {
-    // The code-intelligence check runs ahead of this guard rather than
-    // after it. `status` is what the setup skill verifies against, and
-    // that verification happens in the one situation where no graph
-    // exists yet: setting code intelligence up is what `init` gated on,
-    // so `init` never got far enough to create one. Reporting the graph
-    // as missing and stopping would leave that check unanswered at
-    // exactly the point it is asked.
-    if (!(await noteCodeIntelligenceGap())) {
-      console.error(`${green('Code intelligence is set up.')}`);
-      console.error(`${red('No build graph found.')} Run ${bold('hedgehog init')} first.\n`);
-    } else {
-      console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
-    }
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog init')} first.\n`);
     process.exitCode = 1;
     return;
   }
@@ -2994,15 +2517,6 @@ async function statusCommand() {
   // nothing to check and reports nothing here either.
   if (core) result.missingRequirements = coreMissingRequirements(core);
 
-  // Same reasoning as missingRequirements above: status is what a fresh
-  // session runs first, and an index built ten commits ago is a setup
-  // fact best learned there rather than inferred later from context that
-  // quietly names the wrong symbols.
-  result.indexStaleness = formatIndexStaleness(
-    await checkIndexFreshness({ cwd: process.cwd() }),
-    { indexCommand: await indexCommandHint() },
-  );
-
   console.log(formatStatus(result));
 
   // Whether the commit gate is actually enforcing. This is reported at
@@ -3020,7 +2534,6 @@ async function statusCommand() {
   const warningLines = await coreWarningLines();
   if (warningLines.length > 0) console.log(warningLines.join('\n'));
 
-  await noteCodeIntelligenceGap({ once: true });
   await noteAvailableUpdate();
 }
 

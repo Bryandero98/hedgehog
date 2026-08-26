@@ -314,38 +314,6 @@ function layerShapeLines(task, coreId) {
   return lines;
 }
 
-// Files a code-intelligence index found in this task's blast radius —
-// scope says what the agent may write, this says what it should read
-// first, so it sits directly after ALLOWED SCOPE. `context_files` is a
-// JSON array of repo-relative paths written by plan.mjs at compile time
-// (code-intelligence.mjs); NULL/undefined and a parse failure both mean
-// no section, the same way layerShapeLines returns null and prints
-// nothing.
-//
-// NULL here means the row was planned without a working index —
-// CGC's own environment gone missing, a reindex that never finished, a
-// dead MCP subprocess, or a graph moved onto a machine that hasn't run
-// `init` — or a read-only handle that predates the column. `next`
-// degrades to no PRE-READ section rather than to an error.
-//
-// Kept short like HONESTY: capped at ten files, because a section long
-// enough to skim is a section that isn't read.
-function preReadLines(task) {
-  if (!task.context_files) return null;
-  let files;
-  try {
-    files = JSON.parse(task.context_files);
-  } catch {
-    return null;
-  }
-  if (!Array.isArray(files) || files.length === 0) return null;
-
-  const lines = ['PRE-READ', "  Outside ALLOWED SCOPE, this layer's code calls into:"];
-  for (const file of files.slice(0, 10)) lines.push(`  - ${file}`);
-  if (files.length > 10) lines.push(`  ...and ${files.length - 10} more`);
-  return lines;
-}
-
 // The standing honesty requirement, appended to every packet.
 //
 // Every other section is task-specific — this one is constant, which is
@@ -556,11 +524,6 @@ export function formatPacket(packet, statusLine, coreId = null, exists = null) {
   lines.push('ALLOWED SCOPE');
   for (const glob of scopeGlobs) lines.push(`  ${glob}`);
   lines.push('');
-  const preRead = preReadLines(task);
-  if (preRead) {
-    lines.push(...preRead);
-    lines.push('');
-  }
   if (firstArrival.length > 0) {
     lines.push(...firstArrivalLines(task, firstArrival));
     lines.push('');

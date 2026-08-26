@@ -95,20 +95,18 @@ Agents fan out to give you great outcomes at **faster speeds**.
 
 ## Your Code is a Graph
 
-Hedgehog indexes your codebase with [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext).
+Hedgehog reaches for your editor's own Language Server Protocol integration to see what depends on what.
 
 ```mermaid
 flowchart TD
-    A[Code Repository] --> B[Tree-sitter / SCIP Indexing]
-    B --> C[Knowledge Graph]
-    C --> D[Graph Database]
-    D --> E[MCP Server]
-    E --> F[Hedgehog]
+    A[Code Repository] --> B[Language Server]
+    B --> C[Symbols & References]
+    C --> D[Hedgehog]
 ```
 
-- **Fewer tokens burned**: tasks arrive knowing what to read, instead of searching for it
-- **Faster builds**: no time spent hunting through the codebase for context
-- **No more surprise breakage**: every task knows what depends on it before it edits
+- **No index to go stale**: the language server's view of the code is always current
+- **No time spent hunting through the codebase for context**: find references and callers directly
+- **No more surprise breakage**: every task can check what depends on it before it edits
 - **Tests cover what changed**: verification that misses affected code gets caught
 
 ## Deterministic Code Generation
@@ -218,10 +216,7 @@ Mention `Hedgehog` whenever you want to build something with it.
 <summary>Instructions for AI Agents</summary>
 
 1. Check Node >=22.5.0 is installed.
-2. Check Python >=3.10 is installed — it runs [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext), the code index every project uses.
-3. Check CodeGraphContext is installed and configured.
-4. If anything is missing, offer to set it up with the `hedgehog-code-intelligence-setup` skill — `init` stops without it.
-5. Run the install commands below.
+2. Run the install commands below.
 
 </details>
 
@@ -287,8 +282,6 @@ new one.
 - Nx skills adapted from [nx-ai-agents-config](https://github.com/nrwl/nx-ai-agents-config).
 
 - Animation skills vendored from [gsap-skills](https://github.com/greensock/gsap-skills).
-
-- Hedgehog indexes your codebase with [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext).
 
 ## Support Hedgehog
 
