@@ -15,9 +15,10 @@
 import { makeFixture, runNext, cleanup, fail, pass } from './fixture.mjs';
 
 // The `hedgehog next` output for this fixture immediately before the
-// honesty section was added — after GOAL/OUTCOME labelling and the
-// INHERITED DEBT section, both landed separately. Recorded literally:
-// this is the text that must not move.
+// honesty section was added — after GOAL/OUTCOME labelling, the
+// INHERITED DEBT section, and the INHERITED DECISIONS section, all
+// landed separately. Recorded literally: this is the text that must
+// not move.
 const BASELINE = `TASK  BILLING-SCHEMA
 schema for billing
 
@@ -32,6 +33,9 @@ RELEVANT RULES
   - A period with no usage still produces an invoice
 
 INHERITED DEBT
+  (none declared)
+
+INHERITED DECISIONS
   (none declared)
 
 WHY NOW
@@ -53,6 +57,7 @@ const SECTION_ORDER = [
   'INTENT',
   'RELEVANT RULES',
   'INHERITED DEBT',
+  'INHERITED DECISIONS',
   'WHY NOW',
   'BLOCKED DOWNSTREAM',
   'ALLOWED SCOPE',

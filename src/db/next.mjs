@@ -113,6 +113,24 @@ function loadInheritedDebt(db, taskId) {
   }
 }
 
+// Decisions declared by anything this task inherits from (see
+// decision.mjs) — same upstream walk as loadInheritedDebt, same tolerance
+// for a `decisions` table that doesn't exist yet on an older graph.
+function loadInheritedDecisions(db, taskId) {
+  const upstream = loadUpstreamTaskIds(db, taskId);
+  if (upstream.length === 0) return [];
+  const placeholders = upstream.map(() => '?').join(',');
+  try {
+    return db
+      .prepare(
+        `SELECT task_id AS taskId, note FROM decisions WHERE task_id IN (${placeholders}) ORDER BY id ASC`,
+      )
+      .all(...upstream);
+  } catch {
+    return [];
+  }
+}
+
 function loadDirectDependents(db, taskId) {
   return db
     .prepare(
@@ -162,6 +180,7 @@ function assemblePacket(db, task) {
   const dependents = loadBlockedDownstream(db, task.id);
   const incompleteDeps = incompleteDependencies(db, task.id);
   const inheritedDebt = loadInheritedDebt(db, task.id);
+  const inheritedDecisions = loadInheritedDecisions(db, task.id);
 
   return {
     task,
@@ -170,6 +189,7 @@ function assemblePacket(db, task) {
     dependents,
     incompleteDeps,
     inheritedDebt,
+    inheritedDecisions,
   };
 }
 
@@ -344,8 +364,8 @@ const HONESTY = [
 ];
 
 // Renders a packet into the STATUS / INTENT / RELEVANT RULES /
-// INHERITED DEBT / WHY NOW / BLOCKED DOWNSTREAM / ALLOWED SCOPE /
-// PRE-READ / LAYER SHAPE / VERIFICATION / HONESTY format. The spec
+// INHERITED DEBT / INHERITED DECISIONS / WHY NOW / BLOCKED DOWNSTREAM /
+// ALLOWED SCOPE / PRE-READ / LAYER SHAPE / VERIFICATION / HONESTY format. The spec
 // splits this across two examples — the `hedgehog next` display and "The
 // task packet" (which carries the intent and its rules) — but an agent
 // receives one thing, so the packet is one thing: everything the worker
@@ -456,7 +476,15 @@ function firstArrivalLines(task, roots) {
 }
 
 export function formatPacket(packet, statusLine, coreId = null, exists = null) {
-  const { task, intent, requirements, dependents, incompleteDeps = [], inheritedDebt = [] } = packet;
+  const {
+    task,
+    intent,
+    requirements,
+    dependents,
+    incompleteDeps = [],
+    inheritedDebt = [],
+    inheritedDecisions = [],
+  } = packet;
   const scopeGlobs = JSON.parse(task.scope_globs);
   const firstArrival = firstArrivalPackages(task, exists);
 
@@ -491,6 +519,15 @@ export function formatPacket(packet, statusLine, coreId = null, exists = null) {
   } else {
     for (const entry of inheritedDebt) {
       lines.push(`  ! ${entry.taskId}  ${entry.note}`);
+    }
+  }
+  lines.push('');
+  lines.push('INHERITED DECISIONS');
+  if (inheritedDecisions.length === 0) {
+    lines.push('  (none declared)');
+  } else {
+    for (const entry of inheritedDecisions) {
+      lines.push(`  * ${entry.taskId}  ${entry.note}`);
     }
   }
   lines.push('');

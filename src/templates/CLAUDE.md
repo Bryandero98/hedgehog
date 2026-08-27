@@ -104,8 +104,8 @@ re-derive build state from prose. To work from it:
 
 1. Run `hedgehog claim --count N --owner <owner>`. It's atomic and
    lease-based, and returns up to N tasks (each with its own full
-   STATUS/INTENT/RELEVANT RULES/INHERITED DEBT/WHY NOW/BLOCKED
-   DOWNSTREAM/ALLOWED SCOPE/VERIFICATION packet) that the
+   STATUS/INTENT/RELEVANT RULES/INHERITED DEBT/INHERITED DECISIONS/WHY
+   NOW/BLOCKED DOWNSTREAM/ALLOWED SCOPE/VERIFICATION packet) that the
    scheduler has already verified are safe to run together right now —
    scope and verify-radius disjoint. `--count` is a maximum, not a
    promise: a call may return fewer than N, or zero. `hedgehog ready` is
@@ -140,6 +140,13 @@ A layer that discovers a limitation the next layer has to compensate for
 records it with `hedgehog debt add <task-id> "<note>"` — it lands in the
 **INHERITED DEBT** section of every packet that depends on that task. A
 comment in a source file is not a mechanism; nothing reads it.
+
+A layer that makes a choice a dependent layer needs to know about — a
+pattern, a library, a trade-off, anything the next task should follow
+rather than reinvent or contradict — records it with `hedgehog decision
+add <task-id> "<note>"`, landing in the **INHERITED DECISIONS** section
+the same way. Debt is what's still wrong with a task; a decision is why
+it was built the way it was.
 
 `planner` owns writing intents (`hedgehog intent add`) at planning
 intake; `hedgehog plan` compiles them into the task graph the loop
