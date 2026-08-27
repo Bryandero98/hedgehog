@@ -44,6 +44,11 @@ for.
     procedure for contributing a fix or `ROADMAP.md` item back to the
     Hedgehog project itself, as opposed to a consuming project's own
     code.
+  - `pr-writing` — writing style (brief, info-dense, Simplified Technical
+    English, only verified claims) and the pre-open checklist (CI
+    passing, one change per PR) for a PR, commit message, or review
+    comment in any repo. `hedgehog-contributing` uses it for Hedgehog's
+    own PRs.
 - `src/registry/` — the core table and the fetcher that acts on it.
   `cores.json` names every core, the npm package that ships it, its
   version range, its install flag (absent on `authored`, which is chosen
