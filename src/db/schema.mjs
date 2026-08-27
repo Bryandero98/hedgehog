@@ -109,6 +109,21 @@ CREATE TABLE IF NOT EXISTS debt (
   logged_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Declared decision: a note one task leaves for the tasks that inherit
+-- from it, delivered the same way debt is (rendered into every dependent
+-- task's packet) but for a different purpose. Debt records what's still
+-- wrong with a task; a decision records why it was built the way it was
+-- — the pattern, library, or trade-off chosen. Without it, that
+-- reasoning lives only in the agent session that made the choice, and a
+-- dependent task built by a different, isolated session has no way to
+-- learn it beyond reading the diff and guessing.
+CREATE TABLE IF NOT EXISTS decisions (
+  id        INTEGER PRIMARY KEY,
+  task_id   TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  note      TEXT NOT NULL,
+  logged_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS friction (
   id        INTEGER PRIMARY KEY,
   task_id   TEXT REFERENCES tasks(id) ON DELETE SET NULL,
@@ -154,9 +169,76 @@ export function ensureTaskColumns(db) {
   }
 }
 
-// Applies the schema to an already-open node:sqlite DatabaseSync instance.
-// Idempotent: safe to call against a DB that already has these tables.
+// Schema version this installed CLI knows about, tracked in the graph's
+// own `PRAGMA user_version` (an integer SQLite stores in the file header
+// — no table required, so it reads back even on a brand-new file).
+// Bumped by one for every entry added to MIGRATIONS below; never
+// hand-set past what MIGRATIONS actually covers, since runMigrations
+// trusts this number to mean "every migration through this version has
+// run."
+export const CURRENT_SCHEMA_VERSION = 2;
+
+// Forward migrations, applied in order to bring a graph's user_version up
+// to CURRENT_SCHEMA_VERSION. Unlike the CREATE TABLE IF NOT EXISTS /
+// ensureTaskColumns pair above — which only ever reconciles present-day
+// shape against however old a graph is, and can't touch anything already
+// baked into an existing column (a CHECK constraint, a rename, a data
+// transform) — this is versioned, so a future change too structural for
+// a bare ADD COLUMN has somewhere to go, and upgrading is one fail-loud
+// step instead of every command's queries silently assuming a shape
+// that might not be there yet.
+const MIGRATIONS = [
+  {
+    version: 1,
+    // The lease/task columns TASK_COLUMN_MIGRATIONS covers already had to
+    // be idempotent against a fresh CREATE TABLE (which includes them
+    // from the start) — ensureTaskColumns' own presence check already
+    // does exactly what a migration step needs.
+    migrate: (db) => ensureTaskColumns(db),
+  },
+  {
+    version: 2,
+    migrate: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS decisions (
+          id        INTEGER PRIMARY KEY,
+          task_id   TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          note      TEXT NOT NULL,
+          logged_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `);
+    },
+  },
+];
+
+// Brings a graph's `PRAGMA user_version` up to CURRENT_SCHEMA_VERSION,
+// running only the migrations it hasn't seen yet. A graph newer than
+// this installed CLI knows about (its user_version already ahead of
+// CURRENT_SCHEMA_VERSION — created by, or migrated with, a later
+// Hedgehog) fails loudly here with a plain-English fix, instead of every
+// later query failing confusingly on a column or table shape this code
+// has never heard of.
+export function runMigrations(db) {
+  const { user_version: current } = db.prepare('PRAGMA user_version').get();
+
+  if (current > CURRENT_SCHEMA_VERSION) {
+    throw new Error(
+      `This build graph was created by a newer version of Hedgehog (schema v${current}) than the one installed here (schema v${CURRENT_SCHEMA_VERSION}). Upgrade Hedgehog (\`npx @skyf0xx/hedgehog@latest update\`) before running commands against this graph.`,
+    );
+  }
+
+  for (const { version, migrate } of MIGRATIONS) {
+    if (version > current) {
+      migrate(db);
+      db.exec(`PRAGMA user_version = ${version}`);
+    }
+  }
+}
+
+// Applies the schema to an already-open node:sqlite DatabaseSync instance,
+// then brings it up to CURRENT_SCHEMA_VERSION. Idempotent: safe to call
+// against a DB that already has these tables and has already migrated.
 export function applySchema(db) {
   db.exec(SCHEMA_SQL);
-  ensureTaskColumns(db);
+  runMigrations(db);
 }
