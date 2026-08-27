@@ -29,11 +29,21 @@ const scripts = readdirSync(HERE)
   .filter((f) => f.endsWith('.mjs') && !isHelper(f))
   .sort();
 
+// Reproductions drive the real CLI, and every CLI invocation otherwise
+// runs `ensureGlobalInstall` — a live `npm install -g
+// @skyf0xx/hedgehog@latest`. That reaches the network, mutates the
+// machine's global npm root, and (worst of all here) leaves later
+// reproductions resolving `hedgehog` to the published release instead of
+// this working tree, so a suite run stops testing the code under test.
+// The guard keeps every reproduction hermetic and offline.
+const REPRO_ENV = { ...process.env, HEDGEHOG_NO_UPDATE_CHECK: '1' };
+
 const failed = [];
 for (const script of scripts) {
   console.log(`\n=== ${script} ===`);
   const result = spawnSync(process.execPath, ['--experimental-sqlite', join(HERE, script)], {
     stdio: 'inherit',
+    env: REPRO_ENV,
   });
   if (result.status !== 0) failed.push(script);
 }

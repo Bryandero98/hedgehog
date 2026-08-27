@@ -73,7 +73,7 @@ function hedgehog(cwd, args) {
       cwd,
       encoding: 'utf8',
       stdio: 'pipe',
-      env: { ...process.env, NO_COLOR: '1' },
+      env: { ...process.env, NO_COLOR: '1', HEDGEHOG_NO_UPDATE_CHECK: '1' },
     });
     return { code: 0, out: stripWarnings(out) };
   } catch (err) {
