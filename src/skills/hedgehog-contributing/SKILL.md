@@ -40,25 +40,16 @@ it.
 
 ## Writing the issue or PR
 
-Most of Hedgehog's inbound queue is read first by `inbound-triage`, an
-agent, before a human ever sees it — the same register `inbound-triage`
-uses when it comments back (see that skill's "Comment style" section).
-Write plainly for both readers at once:
+Use the `pr-writing` skill for style: brief, info-dense, Simplified
+Technical English, only verified claims. Most of Hedgehog's inbound queue
+is read first by `inbound-triage`, an agent, before a human ever sees it —
+the same register `inbound-triage` uses when it comments back (see that
+skill's "Comment style" section) — so write plainly for both readers at
+once.
 
-- Plain technical English, one claim per sentence, no hedging or
-  marketing language.
-- Lead with the concrete fact: "`hedgehog init` writes `.claude/agents/`
-  twice on Windows" beats "I noticed there might be an issue with how
-  the installer handles paths."
-- Fill every field the bug-report template asks for as its own labeled
-  fact (symptom, expected behavior, exact repro steps) rather than one
-  collapsed paragraph.
-- Cite `file:line` for anything about existing behavior — an
-  uncited claim is a hypothesis both readers have to re-derive.
-- One issue, one problem; one PR, one change.
-- Say what you verified, not what you assume: "Ran `node bin/cli.mjs
-  init` in a scratch dir, `.claude/skills/` is missing the new
-  directory" beats "this probably breaks the install."
+Fill every field the bug-report template asks for as its own labeled fact
+(symptom, expected behavior, exact repro steps) rather than one collapsed
+paragraph.
 
 ## Workflow
 
@@ -92,7 +83,8 @@ Write plainly for both readers at once:
    tree has accumulated several unrelated changes that need splitting into
    atomic commits, use the `conventional-commits` skill rather than
    hand-rolling the split.
-6. **Push and open the PR.**
+6. **Push and open the PR**, following `pr-writing`'s checklist and shape
+   (CI passing, one change, only verified claims):
    ```bash
    git push -u origin <branch-name>
    gh pr create --repo skyf0xx/hedgehog --title "<type>(<scope>): <summary>" --body "$(cat <<'EOF'
@@ -104,9 +96,10 @@ Write plainly for both readers at once:
    EOF
    )"
    ```
-   Describe the *why* in the PR body, not in the file being changed — same
-   rule `CONTRIBUTING.md` states for the content itself. If the PR closes
-   or addresses a `ROADMAP.md` item or a filed issue, reference it
-   (`Addresses the "<item name>" item in ROADMAP.md`, or `Fixes #<n>`).
-7. **Report the PR URL** `gh` returns and stop — don't merge, don't push
+   If the PR closes or addresses a `ROADMAP.md` item or a filed issue,
+   reference it (`Addresses the "<item name>" item in ROADMAP.md`, or
+   `Fixes #<n>`).
+7. **Check CI** with `gh pr checks <number> --repo skyf0xx/hedgehog` after
+   opening. Fix a red check before asking for review.
+8. **Report the PR URL** `gh` returns and stop — don't merge, don't push
    further commits without being asked.
