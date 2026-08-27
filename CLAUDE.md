@@ -76,10 +76,17 @@ for.
   initializes at `.hedgehog/hedgehog.db`: schema, intents/tasks, `plan`
   (compiles intents into the task graph), `next`/`ready`/`status`/`claim`
   (what to work on and lease it), `verify`/`gate` (close a layer, check a
-  phase transition), `friction`, `debt`, `drift`, `boundary`, `why`,
-  `overrides`, `conflict`, `commitLock`, `core`, `rebuild`,
-  `graph-server` (serves `src/templates/graph.html`'s visualization), and
-  `community` (the star prompt raised at the first completed intent).
+  phase transition), `friction`, `debt`, `decision` (inherited context for
+  dependent tasks — a limitation or a design choice, respectively),
+  `drift`, `boundary`, `why`, `overrides`, `conflict`, `commitLock`,
+  `core`, `rebuild`, `graph-server` (serves `src/templates/graph.html`'s
+  visualization), and `community` (the star prompt raised at the first
+  completed intent). Schema changes are versioned: `schema.mjs`'s
+  `runMigrations` tracks a graph's `PRAGMA user_version` against
+  `CURRENT_SCHEMA_VERSION`, applying only the migrations it hasn't seen
+  yet on every writable open, and failing loudly if the graph is newer
+  than this installed CLI knows about; `hedgehog db migrate` runs the
+  same check on demand and reports what moved.
   This is the live source of truth every loop skill and its agents query
   and mutate for what's next and what's done.
 - `bin/cli.mjs` — the `hedgehog` CLI installed by `npx @skyf0xx/hedgehog`:

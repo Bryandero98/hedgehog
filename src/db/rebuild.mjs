@@ -53,14 +53,15 @@ function intentExists(db, id) {
 //
 // Deleting `intents` cascades through requirements, tasks,
 // task_requirements, dependencies, artifacts and verifications — every
-// one of which this run re-derives. `debt` and `friction` are the
-// exception: they are operator-recorded notes with no committed source,
-// so they are carried across by task id (deterministic, so a note
-// re-attaches to the same task the replay recompiles). A note whose task
-// no longer exists in the new graph has nowhere to live and is reported
-// rather than silently dropped.
+// one of which this run re-derives. `debt`, `decisions`, and `friction`
+// are the exception: they are operator- or agent-recorded notes with no
+// committed source, so they are carried across by task id (deterministic,
+// so a note re-attaches to the same task the replay recompiles). A note
+// whose task no longer exists in the new graph has nowhere to live and is
+// reported rather than silently dropped.
 function clearDerivedGraph(db) {
   const debt = db.prepare('SELECT task_id, note, logged_at FROM debt').all();
+  const decisions = db.prepare('SELECT task_id, note, logged_at FROM decisions').all();
   const friction = db.prepare('SELECT task_id, note, logged_at FROM friction').all();
 
   db.prepare('DELETE FROM intents').run();
@@ -69,13 +70,16 @@ function clearDerivedGraph(db) {
   // the single writer, so a note is not duplicated against its own copy.
   db.prepare('DELETE FROM friction').run();
 
-  return { debt, friction };
+  return { debt, decisions, friction };
 }
 
-function restoreNotes(db, { debt, friction }) {
+function restoreNotes(db, { debt, decisions, friction }) {
   const taskExists = db.prepare('SELECT 1 FROM tasks WHERE id = ?');
   const insertDebt = db.prepare(
     'INSERT INTO debt (task_id, note, logged_at) VALUES (?, ?, ?)',
+  );
+  const insertDecision = db.prepare(
+    'INSERT INTO decisions (task_id, note, logged_at) VALUES (?, ?, ?)',
   );
   const insertFriction = db.prepare(
     'INSERT INTO friction (task_id, note, logged_at) VALUES (?, ?, ?)',
@@ -89,6 +93,14 @@ function restoreNotes(db, { debt, friction }) {
       continue;
     }
     insertDebt.run(row.task_id, row.note, row.logged_at);
+  }
+
+  for (const row of decisions) {
+    if (taskExists.get(row.task_id) === undefined) {
+      orphaned.push({ kind: 'decision', taskId: row.task_id, note: row.note });
+      continue;
+    }
+    insertDecision.run(row.task_id, row.note, row.logged_at);
   }
 
   for (const row of friction) {

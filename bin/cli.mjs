@@ -53,6 +53,7 @@ import {
 import { whyPath, formatWhy } from '../src/db/why.mjs';
 import { addFriction, listFriction } from '../src/db/friction.mjs';
 import { addDebt, listDebt } from '../src/db/debt.mjs';
+import { addDecision, listDecisions } from '../src/db/decision.mjs';
 import {
   shouldPromptForStar,
   recordStarAnswer,
@@ -397,19 +398,19 @@ function warnRebuildDrift({ drift }, corePath) {
   );
 }
 
-// Debt and friction notes are operator-recorded and have no committed
-// source, so a rebuild carries them across by task id. A note whose task
-// is no longer in the recompiled graph — its intent file was renamed,
-// deleted, or its layer sequence changed — has nowhere to re-attach.
-// Friction notes survive unattached (their task_id is nullable); debt
-// notes are lost, so both are printed with their text rather than
-// disappearing into a count.
+// Debt, decision, and friction notes are operator- or agent-recorded and
+// have no committed source, so a rebuild carries them across by task id.
+// A note whose task is no longer in the recompiled graph — its intent
+// file was renamed, deleted, or its layer sequence changed — has nowhere
+// to re-attach. Friction notes survive unattached (their task_id is
+// nullable); debt and decision notes are lost, so all three are printed
+// with their text rather than disappearing into a count.
 function warnOrphanedNotes({ orphanedNotes }) {
   if (!orphanedNotes || orphanedNotes.length === 0) return;
   console.log(
     `${yellow(bold('Notes without a task after rebuild.'))} ${orphanedNotes.length} note(s) referenced a\n` +
       'task the recompiled graph no longer holds. Friction notes were kept unattached;\n' +
-      'debt notes could not be, so they are reproduced here:\n',
+      'debt and decision notes could not be, so they are reproduced here:\n',
   );
   for (const note of orphanedNotes) {
     console.log(`  ${dim(note.kind)}  ${bold(note.taskId)}  ${note.note}`);
@@ -573,6 +574,9 @@ ${bold('Usage')}
   npx @skyf0xx/hedgehog friction list             list logged friction, oldest first
   npx @skyf0xx/hedgehog debt add <task-id> "<note>"   declare debt that lands in dependent tasks' packets
   npx @skyf0xx/hedgehog debt list [<task-id>]     list declared debt, oldest first
+  npx @skyf0xx/hedgehog decision add <task-id> "<note>"   declare a decision that lands in dependent tasks' packets
+  npx @skyf0xx/hedgehog decision list [<task-id>]     list declared decisions, oldest first
+  npx @skyf0xx/hedgehog db migrate                bring the graph's schema up to the latest version
   npx @skyf0xx/hedgehog community star --answer <a>   record the star prompt's answer
   npx @skyf0xx/hedgehog --help
 
@@ -1155,9 +1159,13 @@ async function dbCommand(args) {
     await dbRebuildCommand();
     return;
   }
+  if (sub === 'migrate') {
+    await dbMigrateCommand();
+    return;
+  }
   if (sub !== 'init') {
     console.error(
-      `${red('Unknown db subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog db init\n   or: hedgehog db rebuild\n`,
+      `${red('Unknown db subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog db init\n   or: hedgehog db rebuild\n   or: hedgehog db migrate\n`,
     );
     process.exitCode = 1;
     return;
@@ -1177,6 +1185,44 @@ async function dbCommand(args) {
         `  ${dim('Run')} ${bold('hedgehog db rebuild')} ${dim('to replay strictly from')} ${bold(INTENTS_DIR)}${dim('.')}\n`,
     );
   }
+}
+
+// `hedgehog db migrate` — brings an existing build graph's schema up to
+// CURRENT_SCHEMA_VERSION on demand (see schema.mjs's runMigrations),
+// rather than only as a side effect of the next command that happens to
+// open the graph writably. Reports what moved, since an upgrade
+// shouldn't be a silent side effect the first time some other command
+// happens to trigger it.
+async function dbMigrateCommand() {
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const before = openDb({ readOnly: true });
+  const { user_version: fromVersion } = before.prepare('PRAGMA user_version').get();
+  before.close();
+
+  let toVersion;
+  try {
+    const db = openDb();
+    try {
+      ({ user_version: toVersion } = db.prepare('PRAGMA user_version').get());
+    } finally {
+      db.close();
+    }
+  } catch (err) {
+    console.error(`${red(err.message)}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (fromVersion === toVersion) {
+    console.log(`${dim(`Build graph is already at the latest schema (v${toVersion}). Nothing to do.`)}\n`);
+    return;
+  }
+  console.log(`${green('Migrated')} build graph from schema v${fromVersion} to v${toVersion}.\n`);
 }
 
 // Resolves the project's core definition: an authored .hedgehog/core.yaml
@@ -3095,6 +3141,77 @@ async function debtCommand(args) {
   process.exitCode = 1;
 }
 
+// `hedgehog decision add <task-id> "<note>"` / `hedgehog decision list
+// [<task-id>]` — declared decisions between tasks. A note recorded
+// against a task is rendered into the INHERITED DECISIONS section of the
+// packet of every task that depends on it (see src/db/decision.mjs and
+// src/db/next.mjs).
+async function decisionCommand(args) {
+  await ensureDb();
+
+  const sub = args[0];
+
+  if (!(await exists(DB_PATH))) {
+    console.error(`${red('No build graph found.')} Run ${bold('hedgehog db init')} first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (sub === 'add') {
+    const taskId = args[1];
+    const note = args.slice(2).join(' ');
+    if (!taskId || !note) {
+      console.error(`${red('Usage:')} hedgehog decision add <task-id> "<note>"\n`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const db = openDb();
+    let entry;
+    try {
+      entry = addDecision(db, { taskId, note });
+    } catch (err) {
+      console.error(
+        `${red('Failed to declare decision:')} ${err.message}\n\nRun ${bold('hedgehog status')} to see valid task ids.\n`,
+      );
+      process.exitCode = 1;
+      return;
+    } finally {
+      db.close();
+    }
+
+    console.log(`  ${green('declared')}  #${entry.id} ${bold(entry.taskId)}`);
+    console.log(`  ${dim('reaches the packet of every task depending on it')}`);
+    return;
+  }
+
+  if (sub === 'list') {
+    const taskId = args[1];
+    const db = openDb();
+    let entries;
+    try {
+      entries = listDecisions(db, taskId);
+    } finally {
+      db.close();
+    }
+
+    if (entries.length === 0) {
+      console.log(`${dim('No decisions declared.')}\n`);
+      return;
+    }
+    for (const entry of entries) {
+      console.log(`#${entry.id}  ${dim(entry.loggedAt)}  ${bold(entry.taskId)}`);
+      console.log(`  ${entry.note}\n`);
+    }
+    return;
+  }
+
+  console.error(
+    `${red('Unknown decision subcommand:')} ${sub ?? '(none)'}\n\nUsage: hedgehog decision add <task-id> "<note>"\n   or: hedgehog decision list [<task-id>]\n`,
+  );
+  process.exitCode = 1;
+}
+
 // `hedgehog community star --answer starred|later|dismissed` — records
 // the star prompt's answer. No build graph or core needed: this is
 // project state about a question asked, not about the build.
@@ -3397,6 +3514,11 @@ async function main() {
 
   if (cmd === 'debt') {
     await debtCommand(args.slice(1));
+    return;
+  }
+
+  if (cmd === 'decision') {
+    await decisionCommand(args.slice(1));
     return;
   }
 

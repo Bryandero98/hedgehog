@@ -14,9 +14,9 @@
 // Debt is in-build traffic between two tasks, and a file under
 // `.hedgehog/` written mid-task sits outside every task's scope globs —
 // it would trip verify's scope gate on the very task that declared it.
-// The consequence is that debt does not survive `hedgehog db rebuild`
-// (which replays only `.hedgehog/intents/*.json`); by then the
-// inheriting task has usually already consumed it.
+// Debt has no committed source `hedgehog db rebuild` could replay it
+// from, so rebuild.mjs carries it across a rebuild by task id instead
+// (a note whose task no longer exists there is reported, not dropped).
 
 import { applySchema } from './schema.mjs';
 
