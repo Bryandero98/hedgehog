@@ -46,7 +46,7 @@ export function makeFixture({ goal = GOAL, outcome = OUTCOME } = {}) {
       cwd: dir,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, NODE_NO_WARNINGS: '1' },
+      env: { ...process.env, NODE_NO_WARNINGS: '1', HEDGEHOG_NO_UPDATE_CHECK: '1' },
       ...opts,
     });
 

@@ -128,7 +128,7 @@ function runCli(dir, args) {
   const res = spawnSync(process.execPath, ['--experimental-sqlite', CLI, ...args], {
     cwd: dir,
     encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1' },
+    env: { ...process.env, NO_COLOR: '1', HEDGEHOG_NO_UPDATE_CHECK: '1' },
   });
   return {
     code: res.status,

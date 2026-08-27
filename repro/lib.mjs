@@ -173,7 +173,7 @@ export function hedgehog(cwd, args) {
     stdio: 'pipe',
     // ExperimentalWarning: SQLite noise on stderr would otherwise land in
     // every captured output string.
-    env: { ...process.env, NODE_NO_WARNINGS: '1', NO_COLOR: '1' },
+    env: { ...process.env, NODE_NO_WARNINGS: '1', NO_COLOR: '1', HEDGEHOG_NO_UPDATE_CHECK: '1' },
     // execFileSync throws on non-zero; catching below keeps the code.
   });
   return { code: 0, out: result };

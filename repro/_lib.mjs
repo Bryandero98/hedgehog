@@ -89,6 +89,7 @@ export function cli(cwd, args) {
       cwd,
       encoding: 'utf8',
       stdio: 'pipe',
+      env: { ...process.env, HEDGEHOG_NO_UPDATE_CHECK: '1' },
     });
     return { status: 0, stdout, stderr: '' };
   } catch (err) {

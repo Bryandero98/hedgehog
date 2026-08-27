@@ -88,6 +88,7 @@ export function makeProject(coreYaml = CORE_YAML_BEFORE) {
     ...process.env,
     PATH: `${binDir}:${process.env.PATH}`,
     NO_COLOR: '1',
+    HEDGEHOG_NO_UPDATE_CHECK: '1',
   };
 
   const project = {

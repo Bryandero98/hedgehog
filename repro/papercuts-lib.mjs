@@ -86,7 +86,7 @@ export function hedgehog(cwd, args, env = {}) {
   const res = spawnSync(process.execPath, [CLI, ...args], {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, ...env, NO_COLOR: '1' },
+    env: { ...process.env, ...env, NO_COLOR: '1', HEDGEHOG_NO_UPDATE_CHECK: '1' },
   });
   return {
     status: res.status,
