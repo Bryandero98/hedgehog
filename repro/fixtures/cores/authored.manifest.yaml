@@ -1,7 +1,7 @@
 name: authored
 flag: null
 language: typescript
-engine: "^5.0.0"
+engine: "^6.0.0"
 template: CLAUDE.core.md
 template_adopted: CLAUDE.core.adopted.md
 agents: [layer-eng]
