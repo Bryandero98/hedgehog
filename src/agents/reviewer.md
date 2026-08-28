@@ -18,7 +18,12 @@ commit — the gate already covers that.
 - **A transition check the core's loop skill defines** — the point where
   one phase or layer closes and the next opens. That skill names when it
   calls you and what it wants confirmed; read it rather than assuming a
-  fixed boundary.
+  fixed boundary. Mechanically, that point is where a layer's
+  `verify_radius` is wider than its own `scope`, or the layer is
+  `exclusive: true` (`core.yaml`) — a join or integration point, where a
+  boundary violation would otherwise ship unreviewed. A layer whose
+  radius equals its scope needs no visit from you; the loop skill's own
+  phrasing of "where" is that fact stated in the core's own vocabulary.
 - **Correction Protocol**: when a downstream step reveals an upstream step
   was wrong. Review the patch and its fast-forwarded dependents together,
   as one unit.
