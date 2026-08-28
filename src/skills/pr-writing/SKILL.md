@@ -1,6 +1,6 @@
 ---
 name: pr-writing
-description: Use whenever writing a PR title/description, a commit message body, a code review comment, or an issue — in Hedgehog's own repo or any consuming project. Triggers on "open a PR", "write the PR description", "comment on this PR", "file an issue". Covers writing style (terse, info-dense, Simplified Technical English) and the pre-open checklist (CI status, scope, verified claims only).
+description: Use whenever writing a PR title/description, a commit message body, a code review comment, or an issue — in Hedgehog's own repo or any consuming project. Triggers on "open a PR", "write the PR description", "comment on this PR", "file an issue". Covers writing style (terse, info-dense, Simplified Technical English), the Why/What shape, folding deep reasoning under `<details>`, and the pre-open checklist (CI status, scope, verified claims only).
 ---
 
 # PR Writing
@@ -47,12 +47,51 @@ as a record of the work session.
 
 ## Shape
 
-- **Title**: `<type>(<scope>): <summary>`, imperative mood, under ~70
+- **PR title**: `<type>(<scope>): <summary>`, imperative mood, under ~70
   chars.
-- **Description**: 1-3 bullets — what changed, why. A test plan section
+- **PR description**: 1-3 bullets — what changed, why. A test plan section
   listing what you actually ran, not what should theoretically pass.
+- **Issue title**: plain English a non-technical reader would say out
+  loud, not a commit-style `<type>(<scope>): <summary>`. Name the
+  outcome, not the mechanism — "Improve how Hedgehog tracks and enforces
+  a project's architecture", not "feat(core): add pattern field".
 - **Comments**: lead with the concrete finding, then (if needed) the fix
   requested. No preamble.
+
+## Why/What for issues
+
+An issue proposing a change — a feature, a fix worth explaining, a
+`ROADMAP.md` item being picked up — states **Why** before **What**:
+
+- **Why**: the problem, as a short list of plain-language facts. Each
+  bullet is one observation a reader can verify or disagree with, not a
+  justification wrapped in caveats. State the problem first, then (if
+  the fix isn't obvious from the problem) a short "to fix this" list of
+  intended outcomes.
+- **What**: the change itself — the concrete steps, fields, or sub-issues.
+  Numbered if sequenced, bulleted if not.
+
+Skip the Why section only when the title already states the problem in
+full (a one-line bug report needs no restatement). Never skip What.
+
+## Fold deep reasoning under `<details>`
+
+An issue or PR body written for a human reader stays short. Extended
+reasoning — architecture rationale, alternatives considered, prior
+decisions, anything aimed at an AI agent picking up the work or a reader
+who wants the full trail — goes under a collapsed section, not inline:
+
+```markdown
+<details>
+<summary>Full reasoning (for AI agents and anyone who wants the detail)</summary>
+
+...
+</details>
+```
+
+Ask first whether that detail needs to exist in the issue at all — a
+link to an existing doc or prior discussion is often enough. Only fold
+in content that has no better home.
 
 ## When NOT to apply
 
