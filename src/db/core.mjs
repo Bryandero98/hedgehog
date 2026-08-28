@@ -180,9 +180,16 @@ function indentOf(line) {
   return line.length - line.trimStart().length;
 }
 
+// The only values `pattern` may declare — named in every rejection
+// message below, so a typo surfaces the valid set instead of silently
+// degrading to "unset" (which would turn conformance checking off with
+// no signal that anything is wrong).
+const VALID_PATTERNS = ['hexagonal', 'layered', 'vertical-slice', 'none'];
+
 // Parses the narrow subset of YAML a core definition needs:
 //   id: <scalar>
 //   pluralizes: <bool>            # optional, default true
+//   pattern: <scalar>             # optional, one of hexagonal|layered|vertical-slice|none
 //   layers:
 //     - id: <scalar>
 //       depends_on: <scalar>          # optional
@@ -202,7 +209,7 @@ export function parseCoreYaml(text) {
     lines.push({ indent: indentOf(noComment), text: noComment.trim() });
   }
 
-  const core = { id: undefined, pluralizes: true, layers: [] };
+  const core = { id: undefined, pluralizes: true, pattern: null, layers: [] };
   let i = 0;
 
   while (i < lines.length && lines[i].indent === 0) {
@@ -224,6 +231,21 @@ export function parseCoreYaml(text) {
     // advisory stops firing on it for good, rather than every user of
     // that core re-discovering the same false positive.
     if (key === 'pluralizes') core.pluralizes = parseScalar(value) === 'true';
+    // An architecture claim, checked by validateCore below — see that
+    // function's pattern-conformance block for what each value asserts.
+    // Rejected here, at parse time, rather than left to validateCore:
+    // an unrecognized value must never silently resolve to "unset" (the
+    // one value that turns conformance checking off), so a typo has to
+    // surface as a parse error, not a quietly-skipped check.
+    if (key === 'pattern') {
+      const declared = parseScalar(value);
+      if (!VALID_PATTERNS.includes(declared)) {
+        throw new Error(
+          `unknown pattern "${declared}" — must be one of: ${VALID_PATTERNS.join(', ')}`,
+        );
+      }
+      core.pattern = declared;
+    }
     i++;
   }
 
@@ -498,6 +520,132 @@ export function isModuleAxis(core) {
   return core.layers.some((layer) => layer.scope.join('').includes('{module}'));
 }
 
+// `layered`'s and `hexagonal`'s checks both anchor on "the head layer" —
+// the first-declared layer, by the same convention `core.layers[0]`
+// already carries informally everywhere else in this file (e.g. the
+// once-layer checks below walk `core.layers` in declaration order too).
+function headLayer(core) {
+  return core.layers[0];
+}
+
+// `pattern: layered` — a strict linear chain: every layer but the head
+// depends on exactly one other, no two layers share a depends_on parent
+// (that would be branching, not a chain), and every layer is reachable
+// from the head by walking depends_on forward. Throws naming the first
+// layer that breaks the shape, in the order the checks below run.
+function checkLayeredPattern(core) {
+  const head = headLayer(core);
+  const rest = core.layers.filter((layer) => layer.id !== head.id);
+
+  for (const layer of rest) {
+    if (!layer.depends_on) {
+      throw new Error(
+        `core "${core.id}" declares pattern: layered, but layer "${layer.id}" has no depends_on — every layer but the head ("${head.id}") must depend on exactly one other layer`,
+      );
+    }
+  }
+
+  const dependents = new Map(); // parent layer id -> the one layer that depends on it
+  for (const layer of rest) {
+    const prior = dependents.get(layer.depends_on);
+    if (prior) {
+      throw new Error(
+        `core "${core.id}" declares pattern: layered, but both "${prior}" and "${layer.id}" depend on "${layer.depends_on}" — a layered chain is linear, one dependent per layer`,
+      );
+    }
+    dependents.set(layer.depends_on, layer.id);
+  }
+
+  // Walk forward from the head (parent -> its one dependent) and confirm
+  // every layer gets visited. This also catches a chain disconnected from
+  // the head entirely — e.g. two layers depending on each other with
+  // neither reachable from the head — which the checks above don't rule
+  // out on their own: each layer still has exactly one depends_on and no
+  // parent is shared, they just never connect back to "${head.id}".
+  const visited = new Set([head.id]);
+  let current = head;
+  while (dependents.has(current.id)) {
+    current = core.layers.find((layer) => layer.id === dependents.get(current.id));
+    visited.add(current.id);
+  }
+  for (const layer of core.layers) {
+    if (!visited.has(layer.id)) {
+      throw new Error(
+        `core "${core.id}" declares pattern: layered, but layer "${layer.id}" is not reachable from the head layer "${head.id}" by following depends_on`,
+      );
+    }
+  }
+}
+
+// `pattern: hexagonal` — Hedgehog has no adapter marker today, so this
+// checks direction alone rather than an actual domain/adapter boundary:
+// the head layer (the domain, by convention) must have no depends_on, and
+// every other layer's depends_on chain must terminate at the head with no
+// cycle — i.e. dependencies all point one way, inward, and the head is the
+// sink every chain ends at. Weaker than the real hexagonal rule (nothing
+// stops an adapter depending on another adapter instead of the domain
+// directly), and deliberately so — see #314's "Not in this issue" for why
+// a real adapter-boundary marker is a separate design decision.
+function checkHexagonalPattern(core) {
+  const head = headLayer(core);
+  if (head.depends_on) {
+    throw new Error(
+      `core "${core.id}" declares pattern: hexagonal, but its head layer "${head.id}" has a depends_on — the domain layer must be the sink every dependency chain points to, not itself a dependent`,
+    );
+  }
+
+  const byId = new Map(core.layers.map((layer) => [layer.id, layer]));
+  for (const layer of core.layers) {
+    if (layer.id === head.id) continue;
+    if (!layer.depends_on) {
+      throw new Error(
+        `core "${core.id}" declares pattern: hexagonal, but layer "${layer.id}" has no depends_on — only the domain layer ("${head.id}") may have none`,
+      );
+    }
+    const seen = new Set([layer.id]);
+    let current = layer;
+    while (current.depends_on) {
+      const next = byId.get(current.depends_on);
+      if (seen.has(next.id)) {
+        throw new Error(
+          `core "${core.id}" declares pattern: hexagonal, but layer "${layer.id}"'s depends_on chain cycles back through "${next.id}" instead of terminating at the domain layer "${head.id}"`,
+        );
+      }
+      seen.add(next.id);
+      current = next;
+    }
+    if (current.id !== head.id) {
+      throw new Error(
+        `core "${core.id}" declares pattern: hexagonal, but layer "${layer.id}"'s depends_on chain terminates at "${current.id}", not the domain layer "${head.id}" — every layer must point inward toward the domain`,
+      );
+    }
+  }
+}
+
+// Dispatches on `core.pattern` to the check above matching what was
+// declared. `null` (never set) and `'none'` (set, explicitly no enforced
+// direction — the adopted-repo default) both skip checking entirely: an
+// absent pattern must validate exactly as it did before this field
+// existed, and `none` recording "no direction" is a fact, not a finding.
+function checkPatternConformance(core) {
+  if (!core.pattern || core.pattern === 'none') return;
+  if (core.pattern === 'vertical-slice') {
+    if (!isModuleAxis(core)) {
+      throw new Error(
+        `core "${core.id}" declares pattern: vertical-slice, but no layer's scope contains {module} — vertical-slice is a chain instantiated per module, so at least one layer must vary by module`,
+      );
+    }
+    return;
+  }
+  if (core.pattern === 'layered') {
+    checkLayeredPattern(core);
+    return;
+  }
+  if (core.pattern === 'hexagonal') {
+    checkHexagonalPattern(core);
+  }
+}
+
 // Enforces the interview's rule (spec: "Authored cores") — a layer without
 // scope or without a verify command is rejected. Applied uniformly to
 // shipped and authored cores alike; the loader has no shipped-core-only
@@ -574,6 +722,13 @@ export function validateCore(core) {
       );
     }
   }
+
+  // An architecture claim, checked mechanically — an unchecked `pattern`
+  // is a comment, and a comment that can silently disagree with the graph
+  // is worse than no field at all. Depends on depends_on already being
+  // resolved to real layer ids (the loop just above), which every check
+  // below relies on.
+  checkPatternConformance(core);
 
   // A `once: true` layer compiles a single task for the whole build, so
   // there is no module to substitute into its templates. Left unchecked,
