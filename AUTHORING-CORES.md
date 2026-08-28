@@ -174,6 +174,12 @@ satisfies the package contract above.
 - [ ] Layer sequence matches the build order the core's own agents and
       skills actually follow.
 - [ ] Each layer's `verify` command is real and runnable, not a stub.
+- [ ] `verify_radius` (when set wider than `scope`) and `exclusive: true`
+      are declared on the layers that are actually join or integration
+      points — this is also where the real test bar and the `reviewer`
+      pass land (`hedgehog-authored-loop`'s "Test depth follows verify
+      radius"), so the decision made here is the same one that sets test
+      and review cadence, not a separate call to make later.
 - [ ] Every `verify` command has been checked for a system binary beyond
       what the workspace's package manager installs (Docker, Terraform,
       a database CLI, a compiler toolchain), and any such binary is
